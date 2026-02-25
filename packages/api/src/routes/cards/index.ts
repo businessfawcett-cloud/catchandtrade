@@ -30,18 +30,21 @@ cardsRouter.get(
         orderByField = { prices: { tcgplayerMarket: sort === 'price-desc' ? 'desc' : 'asc' } };
       }
 
-      const cards = await prisma.card.findMany({
-        where,
-        take: limit,
-        skip: (page - 1) * limit,
-        orderBy: orderByField,
-        include: {
-          prices: {
-            orderBy: { date: 'desc' },
-            take: 1
+      const [cards, total] = await Promise.all([
+        prisma.card.findMany({
+          where,
+          take: limit,
+          skip: (page - 1) * limit,
+          orderBy: orderByField,
+          include: {
+            prices: {
+              orderBy: { date: 'desc' },
+              take: 1
+            }
           }
-        }
-      });
+        }),
+        prisma.card.count({ where })
+      ]);
 
       res.json({
         cards: cards.map(card => ({
@@ -54,7 +57,8 @@ cardsRouter.get(
           rarity: card.rarity,
           imageUrl: card.imageUrl,
           currentPrice: card.prices[0]?.tcgplayerMarket || null
-        }))
+        })),
+        total
       });
     } catch (error) {
       next(error);
@@ -105,17 +109,22 @@ cardsRouter.get(
         orderBy = { name: 'asc' };
       }
 
-      const results = await prisma.card.findMany({
-        where,
-        take: 50,
-        orderBy,
-        include: {
-          prices: {
-            orderBy: { date: 'desc' },
-            take: 1
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      const [results, total] = await Promise.all([
+        prisma.card.findMany({
+          where,
+          take: limit,
+          orderBy,
+          include: {
+            prices: {
+              orderBy: { date: 'desc' },
+              take: 1
+            }
           }
-        }
-      });
+        }),
+        prisma.card.count({ where })
+      ]);
 
       let sortedResults = results;
       if (sort === 'price-desc') {
@@ -135,7 +144,8 @@ cardsRouter.get(
           rarity: card.rarity,
           imageUrl: card.imageUrl,
           currentPrice: card.prices[0]?.tcgplayerMarket || null
-        }))
+        })),
+        total
       });
     } catch (error) {
       next(error);
