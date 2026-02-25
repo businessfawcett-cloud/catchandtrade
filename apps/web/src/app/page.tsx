@@ -66,18 +66,18 @@ function Dashboard({ user }: { user: User }) {
     })
       .then(res => res.json())
       .then(data => {
-        setPortfolios(data);
+        setPortfolios(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
 
-  const allItems = portfolios.flatMap(p => p.items);
+  const allItems = (portfolios || []).flatMap(p => p.items || []);
   const recentItems = allItems
-    .sort((a, b) => new Date(b.card.createdAt || 0).getTime() - new Date(a.card.createdAt || 0).getTime())
+    .sort((a, b) => new Date(b.card?.createdAt || 0).getTime() - new Date(a.card?.createdAt || 0).getTime())
     .slice(0, 6);
 
-  const pokemonCards = allItems.filter(i => i.card.gameType === 'POKEMON');
+  const pokemonCards = allItems.filter(i => i.card?.gameType === 'POKEMON');
   const uniquePokemon = new Set(pokemonCards.map(i => i.card.name));
   const totalCards = allItems.reduce((sum, item) => sum + item.quantity, 0);
   const uniqueSets = new Set(allItems.map(i => i.card.setName));
