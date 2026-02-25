@@ -1,0 +1,257 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #0f1724;
+  --color-bg-light: #1a2332;
+  --color-primary: #e63946;
+  --color-primary-dark: #c1121f;
+  --color-secondary: #ffd700;
+  --color-secondary-dark: #d4a500;
+  --color-text: #ffffff;
+  --color-text-muted: #94a3b8;
+  --color-border: #2d3748;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+}
+
+/* Pokeball pattern background */
+.pokeball-pattern {
+  background-image: 
+    radial-gradient(circle at 50% 50%, transparent 0%, transparent 45%, var(--color-bg) 45%, var(--color-bg) 55%, transparent 55%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 20px,
+      rgba(230, 57, 70, 0.03) 20px,
+      rgba(230, 57, 70, 0.03) 21px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 20px,
+      rgba(230, 57, 70, 0.03) 20px,
+      rgba(230, 57, 70, 0.03) 21px
+    );
+  background-size: 60px 60px;
+}
+
+/* Subtle gradient overlay */
+.gradient-overlay {
+  background: 
+    linear-gradient(180deg, rgba(15, 23, 36, 0) 0%, rgba(15, 23, 36, 0.8) 100%),
+    radial-gradient(ellipse at top, rgba(230, 57, 70, 0.1) 0%, transparent 50%);
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Holographic effect for rare cards */
+.holo-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.holo-effect::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 215, 0, 0.3) 50%,
+    transparent 70%
+  );
+  transform: rotate(45deg);
+  animation: holo-shine 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes holo-shine {
+  0%, 100% {
+    transform: translateX(-100%) rotate(45deg);
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(100%) rotate(45deg);
+    opacity: 1;
+  }
+}
+
+/* Rarity colors */
+.rarity-common { color: #a8a878; }
+.rarity-uncommon { color: #a8a878; }
+.rarity-rare { color: #ffd700; }
+.rarity-holov { color: #ffd700; }
+.rarity-ultra { color: #ff6b6b; }
+.rarity-secret { color: #ee99ac; }
+
+/* Type border colors */
+.type-fire { border-color: #f08030; }
+.type-water { border-color: #6890f0; }
+.type-grass { border-color: #78c850; }
+.type-electric { border-color: #f8d030; }
+.type-psychic { border-color: #f85888; }
+.type-fighting { border-color: #c03028; }
+.type-poison { border-color: #a040a0; }
+.type-ground { border-color: #e0c068; }
+.type-rock { border-color: #b8a038; }
+.type-bug { border-color: #a8b820; }
+.type-ghost { border-color: #705898; }
+.type-dragon { border-color: #7038f8; }
+.type-dark { border-color: #705848; }
+.type-steel { border-color: #b8b8d0; }
+.type-fairy { border-color: #ee99ac; }
+.type-ice { border-color: #98d8d8; }
+.type-normal { border-color: #a8a878; }
+
+/* Button styles */
+.btn-primary {
+  @apply bg-poke-red hover:bg-poke-red-dark text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200;
+  box-shadow: 0 4px 14px rgba(230, 57, 70, 0.4);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(230, 57, 70, 0.6);
+}
+
+.btn-secondary {
+  @apply bg-poke-gold hover:bg-poke-gold-dark text-poke-bg font-semibold py-3 px-6 rounded-lg transition-all duration-200;
+  box-shadow: 0 4px 14px rgba(255, 215, 0, 0.4);
+}
+
+/* Input styles */
+.input-dark {
+  @apply bg-poke-bg-light border border-poke-border text-white rounded-lg py-3 px-4 w-full;
+  @apply focus:outline-none focus:border-poke-red focus:ring-1 focus:ring-poke-red;
+  transition: all 0.2s ease;
+}
+
+/* Card styles */
+.card-dark {
+  @apply bg-poke-bg-light border border-poke-border rounded-xl overflow-hidden;
+  transition: all 0.3s ease;
+}
+
+.card-dark:hover {
+  @apply border-poke-red;
+  box-shadow: 0 10px 40px rgba(230, 57, 70, 0.2);
+}
+
+/* Progress bar */
+.progress-poke {
+  @apply h-3 rounded-full overflow-hidden;
+  background: linear-gradient(90deg, #e63946 0%, #ffd700 50%, #e63946 100%);
+  background-size: 200% 100%;
+  animation: progress-shine 2s ease-in-out infinite;
+}
+
+@keyframes progress-shine {
+  0%, 100% { background-position: 100% 0; }
+  50% { background-position: 0 0; }
+}
+
+/* Modal overlay */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50;
+}
+
+/* Pokeball loader */
+.pokeball-loader {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(
+    to bottom,
+    #e63946 0%,
+    #e63946 45%,
+    #1a2332 45%,
+    #1a2332 55%,
+    #ffffff 55%,
+    #ffffff 100%
+  );
+  position: relative;
+  box-shadow: 
+    inset 0 0 0 4px #1a2332,
+    0 0 0 4px #1a2332;
+  animation: pokeball-spin 1s linear infinite;
+}
+
+.pokeball-loader::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border: 4px solid #1a2332;
+  border-radius: 50%;
+}
+
+/* Navigation link hover */
+.nav-link {
+  @apply text-poke-text-muted hover:text-white transition-colors duration-200 relative;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #e63946;
+  transition: width 0.3s ease;
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a2332;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e63946;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c1121f;
+}
