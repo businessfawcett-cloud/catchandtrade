@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import PokeballLoader from '@/components/PokeballLoader';
 import CardGrid from '@/components/CardGrid';
+import { Library, CreditCard, DollarSign, BookOpen } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
 
@@ -407,37 +408,10 @@ function Dashboard({ user }: { user: User }) {
 
   const StatIcon = ({ type }: { type: 'pokemon' | 'cards' | 'value' | 'sets' }) => {
     const icons = {
-      pokemon: (
-        <svg viewBox="0 0 100 100" className="w-8 h-8">
-          <circle cx="50" cy="50" r="45" fill="#e63946" stroke="#0a0f1e" strokeWidth="4" />
-          <rect x="2" y="46" width="96" height="8" fill="#0a0f1e" />
-          <circle cx="50" cy="50" r="14" fill="#ffffff" stroke="#0a0f1e" strokeWidth="4" />
-          <circle cx="50" cy="50" r="6" fill="#0a0f1e" />
-        </svg>
-      ),
-      cards: (
-        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8" stroke="#6890f0" strokeWidth="1.5">
-          <rect x="3" y="3" width="18" height="24" rx="2" />
-          <path d="M3 9h18" />
-          <path d="M9 21V9" />
-        </svg>
-      ),
-      value: (
-        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8" stroke="#ffd700" strokeWidth="1.5">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 6v12M9 10h.01M15 10h.01M9 14h.01M15 14h.01" />
-        </svg>
-      ),
-      sets: (
-        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8" stroke="#a855f7" strokeWidth="1.5">
-          <path d="M12 15l-2 5-1-2-2 1 5-4z" />
-          <path d="M12 15l2-5-5-1 1 2-2-1z" />
-          <path d="M12 15l3-2" />
-          <path d="M12 15l-3-2" />
-          <path d="M12 15V9" />
-          <path d="M9 9l3 2 3-2" />
-        </svg>
-      )
+      pokemon: <Library className="w-8 h-8" style={{ color: '#e63946' }} />,
+      cards: <CreditCard className="w-8 h-8" style={{ color: '#6890f0' }} />,
+      value: <DollarSign className="w-8 h-8" style={{ color: '#ffd700' }} />,
+      sets: <BookOpen className="w-8 h-8" style={{ color: '#a855f7' }} />
     };
     return icons[type];
   };

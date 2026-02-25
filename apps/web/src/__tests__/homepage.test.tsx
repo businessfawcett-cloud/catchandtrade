@@ -1,6 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import HomePage from '../app/page';
 
+jest.mock('lucide-react', () => ({
+  Library: () => 'Library',
+  CreditCard: () => 'CreditCard',
+  DollarSign: () => 'DollarSign',
+  BookOpen: () => 'BookOpen'
+}));
+
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn() })
 }));
