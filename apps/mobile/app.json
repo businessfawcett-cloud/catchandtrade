@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Catch and Trade",
+    "slug": "catchandtrade",
+    "version": "1.0.0",
+    "sdkVersion": "53.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "updates": {
+      "enabled": false,
+      "checkAutomatically": "never",
+      "fallbackToCacheTimeout": 0,
+      "url": ""
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Catch and Trade to access your camera to scan Pokemon cards."
+        }
+      ],
+      "expo-secure-store",
+      "expo-asset"
+    ],
+    "ios": {
+      "bundleIdentifier": "com.catchandtrade.app",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.catchandtrade.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "d392f9ba-ee37-49d7-a99e-fe25ef290db7"
+      }
+    },
+    "owner": "businessfawcett"
+  }
+}
