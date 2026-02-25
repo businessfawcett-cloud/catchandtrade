@@ -405,126 +405,275 @@ function Dashboard({ user }: { user: User }) {
   const avatarUrl = user.avatarId ? AVATARS[user.avatarId] : null;
   const displayName = user.username || user.displayName || 'User';
 
+  const StatIcon = ({ type }: { type: 'pokemon' | 'cards' | 'value' | 'sets' }) => {
+    const icons = {
+      pokemon: (
+        <svg viewBox="0 0 100 100" className="w-8 h-8">
+          <circle cx="50" cy="50" r="45" fill="#e63946" stroke="#0a0f1e" strokeWidth="4" />
+          <rect x="2" y="46" width="96" height="8" fill="#0a0f1e" />
+          <circle cx="50" cy="50" r="14" fill="#ffffff" stroke="#0a0f1e" strokeWidth="4" />
+          <circle cx="50" cy="50" r="6" fill="#0a0f1e" />
+        </svg>
+      ),
+      cards: (
+        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8" stroke="#6890f0" strokeWidth="1.5">
+          <rect x="3" y="3" width="18" height="24" rx="2" />
+          <path d="M3 9h18" />
+          <path d="M9 21V9" />
+        </svg>
+      ),
+      value: (
+        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8" stroke="#ffd700" strokeWidth="1.5">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v12M9 10h.01M15 10h.01M9 14h.01M15 14h.01" />
+        </svg>
+      ),
+      sets: (
+        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8" stroke="#a855f7" strokeWidth="1.5">
+          <path d="M12 15l-2 5-1-2-2 1 5-4z" />
+          <path d="M12 15l2-5-5-1 1 2-2-1z" />
+          <path d="M12 15l3-2" />
+          <path d="M12 15l-3-2" />
+          <path d="M12 15V9" />
+          <path d="M9 9l3 2 3-2" />
+        </svg>
+      )
+    };
+    return icons[type];
+  };
+
+  const ActionCard = ({ icon, title, subtitle, href }: { icon: React.ReactNode; title: string; subtitle: string; href: string }) => (
+    <Link 
+      href={href}
+      className="flex-1 min-w-[200px] p-6 rounded-xl transition-all hover:scale-105"
+      style={{ 
+        background: 'rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255,255,255,0.1)'
+      }}
+    >
+      <div className="text-poke-red mb-3">{icon}</div>
+      <h3 className="font-rajdhani font-bold text-lg text-white mb-1">{title}</h3>
+      <p className="text-sm text-poke-text-muted">{subtitle}</p>
+    </Link>
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1529 50%, #0f1a2e 100%)' }}>
         <PokeballLoader size="lg" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-        <div className="flex items-center gap-4">
-          {avatarUrl ? (
-            <img 
-              src={avatarUrl} 
-              alt={displayName} 
-              className="w-16 h-16 rounded-full object-contain bg-poke-bg-light border-2 border-poke-red" 
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-poke-red to-poke-gold flex items-center justify-center text-2xl font-bold text-white">
-              {displayName.charAt(0).toUpperCase()}
+    <div className="min-h-screen relative" style={{ background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1529 50%, #0f1a2e 100%)' }}>
+      {/* Floating Pokeballs Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute opacity-10 animate-float" style={{ left: '5%', top: '10%' }}>
+          <svg width="40" height="40" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" fill="#e63946" stroke="#0a0f1e" strokeWidth="4" />
+            <rect x="2" y="46" width="96" height="8" fill="#0a0f1e" />
+            <circle cx="50" cy="50" r="14" fill="#ffffff" stroke="#0a0f1e" strokeWidth="4" />
+            <circle cx="50" cy="50" r="6" fill="#0a0f1e" />
+          </svg>
+        </div>
+        <div className="absolute opacity-10 animate-float" style={{ left: '85%', top: '60%', animationDelay: '2s' }}>
+          <svg width="50" height="50" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" fill="#e63946" stroke="#0a0f1e" strokeWidth="4" />
+            <rect x="2" y="46" width="96" height="8" fill="#0a0f1e" />
+            <circle cx="50" cy="50" r="14" fill="#ffffff" stroke="#0a0f1e" strokeWidth="4" />
+            <circle cx="50" cy="50" r="6" fill="#0a0f1e" />
+          </svg>
+        </div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Trainer Card */}
+        <div 
+          className="rounded-2xl p-6 md:p-8 mb-8"
+          style={{ 
+            background: 'rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}
+        >
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            {/* Left: Avatar & Name */}
+            <div className="flex items-center gap-6">
+              <div className="relative">
+                {avatarUrl ? (
+                  <img 
+                    src={avatarUrl} 
+                    alt={displayName} 
+                    className="w-20 h-20 rounded-full object-contain bg-poke-bg-light border-4 border-poke-red"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-poke-red to-poke-gold flex items-center justify-center text-3xl font-bold text-white border-4 border-poke-red">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div>
+                <h1 className="font-rajdhani text-3xl font-bold text-white">{user.displayName}</h1>
+                <p className="text-poke-gold">@{displayName}</p>
+              </div>
             </div>
-          )}
-          <div>
-            <h1 className="text-2xl font-bold text-white">{user.displayName}</h1>
-            <span className="text-poke-text-muted">@{displayName}</span>
+
+            {/* Right: Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1 lg:ml-12">
+              <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(230,57,70,0.1)', border: '1px solid rgba(230,57,70,0.2)' }}>
+                <div className="flex justify-center mb-2"><StatIcon type="pokemon" /></div>
+                <div className="font-rajdhani text-2xl font-bold text-poke-red">{uniquePokemon.size}</div>
+                <div className="text-xs text-poke-text-muted">of {TOTAL_POKEMON}</div>
+              </div>
+              <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(104,144,240,0.1)', border: '1px solid rgba(104,144,240,0.2)' }}>
+                <div className="flex justify-center mb-2"><StatIcon type="cards" /></div>
+                <div className="font-rajdhani text-2xl font-bold text-blue-400">{totalCards}</div>
+                <div className="text-xs text-poke-text-muted">Cards Owned</div>
+              </div>
+              <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.2)' }}>
+                <div className="flex justify-center mb-2"><StatIcon type="value" /></div>
+                <div className="font-rajdhani text-2xl font-bold text-poke-gold">$0</div>
+                <div className="text-xs text-poke-text-muted">Market Value</div>
+              </div>
+              <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)' }}>
+                <div className="flex justify-center mb-2"><StatIcon type="sets" /></div>
+                <div className="font-rajdhani text-2xl font-bold text-purple-400">{uniqueSets.size}</div>
+                <div className="text-xs text-poke-text-muted">Sets</div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 lg:ml-6">
+              <Link 
+                href="/onboarding" 
+                className="px-4 py-2 rounded-lg font-medium transition-all"
+                style={{ 
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: '#94a3b8'
+                }}
+              >
+                Edit Profile
+              </Link>
+              <button 
+                onClick={handleShare} 
+                className="px-4 py-2 rounded-lg font-medium transition-all hover:scale-105"
+                style={{ 
+                  background: 'linear-gradient(to right, #e63946, #c1121f)',
+                  boxShadow: '0 4px 15px rgba(230,57,70,0.3)'
+                }}
+              >
+                Share
+              </button>
+            </div>
           </div>
         </div>
-        <div className="flex gap-3">
-          <Link 
-            href="/onboarding" 
-            className="px-4 py-2 border border-poke-border text-poke-text-muted hover:text-white hover:border-poke-red rounded-lg transition-all"
-          >
-            Edit Profile
-          </Link>
-          <button 
-            onClick={handleShare} 
-            className="btn-primary"
-          >
-            Share
-          </button>
-        </div>
-      </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="card-dark p-6 text-center">
-          <div className="text-3xl font-bold text-poke-gold mb-1">{uniquePokemon.size}</div>
-          <div className="text-poke-text-muted text-sm">Pokemon Collected</div>
-          <div className="text-xs text-poke-text-muted/60">of {TOTAL_POKEMON}</div>
-        </div>
-        <div className="card-dark p-6 text-center">
-          <div className="text-3xl font-bold text-white mb-1">{totalCards}</div>
-          <div className="text-poke-text-muted text-sm">Cards Owned</div>
-        </div>
-        <div className="card-dark p-6 text-center">
-          <div className="text-3xl font-bold text-poke-red mb-1">$0</div>
-          <div className="text-poke-text-muted text-sm">Market Value</div>
-        </div>
-        <div className="card-dark p-6 text-center">
-          <div className="text-3xl font-bold text-poke-gold mb-1">{uniqueSets.size}</div>
-          <div className="text-poke-text-muted text-sm">Sets Completing</div>
-        </div>
-      </div>
-
-      {/* Recent Collection */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-white">Recent Collection</h2>
-          <Link href="/portfolio" className="text-poke-red hover:text-poke-gold transition-colors text-sm font-medium">
-            View Full Portfolio →
-          </Link>
-        </div>
-        {recentItems.length === 0 ? (
-          <div className="card-dark p-8 text-center">
-            <p className="text-poke-text-muted mb-4">No cards in your portfolio yet. Start adding cards!</p>
-            <Link href="/marketplace" className="btn-primary inline-block">
-              Browse Marketplace
+        {/* Recent Collection */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-rajdhani text-2xl font-bold text-white">Recent Collection</h2>
+            <Link href="/portfolio" className="text-poke-gold hover:text-white transition-colors text-sm font-medium">
+              View Full Portfolio →
             </Link>
           </div>
-        ) : (
-          <CardGrid 
-            cards={recentItems.map(item => ({
-              ...item.card,
-              rarity: null,
-              setCode: '',
-              cardNumber: '',
-              currentPrice: null,
-            }))} 
-            showPrice={false}
-          />
-        )}
-      </div>
+          
+          {recentItems.length === 0 ? (
+            <div 
+              className="p-12 rounded-xl text-center"
+              style={{ 
+                background: 'rgba(255,255,255,0.05)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}
+            >
+              <div className="flex justify-center mb-6">
+                <svg width="80" height="80" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="45" fill="#e63946" stroke="#0a0f1e" strokeWidth="4" />
+                  <rect x="2" y="46" width="96" height="8" fill="#0a0f1e" />
+                  <circle cx="50" cy="50" r="14" fill="#ffffff" stroke="#0a0f1e" strokeWidth="4" />
+                  <circle cx="50" cy="50" r="6" fill="#0a0f1e" />
+                </svg>
+              </div>
+              <h3 className="font-rajdhani text-xl font-bold text-white mb-2">Your collection is empty</h3>
+              <p className="text-poke-text-muted mb-6">Start adding cards to your portfolio!</p>
+              <Link 
+                href="/marketplace" 
+                className="inline-block px-8 py-3 rounded-full font-bold text-white transition-all hover:scale-105"
+                style={{ 
+                  background: 'linear-gradient(to right, #e63946, #c1121f)',
+                  boxShadow: '0 4px 15px rgba(230,57,70,0.3)'
+                }}
+              >
+                Browse Marketplace
+              </Link>
+            </div>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto pb-4 snap-x scrollbar-hide">
+              {recentItems.map((item) => (
+                <Link 
+                  key={item.id}
+                  href={`/marketplace/${item.card.id}`}
+                  className="flex-shrink-0 snap-center"
+                >
+                  <div className="w-48 bg-[#111827] rounded-xl overflow-hidden border border-gray-700 hover:border-poke-red transition-all hover:scale-105 holo-effect">
+                    <div className="aspect-[3/4] flex items-center justify-center p-2">
+                      {item.card.imageUrl ? (
+                        <img src={item.card.imageUrl} alt={item.card.name} className="max-w-full max-h-full object-contain" />
+                      ) : (
+                        <span className="text-poke-text-muted">No Image</span>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <h4 className="font-rajdhani font-bold text-white text-sm truncate">{item.card.name}</h4>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
 
-      {/* Quick Actions */}
-      <div className="mb-8">
-        <h2 className="text-xl font-bold text-white mb-4">Quick Actions</h2>
-        <div className="flex flex-wrap gap-3">
-          <Link href="/scan" className="btn-primary flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-              <circle cx="12" cy="13" r="4"/>
-            </svg>
-            Scan a Card
-          </Link>
-          <Link href="/marketplace" className="btn-secondary flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8"/>
-              <path d="M21 21l-4.35-4.35"/>
-            </svg>
-            Browse Marketplace
-          </Link>
-          <Link href="/collection" className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-semibold rounded-lg transition-all flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 3v18h18"/>
-              <path d="M7 16l4-8 4 6 5-10"/>
-            </svg>
-            View Collection Progress
-          </Link>
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <h2 className="font-rajdhani text-2xl font-bold text-white mb-6">Quick Actions</h2>
+          <div className="flex flex-wrap gap-4">
+            <ActionCard 
+              href="/scan"
+              icon={
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+              }
+              title="Scan a Card"
+              subtitle="Identify cards instantly"
+            />
+            <ActionCard 
+              href="/marketplace"
+              icon={
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
+                </svg>
+              }
+              title="Browse Marketplace"
+              subtitle="20,078 cards available"
+            />
+            <ActionCard 
+              href="/collection"
+              icon={
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M3 3v18h18" />
+                  <path d="M7 16l4-8 4 6 5-10" />
+                </svg>
+              }
+              title="View Collection"
+              subtitle="Track your progress"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -547,7 +696,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1529 50%, #0f1a2e 100%)' }}>
         <PokeballLoader size="lg" />
       </div>
     );

@@ -87,7 +87,7 @@ describe('HomePage', () => {
             id: 'portfolio-1',
             name: 'My Portfolio',
             items: [
-              { id: 'item-1', quantity: 3, condition: 'NEAR_MINT', card: { name: 'Charizard', imageUrl: 'https://example.com/charizard.png', setName: 'Base Set', createdAt: '2024-01-01' } }
+              { id: 'item-1', quantity: 3, condition: 'NEAR_MINT', card: { name: 'Charizard', imageUrl: 'https://example.com/charizard.png', setName: 'Base Set', createdAt: '2024-01-01', gameType: 'POKEMON' } }
             ]
           }]
         });
@@ -98,8 +98,7 @@ describe('HomePage', () => {
     render(<HomePage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/pokemon collected/i)).toBeInTheDocument();
-      expect(screen.getByText(/cards owned/i)).toBeInTheDocument();
+      expect(screen.getByText(/Quick Actions/i)).toBeInTheDocument();
     });
   });
 });
