@@ -309,17 +309,33 @@ function FeaturedCards() {
 function HowItWorks() {
   const steps = [
     {
-      icon: '📷',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-16 h-16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" className="text-poke-red" />
+          <circle cx="12" cy="13" r="4" stroke="currentColor" className="text-poke-gold" />
+        </svg>
+      ),
       title: 'Scan Cards',
       description: 'Use your camera to quickly scan and identify any Pokemon card'
     },
     {
-      icon: '📊',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-16 h-16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 3v18h18" stroke="currentColor" className="text-poke-red" />
+          <path d="M7 16l4-8 4 6 5-10" stroke="currentColor" className="text-poke-gold" />
+        </svg>
+      ),
       title: 'Track Portfolio',
       description: 'Monitor your collection value with real-time price tracking'
     },
     {
-      icon: '💎',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-16 h-16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 3h12l4 6-10 13L2 9l4-6z" stroke="currentColor" className="text-poke-gold" />
+          <path d="M11 3 8 9l4 13 4-13-3-6" stroke="currentColor" className="text-poke-red" />
+          <path d="M2 9h20" stroke="currentColor" className="text-poke-text-muted" />
+        </svg>
+      ),
       title: 'Trade & Sell',
       description: 'Connect with other collectors to trade or sell your cards'
     }
@@ -339,7 +355,7 @@ function HowItWorks() {
               className="card-dark p-8 text-center hover:border-poke-red transition-all duration-300 animate-fade-in"
               style={{ animationDelay: `${index * 0.2}s` }}
             >
-              <div className="text-5xl mb-4">{step.icon}</div>
+              <div className="flex justify-center mb-4">{step.icon}</div>
               <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
               <p className="text-poke-text-muted">{step.description}</p>
             </div>
@@ -489,13 +505,25 @@ function Dashboard({ user }: { user: User }) {
         <h2 className="text-xl font-bold text-white mb-4">Quick Actions</h2>
         <div className="flex flex-wrap gap-3">
           <Link href="/scan" className="btn-primary flex items-center gap-2">
-            <span>⚡</span> Scan a Card
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            Scan a Card
           </Link>
           <Link href="/marketplace" className="btn-secondary flex items-center gap-2">
-            <span>🔍</span> Browse Marketplace
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="M21 21l-4.35-4.35"/>
+            </svg>
+            Browse Marketplace
           </Link>
           <Link href="/collection" className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-semibold rounded-lg transition-all flex items-center gap-2">
-            <span>📊</span> View Collection Progress
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 3v18h18"/>
+              <path d="M7 16l4-8 4 6 5-10"/>
+            </svg>
+            View Collection Progress
           </Link>
         </div>
       </div>
