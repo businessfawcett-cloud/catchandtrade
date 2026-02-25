@@ -42,6 +42,8 @@ module.exports = {
         'catch': 'catch 0.6s ease-out',
         'holo': 'holo 2s ease-in-out infinite',
         'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'float-slow': 'float-slow 8s ease-in-out infinite',
       },
       keyframes: {
         'pokeball-spin': {
@@ -60,6 +62,14 @@ module.exports = {
         'pulse-glow': {
           '0%, 100%': { boxShadow: '0 0 5px rgba(230, 57, 70, 0.5)' },
           '50%': { boxShadow: '0 0 20px rgba(230, 57, 70, 0.8)' },
+        },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+          '50%': { transform: 'translateY(-20px) rotate(5deg)' },
+        },
+        'float-slow': {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-15px)' },
         },
       },
     },

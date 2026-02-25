@@ -37,7 +37,7 @@ describe('HomePage', () => {
     render(<HomePage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/catch & trade/i)).toBeInTheDocument();
+      expect(screen.getByText(/Catch\./)).toBeInTheDocument();
     });
   });
 
