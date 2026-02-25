@@ -1,7 +1,8 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 const PokeballLogo = () => (
   <svg width="36" height="36" viewBox="0 0 100 100" className="animate-pulse-glow">
@@ -27,6 +28,20 @@ const navLinks = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setIsLoggedIn(false);
+    router.push('/');
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-poke-bg/95 backdrop-blur-md border-b border-poke-border">
@@ -62,18 +77,29 @@ export default function Navbar() {
 
           {/* Auth Buttons */}
           <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="text-poke-text-muted hover:text-white text-sm font-medium transition-colors"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/register"
-              className="bg-poke-red hover:bg-poke-red-dark text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-200 hover:scale-105"
-            >
-              Get Started
-            </Link>
+            {isLoggedIn ? (
+              <button
+                onClick={handleLogout}
+                className="text-poke-text-muted hover:text-white text-sm font-medium transition-colors"
+              >
+                Log out
+              </button>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-poke-text-muted hover:text-white text-sm font-medium transition-colors"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/register"
+                  className="bg-poke-red hover:bg-poke-red-dark text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-200 hover:scale-105"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
