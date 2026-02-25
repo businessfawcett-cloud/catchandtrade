@@ -1,0 +1,756 @@
+'use client';
+
+import { useEffect, useState, use } from 'react';
+import Link from 'next/link';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+
+interface CardPrice {
+  id: string;
+  date: string;
+  tcgplayerLow: number;
+  tcgplayerMid: number;
+  tcgplayerHigh: number;
+  tcgplayerMarket: number;
+}
+
+interface Card {
+  id: string;
+  name: string;
+  setName: string;
+  setCode: string;
+  cardNumber: string;
+  rarity: string | null;
+  imageUrl: string | null;
+  gameType: string;
+  language: string;
+  prices: CardPrice[];
+}
+
+export default function CardDetailPage({ params }: { params: { id: string } }) {
+  const cardId = params.id;
+  
+  console.log('[ENV] NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG:', process.env.NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG);
+  console.log('[ENV] NEXT_PUBLIC_EBAY_CAMPAIGN_ID:', process.env.NEXT_PUBLIC_EBAY_CAMPAIGN_ID);
+  
+  const [card, setCard] = useState<Card | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [priceRange, setPriceRange] = useState<'30d' | '90d' | '1y'>('30d');
+  const [showModal, setShowModal] = useState(false);
+  const [portfolios, setPortfolios] = useState<{id: string, name: string}[]>([]);
+  const [selectedPortfolio, setSelectedPortfolio] = useState('');
+  const [condition, setCondition] = useState('NEAR_MINT');
+  const [quantity, setQuantity] = useState(1);
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  useEffect(() => {
+    const fetchCard = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/cards/${cardId}`);
+        if (!response.ok) {
+          const data = await response.json();
+          setError(data.error || 'Failed to load card');
+          return;
+        }
+        const data = await response.json();
+        setCard(data);
+      } catch (err) {
+        setError('Failed to load card');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCard();
+  }, [cardId]);
+
+  const getAffiliateLinks = () => {
+    if (!card) return { tcgplayer: '#', amazon: '#', ebay: '#' };
+    const searchTerm = `${card.name} ${card.setName}`;
+    const amazonTag = process.env.NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG || '';
+    const ebayCampaignId = process.env.NEXT_PUBLIC_EBAY_CAMPAIGN_ID || '';
+    const ebaySearchTerm = encodeURIComponent(`${card.name} Pokemon Card`);
+    const ebayUrl = ebayCampaignId 
+      ? `https://www.ebay.com/sch/i.html?_nkw=${ebaySearchTerm}&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${ebayCampaignId}&customid=&toolid=10001&mkevt=1`
+      : '';
+    const amazonSearchTerm = encodeURIComponent(`${searchTerm} Pokemon Card`);
+    const amazonUrl = amazonTag 
+      ? `https://www.amazon.com/s?k=${amazonSearchTerm}&tag=${amazonTag}`
+      : '';
+    
+    console.log('[DEBUG] Amazon URL:', amazonUrl);
+    console.log('[DEBUG] eBay URL:', ebayUrl);
+    console.log('[DEBUG] amazonTag:', amazonTag);
+    console.log('[DEBUG] ebayCampaignId:', ebayCampaignId);
+    
+    return {
+      tcgplayer: `https://www.tcgplayer.com/search?affiliate=true&q=${encodeURIComponent(searchTerm)}`,
+      amazon: amazonUrl || '#',
+      ebay: ebayUrl || '#'
+    };
+  };
+
+  const handleAddToPortfolioClick = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/portfolios`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPortfolios(data);
+        if (data.length > 0) {
+          setSelectedPortfolio(data[0].id);
+        }
+        setShowModal(true);
+      }
+    } catch (err) {
+      console.error('Failed to fetch portfolios:', err);
+    }
+  };
+
+  const handleAddToPortfolio = async () => {
+    if (!selectedPortfolio || !card) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+
+    setAdding(true);
+    try {
+      const response = await fetch(`${API_URL}/api/portfolios/${selectedPortfolio}/items`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          cardId: card.id,
+          condition,
+          quantity,
+          purchasePrice: purchasePrice ? parseFloat(purchasePrice) : undefined
+        })
+      });
+
+      if (response.ok) {
+        setSuccessMessage('Added to Portfolio!');
+        setShowModal(false);
+        setCondition('NEAR_MINT');
+        setQuantity(1);
+        setPurchasePrice('');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        alert('Failed to add card');
+      }
+    } catch (err) {
+      console.error('Add failed:', err);
+      alert('Failed to add card');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleAddToWatchlist = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+    
+    alert('Added to watchlist!');
+  };
+
+  const getPriceHistory = () => {
+    if (!card?.prices) return [];
+    const now = new Date();
+    let cutoffDate: Date;
+    
+    switch (priceRange) {
+      case '30d':
+        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case '90d':
+        cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case '1y':
+        cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+    }
+    
+    return card.prices
+      .filter(p => new Date(p.date) >= cutoffDate)
+      .reverse();
+  };
+
+  if (loading) {
+    return <div style={{ padding: '2rem' }}>Loading...</div>;
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: '2rem' }}>
+        <h1>Error</h1>
+        <p>{error}</p>
+        <a href="/marketplace">Back to Marketplace</a>
+      </div>
+    );
+  }
+
+  if (!card) {
+    return (
+      <div style={{ padding: '2rem' }}>
+        <h1>Card Not Found</h1>
+        <a href="/marketplace">Back to Marketplace</a>
+      </div>
+    );
+  }
+
+  const links = getAffiliateLinks();
+  const latestPrice = card.prices?.[0];
+  const priceHistory = getPriceHistory();
+  const maxPrice = Math.max(...priceHistory.map(p => p.tcgplayerMarket), 1);
+  const minPrice = Math.min(...priceHistory.map(p => p.tcgplayerMarket), 0);
+
+  return (
+    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem' }}>
+      <a href="/marketplace" style={{ display: 'block', marginBottom: '1rem' }}>
+        &larr; Back to Marketplace
+      </a>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', alignItems: 'start' }}>
+        <div>
+          {card.imageUrl ? (
+            <img
+              src={card.imageUrl}
+              alt={card.name}
+              style={{ width: '100%', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+            />
+          ) : (
+            <div style={{ 
+              width: '100%', 
+              height: '400px', 
+              backgroundColor: '#f5f5f5',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '12px',
+              fontSize: '1.2rem',
+              color: '#999'
+            }}>
+              Card Image
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{card.name}</h1>
+          <p style={{ color: '#666', marginBottom: '0.5rem' }}>
+            {card.setName} ({card.setCode} #{card.cardNumber})
+          </p>
+          
+          {card.rarity && (
+            <p style={{ marginBottom: '0.5rem' }}>Rarity: {card.rarity}</p>
+          )}
+          
+          <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
+            {card.gameType} • {card.language}
+          </p>
+
+          {latestPrice && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '0.25rem' }}>Current Market Price</p>
+              <p style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>
+                ${latestPrice.tcgplayerMarket.toFixed(2)}
+              </p>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.85rem' }}>
+                <span>Low: ${latestPrice.tcgplayerLow.toFixed(2)}</span>
+                <span>Mid: ${latestPrice.tcgplayerMid.toFixed(2)}</span>
+                <span>High: ${latestPrice.tcgplayerHigh.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <a
+              href={links.tcgplayer}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block',
+                padding: '1rem',
+                backgroundColor: '#28a745',
+                color: 'white',
+                textAlign: 'center',
+                borderRadius: '4px',
+                fontSize: '1.1rem',
+                fontWeight: 'bold',
+                textDecoration: 'none'
+              }}
+            >
+              Buy on TCGPlayer
+            </a>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <a
+                href={links.amazon}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  backgroundColor: '#ff9900',
+                  color: 'white',
+                  textAlign: 'center',
+                  borderRadius: '4px',
+                  textDecoration: 'none',
+                  fontSize: '0.9rem'
+                }}
+              >
+                Find on Amazon
+              </a>
+              <a
+                href={links.ebay}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  backgroundColor: '#0064d2',
+                  color: 'white',
+                  textAlign: 'center',
+                  borderRadius: '4px',
+                  textDecoration: 'none',
+                  fontSize: '0.9rem'
+                }}
+              >
+                Find on eBay
+              </a>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem' }}>
+            <button
+              onClick={handleAddToPortfolioClick}
+              style={{
+                flex: 1,
+                padding: '0.75rem',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+            >
+              Add to Portfolio
+            </button>
+            <button
+              onClick={handleAddToWatchlist}
+              style={{
+                flex: 1,
+                padding: '0.75rem',
+                backgroundColor: '#17a2b8',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+            >
+              Add to Watchlist
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {priceHistory.length > 1 && (
+        <div style={{ marginTop: '3rem' }}>
+          <h2 style={{ marginBottom: '1rem' }}>Price History</h2>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+            <button
+              onClick={() => setPriceRange('30d')}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: priceRange === '30d' ? '#0066cc' : '#f0f0f0',
+                color: priceRange === '30d' ? 'white' : '#333',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              30D
+            </button>
+            <button
+              onClick={() => setPriceRange('90d')}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: priceRange === '90d' ? '#0066cc' : '#f0f0f0',
+                color: priceRange === '90d' ? 'white' : '#333',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              90D
+            </button>
+            <button
+              onClick={() => setPriceRange('1y')}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: priceRange === '1y' ? '#0066cc' : '#f0f0f0',
+                color: priceRange === '1y' ? 'white' : '#333',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              1Y
+            </button>
+          </div>
+          <div style={{ 
+            height: '200px', 
+            border: '1px solid #ccc', 
+            borderRadius: '4px',
+            padding: '1rem',
+            position: 'relative'
+          }}>
+            <div style={{ 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              display: 'flex', 
+              alignItems: 'flex-end',
+              padding: '0.5rem'
+            }}>
+              {priceHistory.map((price, idx) => {
+                const height = ((price.tcgplayerMarket - minPrice) / (maxPrice - minPrice)) * 100;
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#0066cc',
+                      margin: '0 1px',
+                      height: `${Math.max(height, 2)}%`,
+                      minHeight: '2px'
+                    }}
+                    title={`$${price.tcgplayerMarket.toFixed(2)}`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.8rem', color: '#666' }}>
+            <span>${minPrice.toFixed(2)}</span>
+            <span>${maxPrice.toFixed(2)}</span>
+          </div>
+        </div>
+      )}
+
+      {successMessage && (
+        <div style={{ 
+          position: 'fixed',
+          top: '1rem',
+          right: '1rem',
+          backgroundColor: '#d4edda',
+          color: '#155724',
+          padding: '1rem',
+          borderRadius: '4px',
+          zIndex: 100
+        }}>
+          {successMessage}
+        </div>
+      )}
+
+      {showModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '8px',
+            maxWidth: '400px',
+            width: '90%'
+          }}>
+            <h3 style={{ marginTop: 0 }}>Add to Portfolio</h3>
+            <p style={{ color: '#666' }}>{card?.name}</p>
+            
+            <div style={{ marginTop: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.25rem' }}>Portfolio</label>
+              <select
+                value={selectedPortfolio}
+                onChange={(e) => setSelectedPortfolio(e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+              >
+                {portfolios.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.25rem' }}>Condition</label>
+              <select
+                value={condition}
+                onChange={(e) => setCondition(e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+              >
+                <option value="MINT">Mint</option>
+                <option value="NEAR_MINT">Near Mint</option>
+                <option value="LIGHTLY_PLAYED">Lightly Played</option>
+                <option value="MODERATELY_PLAYED">Moderately Played</option>
+                <option value="HEAVILY_PLAYED">Heavily Played</option>
+                <option value="DAMAGED">Damaged</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.25rem' }}>Quantity</label>
+              <input
+                type="number"
+                min="1"
+                max="99"
+                value={quantity}
+                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                style={{ width: '100%', padding: '0.5rem' }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.25rem' }}>Purchase Price (optional)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={purchasePrice}
+                onChange={(e) => setPurchasePrice(e.target.value)}
+                placeholder="0.00"
+                style={{ width: '100%', padding: '0.5rem' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddToPortfolio}
+                disabled={adding || !selectedPortfolio}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  backgroundColor: adding || !selectedPortfolio ? '#ccc' : '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: adding || !selectedPortfolio ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {adding ? 'Adding...' : 'Add to Portfolio'}
+              </button>
+            </div>
+
+            {showModal && (
+              <div style={{
+                marginTop: '1rem',
+                padding: '1.5rem',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px',
+                border: '1px solid #dee2e6'
+              }}>
+                <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Add to Portfolio</h3>
+                <p style={{ color: '#666', marginBottom: '1rem' }}>{card?.name}</p>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Portfolio</label>
+                  <select
+                    value={selectedPortfolio}
+                    onChange={(e) => setSelectedPortfolio(e.target.value)}
+                    style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+                  >
+                    {portfolios.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Condition</label>
+                  <select
+                    value={condition}
+                    onChange={(e) => setCondition(e.target.value)}
+                    style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+                  >
+                    <option value="MINT">Mint</option>
+                    <option value="NEAR_MINT">Near Mint</option>
+                    <option value="LIGHTLY_PLAYED">Lightly Played</option>
+                    <option value="MODERATELY_PLAYED">Moderately Played</option>
+                    <option value="HEAVILY_PLAYED">Heavily Played</option>
+                    <option value="DAMAGED">Damaged</option>
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Quantity</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    value={quantity}
+                    onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                    style={{ width: '100%', padding: '0.5rem' }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Purchase Price (optional)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={purchasePrice}
+                    onChange={(e) => setPurchasePrice(e.target.value)}
+                    placeholder="0.00"
+                    style={{ width: '100%', padding: '0.5rem' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    style={{
+                      flex: 1,
+                      padding: '0.75rem',
+                      backgroundColor: '#6c757d',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddToPortfolio}
+                    disabled={adding || !selectedPortfolio}
+                    style={{
+                      flex: 1,
+                      padding: '0.75rem',
+                      backgroundColor: adding || !selectedPortfolio ? '#ccc' : '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: adding || !selectedPortfolio ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {adding ? 'Adding...' : 'Add to Portfolio'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {priceHistory.length > 1 && (
+        <div style={{ marginTop: '3rem' }}>
+          <h2 style={{ marginBottom: '1rem' }}>Price History</h2>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+            <button
+              onClick={() => setPriceRange('30d')}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: priceRange === '30d' ? '#0066cc' : '#f0f0f0',
+                color: priceRange === '30d' ? 'white' : '#333',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              30D
+            </button>
+            <button
+              onClick={() => setPriceRange('90d')}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: priceRange === '90d' ? '#0066cc' : '#f0f0f0',
+                color: priceRange === '90d' ? 'white' : '#333',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              90D
+            </button>
+            <button
+              onClick={() => setPriceRange('1y')}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: priceRange === '1y' ? '#0066cc' : '#f0f0f0',
+                color: priceRange === '1y' ? 'white' : '#333',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              1Y
+            </button>
+          </div>
+          <div style={{ height: '200px', backgroundColor: '#f5f5f5', borderRadius: '8px', display: 'flex', alignItems: 'flex-end', padding: '1rem', gap: '2px' }}>
+            {priceHistory.slice(-30).map((price, index) => {
+              const heightPercent = ((price.tcgplayerMarket - minPrice) / (maxPrice - minPrice)) * 100 || 0;
+              return (
+                <div
+                  key={index}
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#0066cc',
+                    borderRadius: '2px 2px 0 0',
+                    minHeight: '4px',
+                    height: `${Math.max(heightPercent, 5)}%`
+                  }}
+                  title={`$${price.tcgplayerMarket.toFixed(2)}`}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#666' }}>
+        <span>${minPrice.toFixed(2)}</span>
+        <span>${maxPrice.toFixed(2)}</span>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,27 @@
+{
+  "name": "catchandtrade",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:generate": "turbo run db:generate",
+    "db:push": "turbo run db:push",
+    "db:migrate": "turbo run db:migrate",
+    "db:seed": "turbo run db:seed",
+    "stripe:listen": "stripe listen --forward-to localhost:3003/api/webhooks/stripe"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.3.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0"
+  },
+  "packageManager": "npm@10.0.0"
+}

@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: catchandtrade_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  postgres_test:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: catchandtrade_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1026:1025"
+      - "8026:8025"
+    environment:
+      MH_STORAGE: maildir
+      MH_MAILDIR_PATH: /maildir
+    volumes:
+      - mailhog_data:/maildir
+
+volumes:
+  postgres_data:
+  postgres_test_data:
+  redis_data:
+  mailhog_data:

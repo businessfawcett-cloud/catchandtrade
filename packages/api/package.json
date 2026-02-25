@@ -1,0 +1,45 @@
+{
+  "name": "@catchandtrade/api",
+  "version": "1.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only -r dotenv/config src/index.ts",
+    "build": "tsc",
+    "start": "PORT=3003 node dist/index.js",
+    "test": "jest",
+    "lint": "echo 'linting api'"
+  },
+  "dependencies": {
+    "@catchandtrade/db": "*",
+    "@catchandtrade/shared": "*",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "node-cron": "^3.0.3",
+    "passport": "^0.7.0",
+    "passport-apple": "^2.0.1",
+    "passport-google-oauth20": "^2.0.0",
+    "passport-local": "^1.0.0",
+    "stripe": "^14.0.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.0",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node-cron": "^3.0.11",
+    "@types/passport": "^1.0.16",
+    "@types/passport-local": "^1.0.38",
+    "@types/supertest": "^6.0.0",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "ts-jest": "^29.1.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.0"
+  }
+}

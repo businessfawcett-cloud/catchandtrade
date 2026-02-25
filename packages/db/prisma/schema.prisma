@@ -1,0 +1,246 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String         @id @default(cuid())
+  email             String         @unique
+  passwordHash      String?
+  googleId          String?        @unique
+  appleId           String?        @unique
+  username          String?        @unique
+  displayName       String
+  avatarId          String?
+  isPublic          Boolean        @default(true)
+  hideCollectionValue Boolean      @default(false)
+  country           String?
+  twitterHandle     String?
+  instagramHandle   String?
+  tiktokHandle     String?
+  avatarUrl         String?
+  stripeCustomerId  String?
+  stripeAccountId   String?
+  isVerifiedSeller  Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  portfolios        Portfolio[]
+  listings          Listing[]
+  bids              Bid[]
+  watchlistItems    WatchlistItem[]
+  priceAlerts       PriceAlert[]
+  orders            Order[]        @relation("buyer")
+  sales             Order[]        @relation("seller")
+}
+
+model PokemonSet {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  totalCards  Int
+  releaseYear Int
+  imageUrl    String?
+  cards       Card[]
+}
+
+model Card {
+  id              String         @id @default(cuid())
+  gameType        GameType       @default(POKEMON)
+  name            String
+  setName         String
+  setCode         String
+  cardNumber      String
+  rarity          String?
+  imageUrl        String?
+  tcgplayerId     String?        @unique
+  language        String         @default("EN")
+  createdAt       DateTime       @default(now())
+  setId           String?
+  set             PokemonSet?    @relation(fields: [setId], references: [id])
+  prices          CardPrice[]
+  portfolioItems  PortfolioItem[]
+  listings        Listing[]
+  watchlistItems  WatchlistItem[]
+  priceAlerts     PriceAlert[]
+}
+
+enum GameType {
+  POKEMON
+  MTG
+  YUGIOH
+  SPORTS
+  ONE_PIECE
+  LORCANA
+  OTHER
+}
+
+model CardPrice {
+  id                  String    @id @default(cuid())
+  cardId              String
+  card                Card      @relation(fields: [cardId], references: [id])
+  date                DateTime  @default(now())
+  tcgplayerLow        Float?
+  tcgplayerMid        Float?
+  tcgplayerHigh       Float?
+  tcgplayerMarket     Float?
+  ebayRecentAvg       Float?
+  priceChartingValue  Float?
+  gradedPSA10         Float?
+  gradedPSA9          Float?
+  gradedBGS10         Float?
+  gradedBGS95         Float?
+  expectedValue       Float?
+  @@index([cardId, date])
+}
+
+model Portfolio {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  name        String
+  isPublic    Boolean         @default(false)
+  shareSlug   String?         @unique
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  items       PortfolioItem[]
+}
+
+model PortfolioItem {
+  id            String      @id @default(cuid())
+  portfolioId   String
+  portfolio     Portfolio   @relation(fields: [portfolioId], references: [id])
+  cardId        String
+  card          Card        @relation(fields: [cardId], references: [id])
+  quantity      Int         @default(1)
+  condition     Condition   @default(NEAR_MINT)
+  isGraded      Boolean     @default(false)
+  gradeCompany  String?
+  gradeValue    Float?
+  purchasePrice Float?
+  purchaseDate  DateTime?
+  notes         String?
+  addedAt       DateTime    @default(now())
+}
+
+enum Condition {
+  MINT
+  NEAR_MINT
+  LIGHTLY_PLAYED
+  MODERATELY_PLAYED
+  HEAVILY_PLAYED
+  DAMAGED
+}
+
+model Listing {
+  id              String        @id @default(cuid())
+  sellerId        String
+  seller          User          @relation(fields: [sellerId], references: [id])
+  cardId          String
+  card            Card          @relation(fields: [cardId], references: [id])
+  title           String
+  description     String?
+  condition       Condition
+  isGraded        Boolean       @default(false)
+  gradeCompany    String?
+  gradeValue      Float?
+  buyNowPrice     Float
+  imageUrls       String[]
+  status          ListingStatus @default(ACTIVE)
+  commissionPct   Float         @default(8)
+  stripeProductId String?
+  createdAt       DateTime      @default(now())
+  expiresAt       DateTime?
+  orders          Order[]
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+  EXPIRED
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  listingId             String
+  listing               Listing     @relation(fields: [listingId], references: [id])
+  buyerId               String
+  buyer                 User        @relation("buyer", fields: [buyerId], references: [id])
+  sellerId              String
+  seller                User        @relation("seller", fields: [sellerId], references: [id])
+  amount                Float
+  platformFee           Float
+  sellerPayout          Float
+  stripePaymentIntentId String?
+  stripeTransferId      String?
+  status                OrderStatus @default(PENDING)
+  shippingAddress       Json?
+  createdAt             DateTime    @default(now())
+  completedAt           DateTime?
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  DISPUTED
+  REFUNDED
+  CANCELLED
+}
+
+model Bid {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  listingId   String
+  amount      Float
+  isWinning   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model WatchlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  cardId    String
+  card      Card     @relation(fields: [cardId], references: [id])
+  addedAt   DateTime @default(now())
+  @@unique([userId, cardId])
+}
+
+model PriceAlert {
+  id            String          @id @default(cuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id])
+  cardId        String
+  card          Card            @relation(fields: [cardId], references: [id])
+  alertType     AlertType
+  targetPrice   Float
+  isActive      Boolean         @default(true)
+  triggeredAt   DateTime?
+  createdAt     DateTime        @default(now())
+}
+
+enum AlertType {
+  PRICE_ABOVE
+  PRICE_BELOW
+  PERCENT_CHANGE
+}
+
+model SyncLog {
+  id              String   @id @default(cuid())
+  runAt           DateTime @default(now())
+  newSets         Int      @default(0)
+  updatedSets     Int      @default(0)
+  newCards        Int      @default(0)
+  updatedCards    Int      @default(0)
+  updatedPrices   Int      @default(0)
+  triggeredAlerts Int      @default(0)
+  errors          String?
+  duration        Int
+}
