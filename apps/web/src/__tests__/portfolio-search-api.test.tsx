@@ -25,7 +25,9 @@ describe('PortfolioSearchPage API Calls', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetAllMocks();
-    (global.fetch as jest.Mock).mockReset();
+    (global.fetch as jest.Mock).mockRestore();
+    global.fetch = jest.fn();
+    mockLocalStorage.getItem.mockReset();
     mockLocalStorage.getItem.mockImplementation((key: string) => {
       if (key === 'token') return 'mock-token';
       if (key === 'user') return JSON.stringify({ id: 'user-1', displayName: 'Test User' });
@@ -84,6 +86,8 @@ describe('PortfolioSearchPage API Calls', () => {
 
   it('shows modal when Add to Portfolio button is clicked', async () => {
     jest.clearAllMocks();
+    jest.resetAllMocks();
+    global.fetch = jest.fn();
     mockLocalStorage.getItem.mockImplementation((key: string) => {
       if (key === 'token') return 'mock-token';
       if (key === 'user') return JSON.stringify({ id: 'user-1', displayName: 'Test User' });

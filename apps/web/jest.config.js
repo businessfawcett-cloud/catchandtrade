@@ -6,6 +6,8 @@ module.exports = {
   },
   testRegex: '(/__tests__/.*|\\.)(test|spec)\\.(ts|tsx)$',
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
+  testRunner: 'jest-jasmine2',
+  maxWorkers: 1,
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', { 
       useESM: false,
