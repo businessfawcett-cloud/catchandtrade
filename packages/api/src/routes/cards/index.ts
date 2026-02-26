@@ -174,28 +174,6 @@ cardsRouter.get(
   }
 );
 
-cardsRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const card = await prisma.card.findUnique({
-      where: { id: req.params.id },
-      include: {
-        prices: {
-          orderBy: { date: 'desc' },
-          take: 90
-        }
-      }
-    });
-
-    if (!card) {
-      return res.status(404).json({ error: 'Card not found' });
-    }
-
-    res.json(card);
-  } catch (error) {
-    next(error);
-  }
-});
-
 cardsRouter.get('/:id/price-history', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const cardId = req.params.id;
@@ -277,5 +255,27 @@ function generateMockPriceHistory(currentPrice: number | null, days: number) {
 
   return data;
 }
+
+cardsRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const card = await prisma.card.findUnique({
+      where: { id: req.params.id },
+      include: {
+        prices: {
+          orderBy: { date: 'desc' },
+          take: 90
+        }
+      }
+    });
+
+    if (!card) {
+      return res.status(404).json({ error: 'Card not found' });
+    }
+
+    res.json(card);
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default cardsRouter;
