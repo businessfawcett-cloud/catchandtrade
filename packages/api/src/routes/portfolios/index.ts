@@ -231,6 +231,45 @@ portfoliosRouter.delete('/:id/items/:itemId', authenticate, async (req: Request,
   }
 });
 
+portfoliosRouter.delete('/:id', authenticate, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).userId;
+    const portfolioId = req.params.id;
+
+    const portfolio = await prisma.portfolio.findUnique({
+      where: { id: portfolioId }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: 'Portfolio not found' });
+    }
+
+    if (portfolio.userId !== userId) {
+      return res.status(403).json({ error: 'Not authorized to delete this portfolio' });
+    }
+
+    const portfolioCount = await prisma.portfolio.count({
+      where: { userId }
+    });
+
+    if (portfolioCount <= 1) {
+      return res.status(400).json({ error: 'Cannot delete your last portfolio' });
+    }
+
+    await prisma.portfolioItem.deleteMany({
+      where: { portfolioId }
+    });
+
+    await prisma.portfolio.delete({
+      where: { id: portfolioId }
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
 portfoliosRouter.get('/:id/summary', authenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const portfolio = await prisma.portfolio.findUnique({
@@ -279,6 +318,49 @@ portfoliosRouter.get('/:id/summary', authenticate, async (req: Request, res: Res
       gainLoss: Math.round(gainLoss * 100) / 100,
       gainLossPercent: Math.round(gainLossPercent * 100) / 100,
       itemCount: portfolio.items.length
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+portfoliosRouter.get('/:id/value', authenticate, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const portfolio = await prisma.portfolio.findUnique({
+      where: { id: req.params.id },
+      include: {
+        items: {
+          include: {
+            card: {
+              include: {
+                prices: {
+                  orderBy: { date: 'desc' },
+                  take: 1
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: 'Portfolio not found' });
+    }
+
+    let totalValue = 0;
+    const uniqueCardIds = new Set<string>();
+
+    for (const item of portfolio.items) {
+      uniqueCardIds.add(item.cardId);
+      const currentPrice = item.card.prices[0]?.tcgplayerMarket || 0;
+      totalValue += currentPrice * item.quantity;
+    }
+
+    res.json({
+      totalValue: Math.round(totalValue * 100) / 100,
+      cardCount: portfolio.items.reduce((sum, item) => sum + item.quantity, 0),
+      uniqueCards: uniqueCardIds.size
     });
   } catch (error) {
     next(error);

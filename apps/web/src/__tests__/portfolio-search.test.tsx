@@ -85,6 +85,12 @@ describe('PortfolioPage Search', () => {
 
   it('shows dropdown while typing', async () => {
     (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/value')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ totalValue: 0, cardCount: 0, uniqueCards: 0 })
+        });
+      }
       if (url.includes('/api/portfolios')) {
         return Promise.resolve({
           ok: true,

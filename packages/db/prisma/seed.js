@@ -6,7 +6,12 @@ const path = require('path');
 const prisma = new PrismaClient();
 
 function loadLocalData() {
-  const dataPath = path.join(__dirname, '..', 'scripts', 'cards-data.json');
+  // Try scripts/cards-data.json first (from fetch-cards.js)
+  let dataPath = path.join(__dirname, '..', 'scripts', 'cards-data.json');
+  if (!fs.existsSync(dataPath)) {
+    // Fall back to prisma/seed-data.json
+    dataPath = path.join(__dirname, 'seed-data.json');
+  }
   const data = fs.readFileSync(dataPath, 'utf-8');
   return JSON.parse(data);
 }
@@ -64,53 +69,63 @@ async function main() {
   }
   console.log(`Upserted ${setsCreated} Pokemon sets`);
 
-  // Get set IDs
+  // Get actual Prisma set IDs from database
   const sets = await prisma.pokemonSet.findMany();
   const setsMap = {};
   for (const set of sets) {
     setsMap[set.code] = set.id;
   }
+  console.log('Built setsMap with', Object.keys(setsMap).length, 'entries');
 
   // Upsert all cards (creates or updates - won't fail on duplicates)
   let cardsCreated = 0;
   let cardsSkipped = 0;
-  for (const setCode of Object.keys(seedData.cards)) {
-    const setId = setsMap[setCode];
-    if (!setId) continue;
-    
-    const cards = seedData.cards[setCode];
-    for (const card of cards) {
-      try {
-        await prisma.card.upsert({
-          where: { tcgplayerId: card.id },
-          update: {
-            name: card.name,
-            setName: card.setName,
-            setCode: card.setCode,
-            cardNumber: card.number || '',
-            rarity: card.rarity,
-            imageUrl: card.images?.large || card.images?.small,
-            gameType: 'POKEMON',
-            language: card.language || 'EN',
-            setId,
-          },
-          create: {
-            name: card.name,
-            setName: card.setName,
-            setCode: card.setCode,
-            cardNumber: card.number || '',
-            rarity: card.rarity,
-            imageUrl: card.images?.large || card.images?.small,
-            tcgplayerId: card.id,
-            gameType: 'POKEMON',
-            language: card.language || 'EN',
-            setId,
-          },
-        });
-        cardsCreated++;
-      } catch (err) {
+  
+  // Cards are stored as array in cards-data.json (indexed by set number)
+  const cardsArray = Object.values(seedData.cards).flat();
+  
+  for (const card of cardsArray) {
+    try {
+      const setId = setsMap[card.setCode];
+      if (!setId) {
         cardsSkipped++;
+        continue;
       }
+      if (!setId) {
+        cardsSkipped++;
+        continue;
+      }
+      
+      // Use card.id as tcgplayerId (e.g., "base1-1")
+      const tcgplayerId = card.id;
+      
+      await prisma.card.upsert({
+        where: { tcgplayerId },
+        update: {
+          name: card.name,
+          setName: card.setName,
+          setCode: card.setCode,
+          cardNumber: card.number || '',
+          rarity: card.rarity,
+          imageUrl: card.images?.large || card.images?.small,
+          setId,
+        },
+        create: {
+          name: card.name,
+          setName: card.setName,
+          setCode: card.setCode,
+          cardNumber: card.number || '',
+          rarity: card.rarity,
+          imageUrl: card.images?.large || card.images?.small,
+          tcgplayerId,
+          gameType: 'POKEMON',
+          language: card.language || 'EN',
+          setId,
+        },
+      });
+      cardsCreated++;
+    } catch (err) {
+      cardsSkipped++;
     }
   }
   console.log(`Upserted ${cardsCreated} Pokemon cards (${cardsSkipped} skipped)`);

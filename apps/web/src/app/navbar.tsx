@@ -13,9 +13,9 @@ const PokeballLogo = () => (
         <stop offset="100%" stopColor="#c1121f" />
       </linearGradient>
     </defs>
-    <circle cx="50" cy="50" r="48" fill="url(#pokeballGrad)" stroke="#1a2332" strokeWidth="4" />
+    <circle cx="50" cy="50" r="48" fill="url(#pokeballGrad)" />
     <rect x="2" y="46" width="96" height="8" fill="#1a2332" />
-    <circle cx="50" cy="50" r="14" fill="#ffffff" stroke="#1a2332" strokeWidth="4" />
+    <circle cx="50" cy="50" r="14" fill="#ffffff" />
     <circle cx="50" cy="50" r="6" fill="#1a2332" />
   </svg>
 );
@@ -48,11 +48,8 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <PokeballLogo />
-            <span className="text-xl font-bold bg-gradient-to-r from-white to-poke-gold bg-clip-text text-transparent">
-              Catch & Trade
-            </span>
+          <Link href="/" className="flex items-center gap-3 group focus:outline-none ring-0">
+            <img src="/Logo.png" alt="Catch & Trade" className="h-24 w-auto" />
           </Link>
 
           {/* Navigation Links */}

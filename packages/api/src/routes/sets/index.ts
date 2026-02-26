@@ -52,6 +52,48 @@ setsRouter.get(
 );
 
 setsRouter.get(
+  '/:code',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { code } = req.params;
+
+      const set = await prisma.pokemonSet.findUnique({
+        where: { code },
+        include: {
+          cards: {
+            orderBy: { cardNumber: 'asc' }
+          }
+        }
+      });
+
+      if (!set) {
+        return res.status(404).json({ error: 'Set not found' });
+      }
+
+      res.json({
+        set: {
+          id: set.id,
+          name: set.name,
+          code: set.code,
+          totalCards: set.totalCards,
+          releaseYear: set.releaseYear,
+          imageUrl: set.imageUrl
+        },
+        cards: set.cards.map(card => ({
+          id: card.id,
+          name: card.name,
+          cardNumber: card.cardNumber,
+          rarity: card.rarity,
+          imageUrl: card.imageUrl
+        }))
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+setsRouter.get(
   '/:code/progress',
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {

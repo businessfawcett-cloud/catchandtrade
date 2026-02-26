@@ -148,4 +148,157 @@ describe('Portfolios API', () => {
       expect(res.status).toBe(400);
     });
   });
+
+  describe('GET /api/portfolios/:id/value', () => {
+    let portfolioId: string;
+    let cardId: string;
+
+    beforeEach(async () => {
+      const card = await prisma.card.create({
+        data: {
+          name: 'Pikachu',
+          setName: 'Base Set',
+          setCode: 'BS1',
+          cardNumber: '25',
+          gameType: 'POKEMON',
+          prices: {
+            create: {
+              tcgplayerMarket: 10.00,
+              date: new Date()
+            }
+          }
+        }
+      });
+      cardId = card.id;
+
+      const portfolio = await prisma.portfolio.create({
+        data: { userId, name: 'Test Portfolio' }
+      });
+      portfolioId = portfolio.id;
+
+      await prisma.portfolioItem.create({
+        data: {
+          portfolioId,
+          cardId,
+          quantity: 2,
+          condition: 'NEAR_MINT'
+        }
+      });
+    });
+
+    it('returns portfolio value', async () => {
+      const res = await request(app)
+        .get(`/api/portfolios/${portfolioId}/value`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.totalValue).toBe(20.00);
+      expect(res.body.cardCount).toBe(2);
+      expect(res.body.uniqueCards).toBe(1);
+    });
+
+    it('returns 0 for empty portfolio', async () => {
+      const emptyPortfolio = await prisma.portfolio.create({
+        data: { userId, name: 'Empty Portfolio' }
+      });
+
+      const res = await request(app)
+        .get(`/api/portfolios/${emptyPortfolio.id}/value`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.totalValue).toBe(0);
+      expect(res.body.cardCount).toBe(0);
+      expect(res.body.uniqueCards).toBe(0);
+    });
+
+    it('returns 404 for non-existent portfolio', async () => {
+      const res = await request(app)
+        .get('/api/portfolios/non-existent-id/value')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(404);
+    });
+
+    it('rejects unauthenticated request', async () => {
+      const res = await request(app)
+        .get(`/api/portfolios/${portfolioId}/value`);
+
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('DELETE /api/portfolios/:id', () => {
+    let portfolioId: string;
+    let secondPortfolioId: string;
+    let userId: string;
+
+    beforeEach(async () => {
+      userId = (jwt.verify(token, JWT_SECRET) as { userId: string }).userId;
+      
+      const portfolio = await prisma.portfolio.create({
+        data: { userId, name: 'Test Portfolio' }
+      });
+      portfolioId = portfolio.id;
+
+      const secondPortfolio = await prisma.portfolio.create({
+        data: { userId, name: 'Second Portfolio' }
+      });
+      secondPortfolioId = secondPortfolio.id;
+    });
+
+    it('deletes portfolio successfully', async () => {
+      const res = await request(app)
+        .delete(`/api/portfolios/${portfolioId}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+
+      const deleted = await prisma.portfolio.findUnique({ where: { id: portfolioId } });
+      expect(deleted).toBeNull();
+    });
+
+    it('returns 404 for non-existent portfolio', async () => {
+      const res = await request(app)
+        .delete('/api/portfolios/non-existent-id')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 403 when trying to delete another users portfolio', async () => {
+      const otherUser = await prisma.user.create({
+        data: { email: 'other@test.com', displayName: 'Other User' }
+      });
+
+      const otherPortfolio = await prisma.portfolio.create({
+        data: { userId: otherUser.id, name: 'Other Portfolio' }
+      });
+
+      const res = await request(app)
+        .delete(`/api/portfolios/${otherPortfolio.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('prevents deleting last portfolio', async () => {
+      await prisma.portfolio.delete({ where: { id: secondPortfolioId } });
+
+      const res = await request(app)
+        .delete(`/api/portfolios/${portfolioId}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('last portfolio');
+    });
+
+    it('rejects unauthenticated request', async () => {
+      const res = await request(app)
+        .delete(`/api/portfolios/${portfolioId}`);
+
+      expect(res.status).toBe(401);
+    });
+  });
 });

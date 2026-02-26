@@ -156,7 +156,8 @@ export default function PortfolioSearchPage() {
       });
 
       if (response.ok) {
-        setSuccessMessage('Added to Portfolio!');
+        const priceMsg = selectedCard.currentPrice ? ` +$${selectedCard.currentPrice.toFixed(2)}` : '';
+        setSuccessMessage(`✓ Added to Portfolio${priceMsg}`);
         setShowModal(false);
         setSelectedCard(null);
         setCondition('NEAR_MINT');
@@ -218,7 +219,13 @@ export default function PortfolioSearchPage() {
             marginBottom: '1rem',
             border: '1px solid rgba(34, 197, 94, 0.3)'
           }}>
-            {successMessage}
+            {successMessage.includes('+') ? (
+              <>
+                ✓ Added to Portfolio <span style={{ color: '#10b981' }}>{successMessage.split('✓ Added to Portfolio')[1]}</span>
+              </>
+            ) : (
+              successMessage
+            )}
           </div>
         )}
 

@@ -1,8 +1,10 @@
 import { prisma } from '@catchandtrade/db';
-import cron from 'node-cron';
+import * as cron from 'node-cron';
 
 const POKEMON_TCG_API_URL = 'https://api.pokemontcg.io/v2';
-const TCGPLAYER_API_URL = 'https://api.tcgplayer.com/v1.39.0';
+const GITHUB_SETS_URL = 'https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json';
+
+const TCGPLAYER_API_KEY = 'a3751a33-9ed6-4662-9ae3-870939002fcc';
 
 interface TCGCardSet {
   id: string;
@@ -10,6 +12,14 @@ interface TCGCardSet {
   images: { logo: string; symbol: string };
   printedTotal: number;
   releaseDate: string;
+}
+
+interface GithubSet {
+  id: string;
+  name: string;
+  total: number;
+  releaseDate: string;
+  images: { symbol: string; logo: string };
 }
 
 interface TCGCard {
@@ -31,15 +41,9 @@ interface TCGCard {
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function fetchWithRetry<T>(url: string, retries = 3): Promise<T | null> {
-  const apiKey = process.env.POKEMON_TCG_API_KEY;
-  const headers: Record<string, string> = {};
-  if (apiKey) {
-    headers['X-Api-Key'] = apiKey;
-  }
-
   for (let i = 0; i < retries; i++) {
     try {
-      const response = await fetch(url, { headers });
+      const response = await fetch(url);
       if (response.status === 429 || response.status === 504) {
         await delay((i + 1) * 2000);
         continue;
@@ -59,110 +63,95 @@ async function fetchWithRetry<T>(url: string, retries = 3): Promise<T | null> {
   return null;
 }
 
-export async function syncSets(): Promise<{ newSets: number; updatedSets: number }> {
-  console.log('Starting Job 1: Sync Sets...');
+export async function syncSets(): Promise<{ newSets: number }> {
+  console.log('Starting Job 1: Sync Sets (new only)...');
   
   let newSets = 0;
-  let updatedSets = 0;
 
-  const response = await fetchWithRetry<{ data: TCGCardSet[] }>(`${POKEMON_TCG_API_URL}/sets`);
+  const response = await fetchWithRetry<GithubSet[]>(GITHUB_SETS_URL);
   if (!response) {
-    console.log('  Pokemon TCG API unavailable, skipping set sync');
-    return { newSets: 0, updatedSets: 0 };
+    console.log('  GitHub API unavailable, skipping set sync');
+    return { newSets: 0 };
   }
 
-  for (const tcgSet of response.data) {
-    const releaseYear = parseInt(tcgSet.releaseDate.split('-')[0], 10);
-    
-    const existing = await prisma.pokemonSet.findUnique({
-      where: { code: tcgSet.id }
-    });
+  const existingSets = await prisma.pokemonSet.findMany({
+    select: { code: true }
+  });
+  const existingCodes = new Set(existingSets.map(s => s.code));
 
-    if (!existing) {
-      await prisma.pokemonSet.create({
-        data: {
-          name: tcgSet.name,
-          code: tcgSet.id,
-          totalCards: tcgSet.printedTotal,
-          releaseYear,
-          imageUrl: tcgSet.images.logo,
-        },
-      });
-      newSets++;
-    } else if (existing.totalCards !== tcgSet.printedTotal) {
-      await prisma.pokemonSet.update({
-        where: { code: tcgSet.id },
-        data: { totalCards: tcgSet.printedTotal },
-      });
-      updatedSets++;
+  for (const tcgSet of response) {
+    if (existingCodes.has(tcgSet.id)) {
+      continue;
     }
+
+    const releaseYear = parseInt(tcgSet.releaseDate.split('-')[0], 10);
+    const logoUrl = `https://images.pokemontcg.io/${tcgSet.id}/logo.png`;
+    
+    await prisma.pokemonSet.create({
+      data: {
+        name: tcgSet.name,
+        code: tcgSet.id,
+        totalCards: tcgSet.total,
+        releaseYear,
+        imageUrl: logoUrl,
+      },
+    });
+    newSets++;
+    console.log(`  Added new set: ${tcgSet.name} (${tcgSet.id})`);
   }
 
-  console.log(`  Found ${newSets} new sets, updated ${updatedSets} existing sets`);
-  return { newSets, updatedSets };
+  console.log(`  Found ${newSets} new sets`);
+  return { newSets };
 }
 
-export async function syncCards(): Promise<{ newCards: number; updatedCards: number }> {
-  console.log('Starting Job 2: Sync Cards...');
+export async function syncCards(): Promise<{ newCards: number }> {
+  console.log('Starting Job 2: Sync Cards (new only)...');
   
   let newCards = 0;
-  let updatedCards = 0;
 
   const sets = await prisma.pokemonSet.findMany();
-  console.log(`  Syncing cards for ${sets.length} sets...`);
+  console.log(`  Checking ${sets.length} sets for new cards...`);
 
   for (const set of sets) {
-    const response = await fetchWithRetry<{ data: TCGCard[] }>(
-      `${POKEMON_TCG_API_URL}/cards?q=set.id:${set.code}&pageSize=250`
+    const response = await fetchWithRetry<TCGCard[]>(
+      `https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en/${set.code}.json`
     );
     
-    if (!response) continue;
+    if (!response || !Array.isArray(response)) continue;
 
-    for (const card of response.data) {
-      const existing = await prisma.card.findUnique({
-        where: { tcgplayerId: card.id }
-      });
+    const existingCards = await prisma.card.findMany({
+      where: { setCode: set.code },
+      select: { tcgplayerId: true }
+    });
+    const existingIds = new Set(existingCards.map(c => c.tcgplayerId));
 
-      if (!existing) {
-        await prisma.card.create({
-          data: {
-            name: card.name,
-            setName: card.set.name,
-            setCode: set.code,
-            cardNumber: card.number,
-            rarity: card.rarity,
-            imageUrl: card.images.small,
-            tcgplayerId: card.id,
-            gameType: 'POKEMON',
-            language: 'EN',
-            setId: set.id,
-          },
-        });
-        newCards++;
-      } else {
-        const updates: Record<string, any> = {};
-        if (existing.imageUrl !== card.images.small) {
-          updates.imageUrl = card.images.small;
-        }
-        if (existing.rarity !== card.rarity) {
-          updates.rarity = card.rarity;
-        }
-        
-        if (Object.keys(updates).length > 0) {
-          await prisma.card.update({
-            where: { id: existing.id },
-            data: updates,
-          });
-          updatedCards++;
-        }
+    for (const card of response) {
+      if (existingIds.has(card.id)) {
+        continue;
       }
+
+      await prisma.card.create({
+        data: {
+          name: card.name,
+          setName: set.name,
+          setCode: set.code,
+          cardNumber: card.number || '',
+          rarity: card.rarity || null,
+          imageUrl: card.images?.large || card.images?.small || null,
+          tcgplayerId: card.id,
+          gameType: 'POKEMON',
+          language: 'EN',
+          setId: set.id,
+        },
+      });
+      newCards++;
     }
 
     await delay(100);
   }
 
-  console.log(`  Added ${newCards} new cards, updated ${updatedCards} existing cards`);
-  return { newCards, updatedCards };
+  console.log(`  Found ${newCards} new cards`);
+  return { newCards };
 }
 
 export async function syncPrices(): Promise<{ updatedPrices: number; triggeredAlerts: number }> {
@@ -175,34 +164,53 @@ export async function syncPrices(): Promise<{ updatedPrices: number; triggeredAl
     where: { tcgplayerId: { not: null } }
   });
 
-  for (const card of cards) {
-    const response = await fetchWithRetry<{ data: TCGCard[] }>(
-      `${POKEMON_TCG_API_URL}/cards/${card.tcgplayerId}`
-    );
-    
-    if (!response || !response.data[0]) continue;
+  console.log(`  Fetching prices for ${cards.length} cards in batches of 50...`);
 
-    const cardData = response.data[0];
-    const marketPrice = 
-      cardData.tcgplayer?.prices?.holofoil?.market ||
-      cardData.tcgplayer?.prices?.normal?.market ||
-      cardData.tcgplayer?.prices?.reverseHolofoil?.market ||
-      null;
+  const BATCH_SIZE = 50;
+  const cardsWithPrices = cards.filter(c => c.tcgplayerId);
 
-    if (marketPrice) {
-      await prisma.cardPrice.create({
-        data: {
-          cardId: card.id,
-          tcgplayerMarket: marketPrice,
-          tcgplayerLow: Math.round(marketPrice * 0.7 * 100) / 100,
-          tcgplayerMid: Math.round(marketPrice * 100) / 100,
-          tcgplayerHigh: Math.round(marketPrice * 1.3 * 100) / 100,
-        },
-      });
-      updatedPrices++;
+  for (let i = 0; i < cardsWithPrices.length; i += BATCH_SIZE) {
+    const batch = cardsWithPrices.slice(i, i + BATCH_SIZE);
+    console.log(`  Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(cardsWithPrices.length / BATCH_SIZE)}...`);
+
+    for (const card of batch) {
+      try {
+        const response = await fetchWithRetry<{ data: TCGCard[] }>(
+          `${POKEMON_TCG_API_URL}/cards/${card.tcgplayerId}`,
+          2
+        );
+        
+        if (!response || !response.data || !response.data[0]) {
+          await delay(200);
+          continue;
+        }
+
+        const cardData = response.data[0];
+        const marketPrice = 
+          cardData.tcgplayer?.prices?.holofoil?.market ||
+          cardData.tcgplayer?.prices?.normal?.market ||
+          cardData.tcgplayer?.prices?.reverseHolofoil?.market ||
+          null;
+
+        if (marketPrice) {
+          await prisma.cardPrice.create({
+            data: {
+              cardId: card.id,
+              tcgplayerMarket: marketPrice,
+              tcgplayerLow: Math.round(marketPrice * 0.7 * 100) / 100,
+              tcgplayerMid: Math.round(marketPrice * 100) / 100,
+              tcgplayerHigh: Math.round(marketPrice * 1.3 * 100) / 100,
+            },
+          });
+          updatedPrices++;
+        }
+
+        await delay(200);
+      } catch (err) {
+        console.log(`  Error fetching price for ${card.tcgplayerId}: ${err}`);
+        await delay(200);
+      }
     }
-
-    await delay(50);
   }
 
   const alerts = await prisma.priceAlert.findMany({
@@ -234,18 +242,16 @@ export async function syncPrices(): Promise<{ updatedPrices: number; triggeredAl
   return { updatedPrices, triggeredAlerts };
 }
 
-export async function runNightlySync(): Promise<void> {
+export async function runWeeklySync(): Promise<void> {
   const startTime = Date.now();
-  let errors: string[] = [];
   
-  console.log('\n=== Starting Nightly Sync ===');
+  console.log('\n=== Starting Weekly Sync (Sets + Cards) ===');
 
-  let newSets = 0, updatedSets = 0, newCards = 0, updatedCards = 0, updatedPrices = 0, triggeredAlerts = 0;
+  let newSets = 0, newCards = 0, errors: string[] = [];
 
   try {
     const setsResult = await syncSets();
     newSets = setsResult.newSets;
-    updatedSets = setsResult.updatedSets;
   } catch (err) {
     errors.push(`Job 1 (syncSets) failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     console.error('  Job 1 failed:', err);
@@ -254,11 +260,36 @@ export async function runNightlySync(): Promise<void> {
   try {
     const cardsResult = await syncCards();
     newCards = cardsResult.newCards;
-    updatedCards = cardsResult.updatedCards;
   } catch (err) {
     errors.push(`Job 2 (syncCards) failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     console.error('  Job 2 failed:', err);
   }
+
+  const duration = Date.now() - startTime;
+
+  await prisma.syncLog.create({
+    data: {
+      newSets,
+      updatedSets: 0,
+      newCards,
+      updatedCards: 0,
+      updatedPrices: 0,
+      triggeredAlerts: 0,
+      errors: errors.length > 0 ? errors.join('; ') : null,
+      duration
+    }
+  });
+
+  console.log(`=== Weekly Sync Complete (${duration}ms) ===\n`);
+}
+
+export async function runNightlySync(): Promise<void> {
+  const startTime = Date.now();
+  let errors: string[] = [];
+  
+  console.log('\n=== Starting Nightly Sync (Prices only) ===');
+
+  let updatedPrices = 0, triggeredAlerts = 0;
 
   try {
     const pricesResult = await syncPrices();
@@ -273,10 +304,10 @@ export async function runNightlySync(): Promise<void> {
 
   await prisma.syncLog.create({
     data: {
-      newSets,
-      updatedSets,
-      newCards,
-      updatedCards,
+      newSets: 0,
+      updatedSets: 0,
+      newCards: 0,
+      updatedCards: 0,
       updatedPrices,
       triggeredAlerts,
       errors: errors.length > 0 ? errors.join('; ') : null,
@@ -287,16 +318,29 @@ export async function runNightlySync(): Promise<void> {
   console.log(`=== Nightly Sync Complete (${duration}ms) ===\n`);
 }
 
-let cronJob: cron.ScheduledTask | null = null;
+let nightlyJob: cron.ScheduledTask | null = null;
+let weeklyJob: cron.ScheduledTask | null = null;
 
 export function startNightlySync(): void {
-  cronJob = cron.schedule('0 2 * * *', runNightlySync);
-  console.log('Nightly sync scheduled for 2:00 AM');
+  nightlyJob = cron.schedule('0 2 * * *', runNightlySync);
+  console.log('Nightly price sync scheduled for 2:00 AM');
+}
+
+export function startWeeklySync(): void {
+  weeklyJob = cron.schedule('0 3 * * 0', runWeeklySync);
+  console.log('Weekly set/card sync scheduled for Sunday 3:00 AM');
 }
 
 export function stopNightlySync(): void {
-  if (cronJob) {
-    cronJob.stop();
-    cronJob = null;
+  if (nightlyJob) {
+    nightlyJob.stop();
+    nightlyJob = null;
+  }
+}
+
+export function stopWeeklySync(): void {
+  if (weeklyJob) {
+    weeklyJob.stop();
+    weeklyJob = null;
   }
 }

@@ -174,28 +174,44 @@ export default function CollectionPage() {
     );
   }
 
-  if (!user) {
-    return (
-      <div style={containerStyle}>
-        <div style={{ 
-          background: 'rgba(255,255,255,0.05)', 
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '16px', 
-          padding: '3rem', 
-          textAlign: 'center',
-          maxWidth: '500px',
-          margin: '0 auto'
-        }}>
-          <h1 style={{ color: 'white', fontSize: '1.75rem', marginBottom: '1rem' }}>Collection</h1>
-          <p style={{ color: '#94a3b8' }}>Please <a href="/login" style={{ color: '#e63946' }}>login</a> to view your collection progress.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={containerStyle}>
+      {/* Sticky banner for logged out users */}
+      {!user && (
+        <div style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          background: 'linear-gradient(135deg, #1a2332, #0a0f1e)',
+          borderBottom: '1px solid rgba(230, 57, 70, 0.3)',
+          padding: '0.75rem 1rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <span style={{ color: 'white', fontSize: '0.95rem' }}>
+            Sign up free to track which cards you own
+          </span>
+          <a 
+            href="/register" 
+            style={{ 
+              background: '#e63946', 
+              color: 'white', 
+              padding: '0.5rem 1.25rem', 
+              borderRadius: '6px',
+              fontWeight: 'bold',
+              fontSize: '0.9rem',
+              textDecoration: 'none',
+              transition: 'background 0.2s'
+            }}
+          >
+            Get Started
+          </a>
+        </div>
+      )}
+
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         
         {/* Header with total progress */}
@@ -208,22 +224,27 @@ export default function CollectionPage() {
           marginBottom: '2rem'
         }}>
           <h1 style={{ color: 'white', fontSize: '32px', fontWeight: 'bold', margin: 0 }}>
-            My Pokemon Collection
+            {user ? 'My Pokemon Collection' : 'Pokemon Card Sets'}
           </h1>
           <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>
-            Track your progress across Pokemon card sets
+            {user 
+              ? 'Track your progress across Pokemon card sets'
+              : 'Browse all available Pokemon card sets'
+            }
           </p>
-          <div style={{ 
-            marginTop: '1rem', 
-            padding: '1rem', 
-            background: 'rgba(0,0,0,0.2)', 
-            borderRadius: '8px',
-            display: 'inline-block'
-          }}>
-            <span style={{ color: 'white', fontSize: '1.1rem' }}>
-              You own <span style={{ color: '#ffd700', fontWeight: 'bold' }}>{totalOwned.toLocaleString()}</span> of <span style={{ fontWeight: 'bold' }}>{totalCards.toLocaleString()}</span> total cards
-            </span>
-          </div>
+          {user && (
+            <div style={{ 
+              marginTop: '1rem', 
+              padding: '1rem', 
+              background: 'rgba(0,0,0,0.2)', 
+              borderRadius: '8px',
+              display: 'inline-block'
+            }}>
+              <span style={{ color: 'white', fontSize: '1.1rem' }}>
+                You own <span style={{ color: '#ffd700', fontWeight: 'bold' }}>{totalOwned.toLocaleString()}</span> of <span style={{ fontWeight: 'bold' }}>{totalCards.toLocaleString()}</span> total cards
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Sets grouped by year */}
@@ -311,23 +332,43 @@ export default function CollectionPage() {
                             </span>
                           </div>
 
-                          {/* Progress bar */}
-                          <div style={{ marginTop: '1rem' }}>
-                            <div style={{ 
-                              height: '6px', 
-                              backgroundColor: '#1a2332', 
-                              borderRadius: '3px',
-                              overflow: 'hidden'
-                            }}>
+                          {/* Progress bar - only show for logged in users */}
+                          {user && (
+                            <div style={{ marginTop: '1rem' }}>
                               <div style={{ 
-                                height: '100%', 
-                                width: `${percentage}%`,
-                                backgroundColor: progressColor,
+                                height: '6px', 
+                                backgroundColor: '#1a2332', 
                                 borderRadius: '3px',
-                                transition: 'width 0.3s ease'
-                              }} />
+                                overflow: 'hidden'
+                              }}>
+                                <div style={{ 
+                                  height: '100%', 
+                                  width: `${percentage}%`,
+                                  backgroundColor: progressColor,
+                                  borderRadius: '3px',
+                                  transition: 'width 0.3s ease'
+                                }} />
+                              </div>
                             </div>
-                          </div>
+                          )}
+
+                          {!user && (
+                            <div style={{ marginTop: '1rem' }}>
+                              <div style={{ 
+                                height: '6px', 
+                                backgroundColor: '#1a2332', 
+                                borderRadius: '3px',
+                                overflow: 'hidden'
+                              }}>
+                                <div style={{ 
+                                  height: '100%', 
+                                  width: '0%',
+                                  backgroundColor: '#1a2332',
+                                  borderRadius: '3px'
+                                }} />
+                              </div>
+                            </div>
+                          )}
 
                           <div style={{ 
                             display: 'flex', 
@@ -336,11 +377,13 @@ export default function CollectionPage() {
                             fontSize: '14px'
                           }}>
                             <span style={{ color: 'white' }}>
-                              {owned} / {total} cards
+                              {user ? `${owned} / ${total} cards` : `${total} cards`}
                             </span>
-                            <span style={{ color: progressColor, fontWeight: 'bold' }}>
-                              {percentage}%
-                            </span>
+                            {user && (
+                              <span style={{ color: progressColor, fontWeight: 'bold' }}>
+                                {percentage}%
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

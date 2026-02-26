@@ -22,22 +22,6 @@ const FloatingPokeball = ({ delay, left, top }: { delay: number; left: string; t
   </div>
 );
 
-const PokeballLogo = () => (
-  <svg width="60" height="60" viewBox="0 0 100 100" className="mx-auto mb-4">
-    <defs>
-      <linearGradient id="pokeballGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#ff6b6b" />
-        <stop offset="50%" stopColor="#e63946" />
-        <stop offset="100%" stopColor="#c1121f" />
-      </linearGradient>
-    </defs>
-    <circle cx="50" cy="50" r="48" fill="url(#pokeballGrad)" stroke="#0a0f1e" strokeWidth="4" />
-    <rect x="2" y="46" width="96" height="8" fill="#0a0f1e" />
-    <circle cx="50" cy="50" r="14" fill="#ffffff" stroke="#0a0f1e" strokeWidth="4" />
-    <circle cx="50" cy="50" r="6" fill="#0a0f1e" />
-  </svg>
-);
-
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -99,7 +83,7 @@ export default function LoginPage() {
             border: '1px solid rgba(255,255,255,0.1)'
           }}
         >
-          <PokeballLogo />
+          <img src="/Logo.png" alt="Catch & Trade" className="h-48 w-auto mx-auto mb-4" />
           
           <h1 className="font-rajdhani text-3xl font-bold text-white text-center mb-8">
             Welcome Back

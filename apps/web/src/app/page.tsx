@@ -226,9 +226,9 @@ function StatsBar() {
           </div>
           <div>
             <div className="text-4xl md:text-5xl font-bold text-white mb-2">
-              <AnimatedCounter end={50000} suffix="+" />
+              Est. 2025
             </div>
-            <div className="text-poke-text-muted">Active Collectors</div>
+            <div className="text-poke-text-muted">Join Free</div>
           </div>
         </div>
       </div>
@@ -370,6 +370,7 @@ function HowItWorks() {
 function Dashboard({ user }: { user: User }) {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
+  const [portfolioValue, setPortfolioValue] = useState<{ totalValue: number; cardCount: number; uniqueCards: number } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -381,6 +382,16 @@ function Dashboard({ user }: { user: User }) {
       .then(res => res.json())
       .then(data => {
         setPortfolios(Array.isArray(data) ? data : []);
+        if (data.length > 0) {
+          return fetch(`${API_URL}/api/portfolios/${data[0].id}/value`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        }
+        return null;
+      })
+      .then(res => res?.ok ? res.json() : null)
+      .then(data => {
+        if (data) setPortfolioValue(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -508,7 +519,7 @@ function Dashboard({ user }: { user: User }) {
               </div>
               <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.2)' }}>
                 <div className="flex justify-center mb-2"><StatIcon type="value" /></div>
-                <div className="font-rajdhani text-2xl font-bold text-poke-gold">$0</div>
+                <div className="font-rajdhani text-2xl font-bold text-poke-gold">${portfolioValue ? portfolioValue.totalValue.toFixed(2) : '0.00'}</div>
                 <div className="text-xs text-poke-text-muted">Market Value</div>
               </div>
               <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)' }}>

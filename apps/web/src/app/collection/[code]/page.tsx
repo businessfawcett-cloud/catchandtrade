@@ -96,6 +96,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
   
   const [user, setUser] = useState<any>(null);
   const [set, setSet] = useState<SetData | null>(null);
+  const [cards, setCards] = useState<Card[]>([]);
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [ownedCards, setOwnedCards] = useState<Card[]>([]);
   const [missingCards, setMissingCards] = useState<Card[]>([]);
@@ -110,8 +111,28 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
     if (token && userData) {
       setUser(JSON.parse(userData));
     }
-    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    const fetchSetData = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/sets/${params.code}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSet(data.set);
+          setCards(data.cards || []);
+        } else {
+          setError('Set not found');
+        }
+      } catch (err) {
+        setError('Failed to load');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSetData();
+  }, [params.code]);
 
   useEffect(() => {
     if (!user) return;
@@ -127,16 +148,12 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
         
         if (response.ok) {
           const data = await response.json();
-          setSet(data.set);
           setProgress(data.progress);
           setOwnedCards(data.ownedCards || []);
           setMissingCards(data.missingCards || []);
-        } else {
-          const errorData = await response.json();
-          setError(errorData.error || 'Failed to load');
         }
       } catch (err) {
-        setError('Failed to load');
+        // Silently fail - user will see public data
       }
     };
 
@@ -163,26 +180,6 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
     );
   }
 
-  if (!user) {
-    return (
-      <div style={containerStyle}>
-        <div style={{ 
-          background: 'rgba(255,255,255,0.05)', 
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '16px', 
-          padding: '3rem', 
-          textAlign: 'center',
-          maxWidth: '500px',
-          margin: '0 auto'
-        }}>
-          <h1 style={{ color: 'white', fontSize: '1.75rem', marginBottom: '1rem' }}>Collection</h1>
-          <p style={{ color: '#94a3b8' }}>Please <a href="/login" style={{ color: '#e63946' }}>login</a> to view your collection progress.</p>
-        </div>
-      </div>
-    );
-  }
-
   if (error || !set) {
     return (
       <div style={containerStyle}>
@@ -202,7 +199,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
     );
   }
 
-  const displayCards = showMissing ? missingCards : ownedCards;
+  const displayCards = user ? (showMissing ? missingCards : ownedCards) : cards;
   const ownedSet = new Set(ownedCards.map(c => c.id));
 
   return (
@@ -233,96 +230,128 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                 {set.releaseYear} • {set.totalCards} cards
               </p>
               
-              {/* Progress Bar */}
-              <div style={{ marginTop: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ color: 'white', fontSize: '14px' }}>Progress</span>
-                  <span style={{ color: '#ffd700', fontWeight: 'bold' }}>
-                    {progress?.owned || 0} / {progress?.total || set.totalCards} cards
-                  </span>
-                </div>
-                <div style={{ 
-                  height: '8px', 
-                  backgroundColor: '#1a2332', 
-                  borderRadius: '4px',
-                  overflow: 'hidden'
-                }}>
+              {/* Progress Bar - only show for logged in users */}
+              {user ? (
+                <div style={{ marginTop: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span style={{ color: 'white', fontSize: '14px' }}>Progress</span>
+                    <span style={{ color: '#ffd700', fontWeight: 'bold' }}>
+                      {progress?.owned || 0} / {progress?.total || set.totalCards} cards
+                    </span>
+                  </div>
                   <div style={{ 
-                    height: '100%', 
-                    width: `${progress?.percentage || 0}%`,
-                    background: 'linear-gradient(to right, #e63946, #c1121f)',
+                    height: '8px', 
+                    backgroundColor: '#1a2332', 
                     borderRadius: '4px',
-                    transition: 'width 0.3s ease'
-                  }} />
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ 
+                      height: '100%', 
+                      width: `${progress?.percentage || 0}%`,
+                      background: 'linear-gradient(to right, #e63946, #c1121f)',
+                      borderRadius: '4px',
+                      transition: 'width 0.3s ease'
+                    }} />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div style={{ 
+                  marginTop: '1.5rem',
+                  padding: '1rem',
+                  background: 'rgba(0,0,0,0.2)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(230, 57, 70, 0.2)'
+                }}>
+                  <p style={{ color: '#94a3b8', margin: 0, fontSize: '14px' }}>
+                    Sign in to track your collection
+                  </p>
+                </div>
+              )}
               
-              {/* Stat Pills */}
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <div style={{ 
-                  background: 'rgba(16, 185, 129, 0.1)', 
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  borderRadius: '20px', 
-                  padding: '0.5rem 1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <span style={{ color: '#10b981', fontWeight: 'bold' }}>{progress?.owned || 0}</span>
-                  <span style={{ color: '#94a3b8', fontSize: '14px' }}>owned</span>
+              {/* Stat Pills - only show for logged in users */}
+              {user && (
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                  <div style={{ 
+                    background: 'rgba(16, 185, 129, 0.1)', 
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    borderRadius: '20px', 
+                    padding: '0.5rem 1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <span style={{ color: '#10b981', fontWeight: 'bold' }}>{progress?.owned || 0}</span>
+                    <span style={{ color: '#94a3b8', fontSize: '14px' }}>owned</span>
+                  </div>
+                  <div style={{ 
+                    background: 'rgba(239, 68, 68, 0.1)', 
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '20px', 
+                    padding: '0.5rem 1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{(progress?.total || set.totalCards) - (progress?.owned || 0)}</span>
+                    <span style={{ color: '#94a3b8', fontSize: '14px' }}>missing</span>
+                  </div>
                 </div>
-                <div style={{ 
-                  background: 'rgba(239, 68, 68, 0.1)', 
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  borderRadius: '20px', 
-                  padding: '0.5rem 1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{(progress?.total || set.totalCards) - (progress?.owned || 0)}</span>
-                  <span style={{ color: '#94a3b8', fontSize: '14px' }}>missing</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-          <button
-            onClick={() => setShowMissing(true)}
-            style={{
-              padding: '0.75rem 1.5rem',
-              background: showMissing ? 'linear-gradient(135deg, #e63946, #c1121f)' : 'rgba(255,255,255,0.05)',
-              color: 'white',
-              border: showMissing ? 'none' : '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '20px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              transition: 'all 0.2s'
-            }}
-          >
-            Missing Cards ({missingCards.length})
-          </button>
-          <button
-            onClick={() => setShowMissing(false)}
-            style={{
-              padding: '0.75rem 1.5rem',
-              background: !showMissing ? 'linear-gradient(135deg, #e63946, #c1121f)' : 'rgba(255,255,255,0.05)',
-              color: 'white',
-              border: !showMissing ? 'none' : '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '20px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              transition: 'all 0.2s'
-            }}
-          >
-            Owned Cards ({ownedCards.length})
-          </button>
-        </div>
+        {/* Tabs - only show for logged in users */}
+        {user && (
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+            <button
+              onClick={() => setShowMissing(true)}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: showMissing ? 'linear-gradient(135deg, #e63946, #c1121f)' : 'rgba(255,255,255,0.05)',
+                color: 'white',
+                border: showMissing ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '20px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                transition: 'all 0.2s'
+              }}
+            >
+              Missing Cards ({missingCards.length})
+            </button>
+            <button
+              onClick={() => setShowMissing(false)}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: !showMissing ? 'linear-gradient(135deg, #e63946, #c1121f)' : 'rgba(255,255,255,0.05)',
+                color: 'white',
+                border: !showMissing ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '20px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                transition: 'all 0.2s'
+              }}
+            >
+              Owned Cards ({ownedCards.length})
+            </button>
+          </div>
+        )}
 
         {/* Card Grid */}
+        {!user && (
+          <div style={{ 
+            background: 'rgba(255,255,255,0.05)', 
+            borderRadius: '16px', 
+            padding: '1rem', 
+            marginBottom: '1.5rem',
+            textAlign: 'center'
+          }}>
+            <p style={{ color: '#94a3b8', fontSize: '14px' }}>
+              Showing all {cards.length} cards in this set
+            </p>
+          </div>
+        )}
+
         {displayCards.length === 0 ? (
           <div style={{ 
             background: 'rgba(255,255,255,0.05)', 
@@ -331,15 +360,18 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
             textAlign: 'center'
           }}>
             <p style={{ color: '#94a3b8', fontSize: '18px' }}>
-              {showMissing 
-                ? '🎉 No missing cards! You have the complete set!' 
-                : 'No owned cards in this set yet.'}
+              {user
+                ? (showMissing 
+                    ? '🎉 No missing cards! You have the complete set!' 
+                    : 'No owned cards in this set yet.')
+                : 'No cards found in this set.'
+              }
             </p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
             {displayCards.map(card => {
-              const isOwned = ownedSet.has(card.id);
+              const isOwned = user && ownedSet.has(card.id);
               const rarityColor = getRarityColor(card.rarity);
               
               return (
@@ -364,7 +396,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                     e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
-                  {/* Owned indicator */}
+                  {/* Owned indicator - only show for logged in users */}
                   {isOwned && (
                     <div style={{
                       position: 'absolute',

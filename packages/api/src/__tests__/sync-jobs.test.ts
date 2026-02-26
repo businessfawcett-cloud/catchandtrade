@@ -25,13 +25,11 @@ describe('Sync Jobs', () => {
   });
 
   describe('Sync Sets Job', () => {
-    it('creates new sets from API response', async () => {
-      const mockSets = {
-        data: [
-          { id: 'base1', name: 'Base Set', images: { logo: 'http://example.com/logo.png' }, printedTotal: 102, releaseDate: '1999-01-01' },
-          { id: 'jungle', name: 'Jungle', images: { logo: 'http://example.com/jungle.png' }, printedTotal: 64, releaseDate: '1999-06-01' },
-        ]
-      };
+    it('creates new sets from GitHub response', async () => {
+      const mockSets = [
+        { id: 'base1', name: 'Base Set', images: { logo: 'http://example.com/logo.png' }, total: 102, releaseDate: '1999-01-01' },
+        { id: 'jungle', name: 'Jungle', images: { logo: 'http://example.com/jungle.png' }, total: 64, releaseDate: '1999-06-01' },
+      ];
 
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
@@ -42,13 +40,12 @@ describe('Sync Jobs', () => {
       const result = await syncSets();
 
       expect(result.newSets).toBe(2);
-      expect(result.updatedSets).toBe(0);
 
       const sets = await prisma.pokemonSet.findMany();
       expect(sets).toHaveLength(2);
     });
 
-    it('updates existing sets when totalCards changes', async () => {
+    it('skips existing sets (only adds new ones)', async () => {
       await prisma.pokemonSet.create({
         data: {
           name: 'Base Set',
@@ -58,11 +55,9 @@ describe('Sync Jobs', () => {
         }
       });
 
-      const mockSets = {
-        data: [
-          { id: 'base1', name: 'Base Set', images: { logo: 'http://example.com/logo.png' }, printedTotal: 102, releaseDate: '1999-01-01' },
-        ]
-      };
+      const mockSets = [
+        { id: 'base1', name: 'Base Set', images: { logo: 'http://example.com/logo.png' }, total: 102, releaseDate: '1999-01-01' },
+      ];
 
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
@@ -73,10 +68,9 @@ describe('Sync Jobs', () => {
       const result = await syncSets();
 
       expect(result.newSets).toBe(0);
-      expect(result.updatedSets).toBe(1);
 
       const set = await prisma.pokemonSet.findUnique({ where: { code: 'base1' } });
-      expect(set?.totalCards).toBe(102);
+      expect(set?.totalCards).toBe(100);
     });
 
     it('skips gracefully when API is unavailable', async () => {
@@ -86,7 +80,6 @@ describe('Sync Jobs', () => {
       const result = await syncSets();
 
       expect(result.newSets).toBe(0);
-      expect(result.updatedSets).toBe(0);
     });
   });
 
@@ -96,12 +89,10 @@ describe('Sync Jobs', () => {
         data: { name: 'Base Set', code: 'base1', totalCards: 102, releaseYear: 1999 }
       });
 
-      const mockCards = {
-        data: [
-          { id: 'base1-4', name: 'Charizard', number: '4', rarity: 'Rare Holo', images: { small: 'http://example.com/charizard.png' }, set: { id: 'base1', name: 'Base Set' } },
-          { id: 'base1-5', name: 'Blastoise', number: '5', rarity: 'Rare Holo', images: { small: 'http://example.com/blastoise.png' }, set: { id: 'base1', name: 'Base Set' } },
-        ]
-      };
+      const mockCards = [
+        { id: 'base1-4', name: 'Charizard', number: '4', rarity: 'Rare Holo', images: { small: 'http://example.com/charizard.png' }, set: { id: 'base1', name: 'Base Set' } },
+        { id: 'base1-5', name: 'Blastoise', number: '5', rarity: 'Rare Holo', images: { small: 'http://example.com/blastoise.png' }, set: { id: 'base1', name: 'Base Set' } },
+      ];
 
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
@@ -117,12 +108,12 @@ describe('Sync Jobs', () => {
       expect(cards).toHaveLength(2);
     });
 
-    it('updates existing cards when data changes', async () => {
+    it('skips existing cards (only adds new ones)', async () => {
       const set = await prisma.pokemonSet.create({
         data: { name: 'Base Set', code: 'base1', totalCards: 102, releaseYear: 1999 }
       });
 
-      const card = await prisma.card.create({
+      await prisma.card.create({
         data: {
           name: 'Charizard',
           setName: 'Base Set',
@@ -134,11 +125,9 @@ describe('Sync Jobs', () => {
         }
       });
 
-      const mockCards = {
-        data: [
-          { id: 'base1-4', name: 'Charizard', number: '4', rarity: 'Rare Holo', images: { small: 'http://example.com/new-charizard.png' }, set: { id: 'base1', name: 'Base Set' } },
-        ]
-      };
+      const mockCards = [
+        { id: 'base1-4', name: 'Charizard', number: '4', rarity: 'Rare Holo', images: { small: 'http://example.com/charizard.png' }, set: { id: 'base1', name: 'Base Set' } },
+      ];
 
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
@@ -149,10 +138,9 @@ describe('Sync Jobs', () => {
       const result = await syncCards();
 
       expect(result.newCards).toBe(0);
-      expect(result.updatedCards).toBe(1);
 
-      const updated = await prisma.card.findUnique({ where: { id: card.id } });
-      expect(updated?.rarity).toBe('Rare Holo');
+      const card = await prisma.card.findUnique({ where: { tcgplayerId: 'base1-4' } });
+      expect(card?.rarity).toBe('Common');
     });
   });
 

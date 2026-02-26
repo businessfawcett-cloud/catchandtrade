@@ -24,6 +24,7 @@ Object.defineProperty(window, 'localStorage', {
 describe('PortfolioSearchPage API Calls', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.resetAllMocks();
     (global.fetch as jest.Mock).mockReset();
     mockLocalStorage.getItem.mockImplementation((key: string) => {
       if (key === 'token') return 'mock-token';
@@ -50,7 +51,14 @@ describe('PortfolioSearchPage API Calls', () => {
   ];
 
   it('fetches portfolios with Authorization header', async () => {
+    (global.fetch as jest.Mock).mockReset();
     (global.fetch as jest.Mock).mockImplementation((url: string, options?: any) => {
+      if (url.includes('/value')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ totalValue: 0, cardCount: 0, uniqueCards: 0 })
+        });
+      }
       if (url.includes('/api/portfolios')) {
         expect(options?.headers?.Authorization).toBe('Bearer mock-token');
         return Promise.resolve({
@@ -64,7 +72,7 @@ describe('PortfolioSearchPage API Calls', () => {
           json: async () => ({ results: mockCards })
         });
       }
-      return Promise.resolve({ ok: false });
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
     render(<PortfolioSearchPage />);
@@ -75,7 +83,14 @@ describe('PortfolioSearchPage API Calls', () => {
   });
 
   it('shows modal when Add to Portfolio button is clicked', async () => {
+    (global.fetch as jest.Mock).mockReset();
     (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/value')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ totalValue: 0, cardCount: 0, uniqueCards: 0 })
+        });
+      }
       if (url.includes('/api/portfolios')) {
         return Promise.resolve({
           ok: true,
@@ -88,7 +103,7 @@ describe('PortfolioSearchPage API Calls', () => {
           json: async () => ({ results: mockCards })
         });
       }
-      return Promise.resolve({ ok: false });
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
     render(<PortfolioSearchPage />);

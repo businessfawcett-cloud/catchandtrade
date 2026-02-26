@@ -30,9 +30,6 @@ interface Card {
 export default function CardDetailPage({ params }: { params: { id: string } }) {
   const cardId = params.id;
   
-  console.log('[ENV] NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG:', process.env.NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG);
-  console.log('[ENV] NEXT_PUBLIC_EBAY_CAMPAIGN_ID:', process.env.NEXT_PUBLIC_EBAY_CAMPAIGN_ID);
-  
   const [card, setCard] = useState<Card | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,26 +67,11 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
   const getAffiliateLinks = () => {
     if (!card) return { tcgplayer: '#', amazon: '#', ebay: '#' };
     const searchTerm = `${card.name} ${card.setName}`;
-    const amazonTag = process.env.NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG || '';
-    const ebayCampaignId = process.env.NEXT_PUBLIC_EBAY_CAMPAIGN_ID || '';
-    const ebaySearchTerm = encodeURIComponent(`${card.name} Pokemon Card`);
-    const ebayUrl = ebayCampaignId 
-      ? `https://www.ebay.com/sch/i.html?_nkw=${ebaySearchTerm}&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${ebayCampaignId}&customid=&toolid=10001&mkevt=1`
-      : '';
-    const amazonSearchTerm = encodeURIComponent(`${searchTerm} Pokemon Card`);
-    const amazonUrl = amazonTag 
-      ? `https://www.amazon.com/s?k=${amazonSearchTerm}&tag=${amazonTag}`
-      : '';
-    
-    console.log('[DEBUG] Amazon URL:', amazonUrl);
-    console.log('[DEBUG] eBay URL:', ebayUrl);
-    console.log('[DEBUG] amazonTag:', amazonTag);
-    console.log('[DEBUG] ebayCampaignId:', ebayCampaignId);
-    
+    const searchTermEncoded = encodeURIComponent(searchTerm);
     return {
-      tcgplayer: `https://www.tcgplayer.com/search?affiliate=true&q=${encodeURIComponent(searchTerm)}`,
-      amazon: amazonUrl || '#',
-      ebay: ebayUrl || '#'
+      tcgplayer: `https://www.tcgplayer.com/search?affiliate=true&q=${searchTermEncoded}`,
+      amazon: `https://www.amazon.com/s?k=${encodeURIComponent(searchTerm + ' Pokemon Card')}`,
+      ebay: `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(searchTerm + ' Pokemon Card')}`
     };
   };
 
@@ -111,6 +93,8 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
           setSelectedPortfolio(data[0].id);
         }
         setShowModal(true);
+      } else if (response.status === 401) {
+        window.location.href = '/login';
       }
     } catch (err) {
       console.error('Failed to fetch portfolios:', err);
@@ -143,7 +127,8 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
       });
 
       if (response.ok) {
-        setSuccessMessage('Added to Portfolio!');
+        const priceMsg = latestPrice ? ` +$${latestPrice.tcgplayerMarket.toFixed(2)}` : '';
+        setSuccessMessage(`✓ Added to Portfolio${priceMsg}`);
         setShowModal(false);
         setCondition('NEAR_MINT');
         setQuantity(1);
@@ -222,9 +207,9 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
   const minPrice = Math.min(...priceHistory.map(p => p.tcgplayerMarket), 0);
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem' }}>
-      <a href="/marketplace" style={{ display: 'block', marginBottom: '1rem' }}>
-        &larr; Back to Marketplace
+    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem', background: '#0a0f1e', minHeight: '100vh' }}>
+      <a href="/marketplace" style={{ display: 'block', marginBottom: '1rem', color: '#e63946', textDecoration: 'none' }}>
+        ← Back to Marketplace
       </a>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', alignItems: 'start' }}>
@@ -239,13 +224,13 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
             <div style={{ 
               width: '100%', 
               height: '400px', 
-              backgroundColor: '#f5f5f5',
+              backgroundColor: '#1a2332',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: '12px',
               fontSize: '1.2rem',
-              color: '#999'
+              color: '#94a3b8'
             }}>
               Card Image
             </div>
@@ -253,26 +238,26 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
         </div>
 
         <div>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{card.name}</h1>
-          <p style={{ color: '#666', marginBottom: '0.5rem' }}>
+          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'white' }}>{card.name}</h1>
+          <p style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>
             {card.setName} ({card.setCode} #{card.cardNumber})
           </p>
           
           {card.rarity && (
-            <p style={{ marginBottom: '0.5rem' }}>Rarity: {card.rarity}</p>
+            <p style={{ marginBottom: '0.5rem', color: '#a855f7' }}>Rarity: {card.rarity}</p>
           )}
           
-          <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
+          <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: '#94a3b8' }}>
             {card.gameType} • {card.language}
           </p>
 
           {latestPrice && (
             <div style={{ marginTop: '1.5rem' }}>
-              <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '0.25rem' }}>Current Market Price</p>
-              <p style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>
+              <p style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '0.25rem' }}>Current Market Price</p>
+              <p style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0, color: '#ffd700' }}>
                 ${latestPrice.tcgplayerMarket.toFixed(2)}
               </p>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.85rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.85rem', color: '#94a3b8' }}>
                 <span>Low: ${latestPrice.tcgplayerLow.toFixed(2)}</span>
                 <span>Mid: ${latestPrice.tcgplayerMid.toFixed(2)}</span>
                 <span>High: ${latestPrice.tcgplayerHigh.toFixed(2)}</span>
@@ -374,15 +359,15 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
 
       {priceHistory.length > 1 && (
         <div style={{ marginTop: '3rem' }}>
-          <h2 style={{ marginBottom: '1rem' }}>Price History</h2>
+          <h2 style={{ marginBottom: '1rem', color: 'white' }}>Price History</h2>
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
             <button
               onClick={() => setPriceRange('30d')}
               style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: priceRange === '30d' ? '#0066cc' : '#f0f0f0',
-                color: priceRange === '30d' ? 'white' : '#333',
-                border: '1px solid #ccc',
+                backgroundColor: priceRange === '30d' ? '#e63946' : 'rgba(255,255,255,0.1)',
+                color: priceRange === '30d' ? 'white' : '#94a3b8',
+                border: '1px solid rgba(255,255,255,0.2)',
                 borderRadius: '4px',
                 cursor: 'pointer'
               }}
@@ -393,9 +378,9 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
               onClick={() => setPriceRange('90d')}
               style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: priceRange === '90d' ? '#0066cc' : '#f0f0f0',
-                color: priceRange === '90d' ? 'white' : '#333',
-                border: '1px solid #ccc',
+                backgroundColor: priceRange === '90d' ? '#e63946' : 'rgba(255,255,255,0.1)',
+                color: priceRange === '90d' ? 'white' : '#94a3b8',
+                border: '1px solid rgba(255,255,255,0.2)',
                 borderRadius: '4px',
                 cursor: 'pointer'
               }}
@@ -406,9 +391,9 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
               onClick={() => setPriceRange('1y')}
               style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: priceRange === '1y' ? '#0066cc' : '#f0f0f0',
-                color: priceRange === '1y' ? 'white' : '#333',
-                border: '1px solid #ccc',
+                backgroundColor: priceRange === '1y' ? '#e63946' : 'rgba(255,255,255,0.1)',
+                color: priceRange === '1y' ? 'white' : '#94a3b8',
+                border: '1px solid rgba(255,255,255,0.2)',
                 borderRadius: '4px',
                 cursor: 'pointer'
               }}
@@ -418,10 +403,11 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
           </div>
           <div style={{ 
             height: '200px', 
-            border: '1px solid #ccc', 
+            border: '1px solid rgba(255,255,255,0.1)', 
             borderRadius: '4px',
             padding: '1rem',
-            position: 'relative'
+            position: 'relative',
+            background: 'rgba(255,255,255,0.05)'
           }}>
             <div style={{ 
               position: 'absolute', 
@@ -440,10 +426,11 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
                     key={idx}
                     style={{
                       flex: 1,
-                      backgroundColor: '#0066cc',
+                      backgroundColor: '#e63946',
                       margin: '0 1px',
                       height: `${Math.max(height, 2)}%`,
-                      minHeight: '2px'
+                      minHeight: '2px',
+                      borderRadius: '2px 2px 0 0'
                     }}
                     title={`$${price.tcgplayerMarket.toFixed(2)}`}
                   />
@@ -451,7 +438,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
               })}
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.8rem', color: '#666' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.8rem', color: '#94a3b8' }}>
             <span>${minPrice.toFixed(2)}</span>
             <span>${maxPrice.toFixed(2)}</span>
           </div>
@@ -470,7 +457,13 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
           border: '1px solid rgba(34, 197, 94, 0.3)',
           zIndex: 100
         }}>
-          {successMessage}
+          {successMessage.includes('+') ? (
+            <>
+              ✓ Added to Portfolio <span style={{ color: '#10b981' }}>{successMessage.split('✓ Added to Portfolio')[1]}</span>
+            </>
+          ) : (
+            successMessage
+          )}
         </div>
       )}
 
@@ -629,76 +622,6 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
           </div>
         </div>
       )}
-
-      {priceHistory.length > 1 && (
-        <div style={{ marginTop: '3rem' }}>
-          <h2 style={{ marginBottom: '1rem' }}>Price History</h2>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-            <button
-              onClick={() => setPriceRange('30d')}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: priceRange === '30d' ? '#0066cc' : '#f0f0f0',
-                color: priceRange === '30d' ? 'white' : '#333',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              30D
-            </button>
-            <button
-              onClick={() => setPriceRange('90d')}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: priceRange === '90d' ? '#0066cc' : '#f0f0f0',
-                color: priceRange === '90d' ? 'white' : '#333',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              90D
-            </button>
-            <button
-              onClick={() => setPriceRange('1y')}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: priceRange === '1y' ? '#0066cc' : '#f0f0f0',
-                color: priceRange === '1y' ? 'white' : '#333',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              1Y
-            </button>
-          </div>
-          <div style={{ height: '200px', backgroundColor: '#f5f5f5', borderRadius: '8px', display: 'flex', alignItems: 'flex-end', padding: '1rem', gap: '2px' }}>
-            {priceHistory.slice(-30).map((price, index) => {
-              const heightPercent = ((price.tcgplayerMarket - minPrice) / (maxPrice - minPrice)) * 100 || 0;
-              return (
-                <div
-                  key={index}
-                  style={{
-                    flex: 1,
-                    backgroundColor: '#0066cc',
-                    borderRadius: '2px 2px 0 0',
-                    minHeight: '4px',
-                    height: `${Math.max(heightPercent, 5)}%`
-                  }}
-                  title={`$${price.tcgplayerMarket.toFixed(2)}`}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#666' }}>
-        <span>${minPrice.toFixed(2)}</span>
-        <span>${maxPrice.toFixed(2)}</span>
-      </div>
     </div>
   );
 }

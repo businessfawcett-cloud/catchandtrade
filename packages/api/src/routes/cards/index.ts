@@ -110,11 +110,12 @@ cardsRouter.get(
       }
 
       const limit = parseInt(req.query.limit as string) || 50;
+      const fetchLimit = Math.min(limit * 4, 200);
 
       const [results, total] = await Promise.all([
         prisma.card.findMany({
           where,
-          take: limit,
+          take: fetchLimit,
           orderBy,
           include: {
             prices: {
@@ -127,14 +128,34 @@ cardsRouter.get(
       ]);
 
       let sortedResults = results;
-      if (sort === 'price-desc') {
+      if (searchQuery && searchQuery.trim().length >= 2) {
+        const q = searchQuery.toLowerCase();
+        sortedResults = results.sort((a, b) => {
+          const aName = a.name.toLowerCase();
+          const bName = b.name.toLowerCase();
+          
+          const aExact = aName === q ? 1 : 0;
+          const bExact = bName === q ? 1 : 0;
+          if (aExact !== bExact) return bExact - aExact;
+          
+          const aStarts = aName.startsWith(q) ? 1 : 0;
+          const bStarts = bName.startsWith(q) ? 1 : 0;
+          if (aStarts !== bStarts) return bStarts - aStarts;
+          
+          const aContains = aName.includes(q) ? 1 : 0;
+          const bContains = bName.includes(q) ? 1 : 0;
+          if (aContains !== bContains) return bContains - aContains;
+          
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+      } else if (sort === 'price-desc') {
         sortedResults = results.sort((a, b) => (b.prices[0]?.tcgplayerMarket || 0) - (a.prices[0]?.tcgplayerMarket || 0));
       } else if (sort === 'price-asc') {
         sortedResults = results.sort((a, b) => (a.prices[0]?.tcgplayerMarket || 0) - (b.prices[0]?.tcgplayerMarket || 0));
       }
 
       res.json({
-        results: sortedResults.map(card => ({
+        results: sortedResults.slice(0, limit).map(card => ({
           id: card.id,
           name: card.name,
           setName: card.setName,
