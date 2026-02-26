@@ -44,6 +44,29 @@ usersRouter.get(
   }
 );
 
+usersRouter.get(
+  '/:username',
+  query('u').isString().notEmpty(),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ error: 'Username is required' });
+      }
+
+      const username = req.query.u as string;
+      
+      const existing = await prisma.user.findUnique({
+        where: { username: username.toLowerCase() }
+      });
+
+      res.json({ available: !existing });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 usersRouter.put(
   '/profile',
   authenticate,

@@ -24,6 +24,7 @@ Object.defineProperty(window, 'localStorage', {
 describe('PortfolioSearchPage API Calls', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (global.fetch as jest.Mock).mockReset();
     mockLocalStorage.getItem.mockImplementation((key: string) => {
       if (key === 'token') return 'mock-token';
       if (key === 'user') return JSON.stringify({ id: 'user-1', displayName: 'Test User' });

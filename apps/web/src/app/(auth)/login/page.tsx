@@ -10,7 +10,7 @@ const FloatingPokeball = ({ delay, left, top }: { delay: number; left: string; t
       left, 
       top, 
       animationDelay: `${delay}s`,
-      animationDuration: `${8 + Math.random() * 4}s`
+      animationDuration: '10s'
     }}
   >
     <svg width="60" height="60" viewBox="0 0 100 100">

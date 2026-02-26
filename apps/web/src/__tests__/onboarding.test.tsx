@@ -23,6 +23,7 @@ Object.defineProperty(window, 'localStorage', {
 describe('OnboardingPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (global.fetch as jest.Mock).mockReset();
     mockLocalStorage.getItem.mockImplementation((key: string) => {
       if (key === 'token') return 'mock-token';
       if (key === 'user') return JSON.stringify({ id: 'user-1', email: 'test@test.com', displayName: 'Test User' });
@@ -39,7 +40,7 @@ describe('OnboardingPage', () => {
     render(<OnboardingPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/set up your profile/i)).toBeInTheDocument();
+      expect(screen.getByText(/welcome to catch & trade/i)).toBeInTheDocument();
     });
   });
 
@@ -94,46 +95,123 @@ describe('OnboardingPage', () => {
     });
   });
 
-  it('shows avatar selection grid', async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({})
+  it('shows avatar selection grid after advancing to step 2', async () => {
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/users/check-username')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ available: true })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
     render(<OnboardingPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/welcome to catch & trade/i)).toBeInTheDocument();
+    });
+
+    const usernameInput = screen.getByLabelText(/username/i);
+    fireEvent.change(usernameInput, { target: { value: 'testuser' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/available/i)).toBeInTheDocument();
+    });
+
+    const continueBtn = screen.getByText('Continue →');
+    fireEvent.click(continueBtn);
 
     await waitFor(() => {
       expect(screen.getByText(/choose your starter/i)).toBeInTheDocument();
     });
   });
 
-  it('shows privacy toggles', async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({})
+  it('shows privacy toggles on step 3', async () => {
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/users/check-username')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ available: true })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
     render(<OnboardingPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/profile visibility/i)).toBeInTheDocument();
+      expect(screen.getByText(/welcome to catch & trade/i)).toBeInTheDocument();
+    });
+
+    const usernameInput = screen.getByLabelText(/username/i);
+    fireEvent.change(usernameInput, { target: { value: 'testuser' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/available/i)).toBeInTheDocument();
+    });
+
+    const continueBtn1 = screen.getByText('Continue →');
+    fireEvent.click(continueBtn1);
+
+    await waitFor(() => {
+      expect(screen.getByText(/choose your starter/i)).toBeInTheDocument();
+    });
+
+    const avatarBtn = screen.getByAltText('bulbasaur');
+    fireEvent.click(avatarBtn);
+
+    const continueBtn2 = screen.getByText('Continue →');
+    fireEvent.click(continueBtn2);
+
+    await waitFor(() => {
+      expect(screen.getByText(/preferences/i)).toBeInTheDocument();
     });
   });
 
-  it('shows country selector', async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({})
+  it('shows country selector on step 3', async () => {
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/users/check-username')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ available: true })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
     render(<OnboardingPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/welcome to catch & trade/i)).toBeInTheDocument();
+    });
+
+    const usernameInput = screen.getByLabelText(/username/i);
+    fireEvent.change(usernameInput, { target: { value: 'testuser' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/available/i)).toBeInTheDocument();
+    });
+
+    const continueBtn1 = screen.getByText('Continue →');
+    fireEvent.click(continueBtn1);
+
+    await waitFor(() => {
+      expect(screen.getByText(/choose your starter/i)).toBeInTheDocument();
+    });
+
+    const avatarBtn = screen.getByAltText('bulbasaur');
+    fireEvent.click(avatarBtn);
+
+    const continueBtn2 = screen.getByText('Continue →');
+    fireEvent.click(continueBtn2);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/country/i)).toBeInTheDocument();
     });
   });
 
-  it('has Continue button', async () => {
+  it('has Continue button on step 1', async () => {
     (global.fetch as jest.Mock).mockImplementation((url: string) => {
       return Promise.resolve({ ok: true, json: async () => ({}) });
     });
@@ -141,7 +219,7 @@ describe('OnboardingPage', () => {
     render(<OnboardingPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Continue')).toBeInTheDocument();
+      expect(screen.getByText('Continue →')).toBeInTheDocument();
     });
   });
 
@@ -154,7 +232,7 @@ describe('OnboardingPage', () => {
     render(<OnboardingPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Sign Out')).toBeInTheDocument();
+      expect(screen.getByText('Sign out')).toBeInTheDocument();
     });
   });
 });

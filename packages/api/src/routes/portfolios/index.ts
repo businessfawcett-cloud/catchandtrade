@@ -101,6 +101,19 @@ portfoliosRouter.get('/default', authenticate, async (req: Request, res: Respons
   }
 });
 
+portfoliosRouter.get('/user/:userId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId } = req.params;
+    const portfolios = await prisma.portfolio.findMany({
+      where: { userId },
+      include: { items: { include: { card: true } } }
+    });
+    res.json(portfolios);
+  } catch (error) {
+    next(error);
+  }
+});
+
 portfoliosRouter.get('/:id', authenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const portfolio = await prisma.portfolio.findUnique({

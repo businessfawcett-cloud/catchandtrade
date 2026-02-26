@@ -4,19 +4,19 @@ import { useState, useEffect } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
 
-const AVATARS = [
-  { id: '1', pokemon: 'bulbasaur', spriteUrl: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png' },
-  { id: '4', pokemon: 'charmander', spriteUrl: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png' },
-  { id: '7', pokemon: 'squirtle', spriteUrl: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png' },
-  { id: '25', pokemon: 'pikachu', spriteUrl: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png' },
-  { id: '39', pokemon: 'jigglypuff', spriteUrl: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/39.png' },
-  { id: '52', pokemon: 'meowth', spriteUrl: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/52.png' },
-  { id: '54', pokemon: 'psyduck', spriteUrl: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/54.png' },
-  { id: '94', pokemon: 'gengar', spriteUrl: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/94.png' },
-  { id: '131', pokemon: 'lapras', spriteUrl: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/131.png' },
-  { id: '133', pokemon: 'eevee', spriteUrl: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png' },
-  { id: '143', pokemon: 'snorlax', spriteUrl: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png' },
-  { id: '150', pokemon: 'mewtwo', spriteUrl: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png' },
+const STARTERS = [
+  { id: '1', pokemon: 'bulbasaur' },
+  { id: '4', pokemon: 'charmander' },
+  { id: '7', pokemon: 'squirtle' },
+  { id: '25', pokemon: 'pikachu' },
+  { id: '39', pokemon: 'jigglypuff' },
+  { id: '52', pokemon: 'meowth' },
+  { id: '54', pokemon: 'psyduck' },
+  { id: '94', pokemon: 'gengar' },
+  { id: '131', pokemon: 'lapras' },
+  { id: '133', pokemon: 'eevee' },
+  { id: '143', pokemon: 'snorlax' },
+  { id: '150', pokemon: 'mewtwo' },
 ];
 
 const COUNTRIES = [
@@ -24,7 +24,51 @@ const COUNTRIES = [
   'France', 'Japan', 'Brazil', 'Mexico', 'Spain', 'Italy', 'Netherlands'
 ];
 
+const containerStyle: React.CSSProperties = {
+  background: '#0a0f1e',
+  minHeight: '100vh',
+  padding: '2rem',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
+};
+
+const cardStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.05)',
+  backdropFilter: 'blur(20px)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: '20px',
+  padding: '2.5rem',
+  maxWidth: '500px',
+  width: '100%'
+};
+
+const inputStyle: React.CSSProperties = {
+  background: '#1a2332',
+  border: '1px solid rgba(255,255,255,0.1)',
+  color: 'white',
+  padding: '0.875rem',
+  borderRadius: '8px',
+  width: '100%',
+  fontSize: '1rem',
+  boxSizing: 'border-box'
+};
+
+const buttonStyle: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #e63946, #c1121f)',
+  color: 'white',
+  border: 'none',
+  padding: '1rem 2rem',
+  borderRadius: '8px',
+  fontSize: '1rem',
+  fontWeight: 'bold',
+  cursor: 'pointer',
+  width: '100%',
+  transition: 'opacity 0.2s'
+};
+
 export default function OnboardingPage() {
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -77,16 +121,29 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleContinue = async () => {
-    if (!username || username.length < 3) {
-      setError('Please choose a username (at least 3 characters)');
-      return;
+  const handleContinue = () => {
+    if (step === 1) {
+      if (!username || username.length < 3) {
+        setError('Please choose a username (at least 3 characters)');
+        return;
+      }
+      if (!usernameAvailable) {
+        setError('Please choose an available username');
+        return;
+      }
+      setError('');
+      setStep(2);
+    } else if (step === 2) {
+      if (!avatarId) {
+        setError('Please choose a starter Pokemon');
+        return;
+      }
+      setError('');
+      setStep(3);
     }
-    if (!usernameAvailable) {
-      setError('Please choose an available username');
-      return;
-    }
+  };
 
+  const handleComplete = async () => {
     setSaving(true);
     setError('');
 
@@ -100,8 +157,8 @@ export default function OnboardingPage() {
         },
         body: JSON.stringify({
           username,
-          displayName: displayName || undefined,
-          avatarId: avatarId || null,
+          displayName: displayName || null,
+          avatarId,
           isPublic,
           hideCollectionValue,
           country: country || null,
@@ -113,15 +170,14 @@ export default function OnboardingPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        setError(data.error || 'Failed to save profile');
-        return;
+        throw new Error(data.error || 'Failed to save profile');
       }
 
-      const data = await response.json();
-      localStorage.setItem('user', JSON.stringify(data));
+      const userData = await response.json();
+      localStorage.setItem('user', JSON.stringify(userData));
       window.location.href = '/';
-    } catch (err) {
-      setError('An error occurred');
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
     } finally {
       setSaving(false);
     }
@@ -134,275 +190,301 @@ export default function OnboardingPage() {
   };
 
   if (loading) {
-    return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>;
+    return (
+      <div style={containerStyle}>
+        <div style={cardStyle}>
+          <div style={{ textAlign: 'center', color: 'white' }}>Loading...</div>
+        </div>
+      </div>
+    );
   }
 
+  const labelStyle: React.CSSProperties = {
+    color: 'white',
+    display: 'block',
+    marginBottom: '0.5rem',
+    fontWeight: 'bold',
+    fontSize: '0.9rem'
+  };
+
+  const textMutedStyle: React.CSSProperties = {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: '0.875rem'
+  };
+
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2rem' }}>
-      <h1>Set Up Your Profile</h1>
-      <p style={{ color: '#666', marginBottom: '2rem' }}>
-        Tell us about yourself to get started with your collection.
-      </p>
-
-      {error && (
-        <div style={{ color: 'red', marginBottom: '1rem', padding: '0.75rem', backgroundColor: '#fee2e2', borderRadius: '4px' }}>
-          {error}
-        </div>
-      )}
-
-      <div style={{ marginBottom: '2rem' }}>
-        <h2>Profile</h2>
-        
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }} htmlFor="displayName">
-            Display Name <span style={{ color: '#666', fontWeight: 'normal' }}>(optional)</span>
-          </label>
-          <input
-            id="displayName"
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value.slice(0, 25))}
-            maxLength={25}
-            placeholder="How you want to be called"
-            style={{ width: '100%', padding: '0.5rem', fontSize: '1rem' }}
-          />
-          <div style={{ fontSize: '0.8rem', color: '#666', textAlign: 'right' }}>
-            {displayName.length}/25
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }} htmlFor="username">
-            Username <span style={{ color: 'red' }}>*</span>
-          </label>
-          <div style={{ position: 'relative' }}>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => handleUsernameChange(e.target.value)}
-              placeholder="your-username"
-              style={{ width: '100%', padding: '0.5rem', fontSize: '1rem', paddingRight: '40px' }}
-            />
-            <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
-              {checkingUsername ? '...' : usernameAvailable === true ? '✓' : usernameAvailable === false ? '✗' : ''}
-            </span>
-          </div>
-          <div style={{ fontSize: '0.8rem', color: '#666' }}>
-            {username.length}/25 • lowercase, no spaces
-          </div>
-          {usernameAvailable === true && (
-            <div style={{ fontSize: '0.8rem', color: 'green' }}>✓ Available</div>
-          )}
-          {usernameAvailable === false && (
-            <div style={{ fontSize: '0.8rem', color: 'red' }}>✗ Already taken</div>
-          )}
-        </div>
-      </div>
-
-      <div style={{ marginBottom: '2rem' }}>
-        <h2>Avatar</h2>
-        <p style={{ color: '#666', marginBottom: '0.5rem' }}>Choose your starter Pokemon</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.75rem' }}>
-          {AVATARS.map((avatar) => (
-            <button
-              key={avatar.id}
-              onClick={() => setAvatarId(avatar.id)}
+    <div style={containerStyle}>
+      <div style={cardStyle}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '2rem' }}>
+          {[1, 2, 3].map((s) => (
+            <div
+              key={s}
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '0.5rem',
-                backgroundColor: avatarId === avatar.id ? '#e0f2fe' : '#f9fafb',
-                border: avatarId === avatar.id ? '3px solid #3b82f6' : '3px solid #e5e7eb',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'transform 0.2s',
-              }}
-            >
-              <div style={{
-                width: '80px',
-                height: '80px',
+                width: '10px',
+                height: '10px',
                 borderRadius: '50%',
-                backgroundColor: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1px solid #e5e7eb',
-              }}>
-                <img 
-                  src={avatar.spriteUrl} 
-                  alt={avatar.pokemon}
-                  style={{ width: '64px', height: '64px', objectFit: 'contain' }}
-                />
-              </div>
-              <span style={{ 
-                marginTop: '0.25rem', 
-                fontSize: '0.7rem', 
-                textTransform: 'capitalize',
-                color: '#374151',
-                fontWeight: '500'
-              }}>
-                {avatar.pokemon}
-              </span>
-            </button>
+                background: step === s ? '#e63946' : '#374151',
+                transition: 'background 0.3s'
+              }}
+            />
           ))}
         </div>
-      </div>
 
-      <div style={{ marginBottom: '2rem' }}>
-        <h2>Privacy</h2>
-        
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ fontWeight: 'bold' }}>Profile Visibility</label>
-          <div style={{ marginTop: '0.5rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', cursor: 'pointer' }}>
-              <input
-                type="radio"
-                name="isPublic"
-                checked={isPublic === true}
-                onChange={() => setIsPublic(true)}
-              />
-              <div>
-                <div>Public</div>
-                <div style={{ fontSize: '0.8rem', color: '#666' }}>Anyone can see and find your profile</div>
-              </div>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-              <input
-                type="radio"
-                name="isPublic"
-                checked={isPublic === false}
-                onChange={() => setIsPublic(false)}
-              />
-              <div>
-                <div>Private</div>
-                <div style={{ fontSize: '0.8rem', color: '#666' }}>Only you and your friends can see your profile</div>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        {isPublic && (
-          <div>
-            <label style={{ fontWeight: 'bold' }}>Collection Value</label>
-            <div style={{ marginTop: '0.5rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="hideValue"
-                  checked={hideCollectionValue === false}
-                  onChange={() => setHideCollectionValue(false)}
-                />
-                Show - Your collection value is visible to anyone
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="hideValue"
-                  checked={hideCollectionValue === true}
-                  onChange={() => setHideCollectionValue(true)}
-                />
-                Hide - Only you can see your collection value
-              </label>
-            </div>
+        {error && (
+          <div style={{ color: '#ef4444', marginBottom: '1rem', padding: '0.75rem', backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)', fontSize: '0.875rem' }}>
+            {error}
           </div>
         )}
-      </div>
 
-      <div style={{ marginBottom: '2rem' }}>
-        <h2>Trading</h2>
-        
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }} htmlFor="country">
-            Country <span style={{ color: '#666', fontWeight: 'normal' }}>(optional)</span>
-          </label>
-          <select
-            id="country"
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            style={{ width: '100%', padding: '0.5rem', fontSize: '1rem' }}
+        {step === 1 && (
+          <>
+            <h1 style={{ color: 'white', fontSize: '1.75rem', fontWeight: 'bold', textAlign: 'center', marginBottom: '0.5rem' }}>
+              Welcome to Catch & Trade
+            </h1>
+            <p style={{ ...textMutedStyle, textAlign: 'center', marginBottom: '2rem' }}>
+              Set up your trainer profile to get started
+            </p>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={labelStyle} htmlFor="displayName">
+                Display Name <span style={textMutedStyle}>(optional)</span>
+              </label>
+              <input
+                id="displayName"
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value.slice(0, 25))}
+                maxLength={25}
+                placeholder="How you want to be called"
+                style={inputStyle}
+              />
+              <div style={{ ...textMutedStyle, textAlign: 'right', marginTop: '0.25rem' }}>
+                {displayName.length}/25
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '2rem' }}>
+              <label style={labelStyle} htmlFor="username">
+                Username <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => handleUsernameChange(e.target.value)}
+                  placeholder="your-username"
+                  style={{ ...inputStyle, paddingRight: '40px' }}
+                />
+                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: checkingUsername ? 'rgba(255,255,255,0.5)' : usernameAvailable === true ? '#22c55e' : usernameAvailable === false ? '#ef4444' : 'transparent', fontSize: '0.875rem' }}>
+                  {checkingUsername ? '...' : usernameAvailable === true ? '✓' : usernameAvailable === false ? '✗' : ''}
+                </span>
+              </div>
+              <div style={{ ...textMutedStyle, marginTop: '0.5rem' }}>
+                {username.length}/25 • lowercase, no spaces
+              </div>
+              {usernameAvailable === true && (
+                <div style={{ fontSize: '0.875rem', color: '#22c55e', marginTop: '0.25rem' }}>✓ Available</div>
+              )}
+              {usernameAvailable === false && (
+                <div style={{ fontSize: '0.875rem', color: '#ef4444', marginTop: '0.25rem' }}>✗ Already taken</div>
+              )}
+            </div>
+
+            <button onClick={handleContinue} style={buttonStyle}>
+              Continue →
+            </button>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <h1 style={{ color: 'white', fontSize: '1.75rem', fontWeight: 'bold', textAlign: 'center', marginBottom: '0.5rem' }}>
+              Choose Your Starter
+            </h1>
+            <p style={{ ...textMutedStyle, textAlign: 'center', marginBottom: '2rem' }}>
+              Select your first Pokemon partner
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '2rem' }}>
+              {STARTERS.map((starter) => (
+                <button
+                  key={starter.id}
+                  onClick={() => setAvatarId(starter.id)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '0.75rem',
+                    backgroundColor: avatarId === starter.id ? 'rgba(230,57,70,0.15)' : 'rgba(255,255,255,0.03)',
+                    border: avatarId === starter.id ? '2px solid #e63946' : '2px solid transparent',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: avatarId === starter.id ? '0 0 20px rgba(230,57,70,0.3)' : 'none'
+                  }}
+                >
+                  <img
+                    src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${starter.id}.png`}
+                    alt={starter.pokemon}
+                    style={{ width: '72px', height: '72px', objectFit: 'contain', imageRendering: 'pixelated' }}
+                  />
+                  <span style={{ 
+                    marginTop: '0.5rem', 
+                    fontSize: '0.65rem', 
+                    textTransform: 'capitalize' as const,
+                    color: avatarId === starter.id ? '#ffd700' : 'white',
+                    fontWeight: avatarId === starter.id ? 'bold' : 'normal'
+                  }}>
+                    {starter.pokemon}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <button onClick={handleContinue} style={buttonStyle}>
+              Continue →
+            </button>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <h1 style={{ color: 'white', fontSize: '1.75rem', fontWeight: 'bold', textAlign: 'center', marginBottom: '0.5rem' }}>
+              Preferences
+            </h1>
+            <p style={{ ...textMutedStyle, textAlign: 'center', marginBottom: '1.5rem' }}>
+              Customize your profile visibility
+            </p>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={labelStyle}>Profile Visibility</label>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  onClick={() => setIsPublic(true)}
+                  style={{
+                    flex: 1,
+                    padding: '1rem',
+                    background: isPublic ? 'rgba(230,57,70,0.15)' : 'rgba(255,255,255,0.03)',
+                    border: isPublic ? '2px solid #e63946' : '2px solid rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    textAlign: 'center' as const
+                  }}
+                >
+                  <div style={{ color: 'white', fontWeight: 'bold', fontSize: '0.9rem' }}>Public</div>
+                  <div style={{ ...textMutedStyle, fontSize: '0.75rem', marginTop: '0.25rem' }}>Anyone can find you</div>
+                </button>
+                <button
+                  onClick={() => setIsPublic(false)}
+                  style={{
+                    flex: 1,
+                    padding: '1rem',
+                    background: !isPublic ? 'rgba(230,57,70,0.15)' : 'rgba(255,255,255,0.03)',
+                    border: !isPublic ? '2px solid #e63946' : '2px solid rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    textAlign: 'center' as const
+                  }}
+                >
+                  <div style={{ color: 'white', fontWeight: 'bold', fontSize: '0.9rem' }}>Private</div>
+                  <div style={{ ...textMutedStyle, fontSize: '0.75rem', marginTop: '0.25rem' }}>Only you can see</div>
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={labelStyle}>Collection Value</label>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  onClick={() => setHideCollectionValue(false)}
+                  style={{
+                    flex: 1,
+                    padding: '1rem',
+                    background: !hideCollectionValue ? 'rgba(230,57,70,0.15)' : 'rgba(255,255,255,0.03)',
+                    border: !hideCollectionValue ? '2px solid #e63946' : '2px solid rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    textAlign: 'center' as const
+                  }}
+                >
+                  <div style={{ color: 'white', fontWeight: 'bold', fontSize: '0.9rem' }}>Show</div>
+                  <div style={{ ...textMutedStyle, fontSize: '0.75rem', marginTop: '0.25rem' }}>Value visible</div>
+                </button>
+                <button
+                  onClick={() => setHideCollectionValue(true)}
+                  style={{
+                    flex: 1,
+                    padding: '1rem',
+                    background: hideCollectionValue ? 'rgba(230,57,70,0.15)' : 'rgba(255,255,255,0.03)',
+                    border: hideCollectionValue ? '2px solid #e63946' : '2px solid rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    textAlign: 'center' as const
+                  }}
+                >
+                  <div style={{ color: 'white', fontWeight: 'bold', fontSize: '0.9rem' }}>Hide</div>
+                  <div style={{ ...textMutedStyle, fontSize: '0.75rem', marginTop: '0.25rem' }}>Value private</div>
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={labelStyle} htmlFor="country">
+                Country <span style={textMutedStyle}>(optional)</span>
+              </label>
+              <select
+                id="country"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}
+              >
+                <option value="" style={{ background: '#1a2332' }}>Select a country</option>
+                {COUNTRIES.map((c) => (
+                  <option key={c} value={c} style={{ background: '#1a2332' }}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={labelStyle}>Social Links <span style={textMutedStyle}>(optional)</span></label>
+              <input
+                type="text"
+                value={twitterHandle}
+                onChange={(e) => setTwitterHandle(e.target.value)}
+                placeholder="Twitter @username"
+                style={{ ...inputStyle, marginBottom: '0.75rem' }}
+              />
+              <input
+                type="text"
+                value={instagramHandle}
+                onChange={(e) => setInstagramHandle(e.target.value)}
+                placeholder="Instagram @username"
+                style={{ ...inputStyle, marginBottom: '0.75rem' }}
+              />
+              <input
+                type="text"
+                value={tiktokHandle}
+                onChange={(e) => setTiktokHandle(e.target.value)}
+                placeholder="TikTok @username"
+                style={inputStyle}
+              />
+            </div>
+
+            <button onClick={handleComplete} disabled={saving} style={{ ...buttonStyle, opacity: saving ? 0.6 : 1 }}>
+              {saving ? 'Saving...' : 'Complete Setup'}
+            </button>
+          </>
+        )}
+
+        <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+          <button
+            onClick={handleSignOut}
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '0.875rem' }}
           >
-            <option value="">Select a country</option>
-            {COUNTRIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.25rem' }}>
-            Sharing your country helps you connect with traders nearby
-          </p>
+            Sign out
+          </button>
         </div>
-      </div>
-
-      <div style={{ marginBottom: '2rem' }}>
-        <h2>Socials</h2>
-        <p style={{ color: '#666', marginBottom: '1rem' }}>Add your social links (all optional)</p>
-
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.9rem' }}>Twitter/X</label>
-          <input
-            type="text"
-            value={twitterHandle}
-            onChange={(e) => setTwitterHandle(e.target.value)}
-            placeholder="@username"
-            style={{ width: '100%', padding: '0.5rem', fontSize: '1rem' }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.9rem' }}>Instagram</label>
-          <input
-            type="text"
-            value={instagramHandle}
-            onChange={(e) => setInstagramHandle(e.target.value)}
-            placeholder="@username"
-            style={{ width: '100%', padding: '0.5rem', fontSize: '1rem' }}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.9rem' }}>TikTok</label>
-          <input
-            type="text"
-            value={tiktokHandle}
-            onChange={(e) => setTiktokHandle(e.target.value)}
-            placeholder="@username"
-            style={{ width: '100%', padding: '0.5rem', fontSize: '1rem' }}
-          />
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-        <button
-          onClick={handleContinue}
-          disabled={saving}
-          style={{
-            flex: 1,
-            padding: '1rem',
-            backgroundColor: '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            fontSize: '1rem',
-            cursor: saving ? 'not-allowed' : 'pointer'
-          }}
-        >
-          {saving ? 'Saving...' : 'Continue'}
-        </button>
-        <button
-          onClick={handleSignOut}
-          style={{
-            padding: '1rem',
-            backgroundColor: '#6c757d',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            fontSize: '1rem',
-            cursor: 'pointer'
-          }}
-        >
-          Sign Out
-        </button>
       </div>
     </div>
   );
