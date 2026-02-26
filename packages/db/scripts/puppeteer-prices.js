@@ -5,8 +5,9 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 const PROGRESS_FILE = path.join(__dirname, 'price-progress.json');
-const BATCH_SIZE = 3;
-const DELAY_MS = 2000;
+const PARALLEL_TABS = 5;
+const DELAY_MS = 1000;
+const SAVE_EVERY = 50;
 
 function loadProgress() {
   try {
@@ -22,10 +23,12 @@ function saveProgress(progress) {
 }
 
 async function getPriceForCard(page, cardName, setName) {
-  const query = encodeURIComponent(`${cardName} ${setName} pokemon`);
+  const query = encodeURIComponent(`${cardName} ${setName} pokemon card`);
   const url = `https://www.tcgplayer.com/search/pokemon/product?q=${query}&view=grid`;
   
-  await page.goto(url, { waitUntil: 'networkidle2', timeout: 15000 });
+  await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+  
+  await new Promise(r => setTimeout(r, 2000));
   
   const price = await page.evaluate(() => {
     const selectors = [
@@ -33,25 +36,25 @@ async function getPriceForCard(page, cardName, setName) {
       '.product-card__price .price .value',
       '[data-testid="market-price"]',
       '.price__marketPrice',
-      '.product-price .price .value'
+      '.product-price .price .value',
+      '.inventory__price-with-shipping',
+      '.product-price'
     ];
     
     for (const sel of selectors) {
       const el = document.querySelector(sel);
       if (el) {
         const text = el.textContent || el.innerText;
-        const match = text.match(/[\d,]+\.?\d*/);
-        if (match) return parseFloat(match[0].replace(',', ''));
+        const match = text.match(/\$?([\d,]+\.?\d*)/);
+        if (match && parseFloat(match[1]) > 0) return parseFloat(match[1].replace(',', ''));
       }
     }
     
-    const allPrices = document.querySelectorAll('.price, .product-card__price');
-    for (const p of allPrices) {
-      const text = p.textContent;
-      if (text.includes('$')) {
-        const match = text.match(/\$?([\d,]+\.?\d*)/);
-        if (match) return parseFloat(match[1].replace(',', ''));
-      }
+    const allText = document.body.innerText;
+    const prices = allText.match(/\$[\d,]+\.\d{2}/g);
+    if (prices && prices.length > 0) {
+      const firstPrice = prices[0].replace('$', '').replace(',', '');
+      return parseFloat(firstPrice);
     }
     
     return null;
@@ -60,65 +63,98 @@ async function getPriceForCard(page, cardName, setName) {
   return price;
 }
 
-async function processBatch(browser, cards, startIndex, progress) {
+async function processCard(browser, card, index, progress) {
   const page = await browser.newPage();
   await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
   
-  for (let i = 0; i < cards.length; i++) {
-    const card = cards[i];
-    const index = startIndex + i;
-    const queryName = `${card.name} ${card.setCode}`.substring(0, 80);
+  const queryName = `${card.name} ${card.setCode}`.substring(0, 80);
+  
+  try {
+    console.log(`  [${index + 1}] Fetching ${queryName}...`);
     
-    try {
-      console.log(`  [${index + 1}] Fetching ${queryName}...`);
-      
-      const price = await getPriceForCard(page, card.name, card.setCode);
-      
-      if (price && price > 0) {
-        await prisma.card.update({
-          where: { id: card.id },
-          data: { currentPrice: price }
-        });
-        progress.updated++;
-        console.log(`       ✅ $${price.toFixed(2)}`);
-      } else {
-        console.log(`       ⚠️ No price found`);
-      }
-      
-    } catch (e) {
-      progress.errors.push({ card: card.name, error: e.message });
-      progress.failedCards.push({ name: card.name, set: card.setCode });
-      console.log(`       ❌ ${e.message}`);
+    const price = await getPriceForCard(page, card.name, card.setCode);
+    
+    if (price && price > 0) {
+      await prisma.cardPrice.create({
+        data: {
+          cardId: card.id,
+          tcgplayerMarket: price,
+          date: new Date()
+        }
+      });
+      progress.updated++;
+      console.log(`       ✅ $${price.toFixed(2)}`);
+    } else {
+      console.log(`       ⚠️ No price found`);
     }
     
-    if (i < cards.length - 1) {
-      await new Promise(r => setTimeout(r, DELAY_MS));
-    }
+  } catch (e) {
+    progress.errors.push({ card: card.name, error: e.message });
+    progress.failedCards.push({ name: card.name, set: card.setCode });
+    console.log(`       ❌ ${e.message}`);
   }
   
   await page.close();
 }
 
+async function processParallel(browser, cards, startIndex, progress) {
+  const batches = [];
+  for (let i = 0; i < cards.length; i += PARALLEL_TABS) {
+    batches.push(cards.slice(i, i + PARALLEL_TABS));
+  }
+  
+  for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+    const batch = batches[batchIdx];
+    console.log(`\nBatch ${batchIdx + 1}/${batches.length} (${batch.length} cards)...`);
+    
+    await Promise.all(
+      batch.map((card, i) => processCard(browser, card, startIndex + batchIdx * PARALLEL_TABS + i, progress))
+    );
+    
+    if (batchIdx < batches.length - 1) {
+      await new Promise(r => setTimeout(r, DELAY_MS));
+    }
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
   let maxCards = 5;
+  let fetchAll = false;
   
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--cards' && args[i + 1]) {
       maxCards = parseInt(args[i + 1], 10);
     }
+    if (args[i] === '--all') {
+      fetchAll = true;
+    }
   }
   
   console.log('🔍 TCGPlayer Price Fetcher using Puppeteer\n');
-  console.log(`Fetching prices for ${maxCards} cards...\n`);
+  console.log(`Parallel tabs: ${PARALLEL_TABS}`);
+  console.log(`Delay: ${DELAY_MS}ms\n`);
   
   const progress = loadProgress();
   console.log('Resume from card #', progress.lastCardIndex + 1);
   
+  let totalCards;
+  if (fetchAll) {
+    totalCards = await prisma.card.count();
+    console.log(`Fetching ALL ${totalCards} cards...\n`);
+  } else {
+    totalCards = Math.min(maxCards, await prisma.card.count() - progress.lastCardIndex);
+    console.log(`Fetching ${totalCards} cards...\n`);
+  }
+  
   const cards = await prisma.card.findMany({
-    take: maxCards,
+    take: fetchAll ? totalCards : maxCards,
     skip: progress.lastCardIndex,
-    select: { id: true, name: true, setCode: true, currentPrice: true }
+    select: {
+      id: true,
+      name: true,
+      setCode: true
+    }
   });
   
   if (cards.length === 0) {
@@ -133,10 +169,23 @@ async function main() {
   try {
     browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
     
-    await processBatch(browser, cards, progress.lastCardIndex, progress);
+    let cardIdx = 0;
+    while (cardIdx < cards.length) {
+      const batchSize = Math.min(PARALLEL_TABS, cards.length - cardIdx);
+      await processParallel(browser, cards.slice(cardIdx, cardIdx + batchSize), progress.lastCardIndex + cardIdx, progress);
+      cardIdx += batchSize;
+      
+      if (cardIdx % SAVE_EVERY === 0 || cardIdx >= cards.length) {
+        progress.lastCardIndex += cardIdx;
+        if (progress.lastCardIndex % SAVE_EVERY === 0) {
+          saveProgress(progress);
+          console.log(`\n💾 Progress saved (${progress.lastCardIndex} cards processed)\n`);
+        }
+      }
+    }
     
   } catch (e) {
     console.error('Browser error:', e.message);
@@ -144,7 +193,6 @@ async function main() {
     if (browser) await browser.close();
   }
   
-  progress.lastCardIndex += cards.length;
   saveProgress(progress);
   
   console.log(`\n✅ Done! Updated ${progress.updated} prices`);
