@@ -12,6 +12,14 @@ function loadLocalData() {
 }
 
 async function main() {
+  // Safety guard - don't reseed if database already has cards
+  const existingCardCount = await prisma.card.count();
+  if (existingCardCount > 1000) {
+    console.log(`Database already has ${existingCardCount} cards. Skipping seed.`);
+    await prisma.$disconnect();
+    return;
+  }
+
   console.log('Starting database seed from local data...');
 
   console.log('\n=== Loading local card data ===');
