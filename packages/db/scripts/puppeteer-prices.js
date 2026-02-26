@@ -22,8 +22,81 @@ function saveProgress(progress) {
   fs.writeFileSync(PROGRESS_FILE, JSON.stringify(progress, null, 2));
 }
 
+const setNameMap = {
+  'base1': 'Base Set',
+  'base2': 'Jungle',
+  'base3': 'Fossil',
+  'base4': 'Base Set 2',
+  'base5': 'Team Rocket',
+  'base6': 'Gym Heroes',
+  'base7': 'Gym Challenge',
+  'base8': 'Neo Genesis',
+  'base9': 'Neo Discovery',
+  'base10': 'Neo Destiny',
+  'base11': 'Legendary Collection',
+  'base12': 'Ex Ruby Sapphire',
+  'base13': 'Ex Sandstorm',
+  'base14': 'Ex Dragon',
+  'base15': 'Ex Team Magma vs Team Aqua',
+  'base16': 'Ex Hidden Legends',
+  'base17': 'Ex Fire Red Leaf Green',
+  'base18': 'Ex Unseen Forces',
+  'base19': 'Ex Delta Species',
+  'base20': 'Ex Legend Maker',
+  'xy1': 'XY Base Set',
+  'xy2': 'Flashfire',
+  'xy3': 'Furious Fists',
+  'xy4': 'Phantom Forces',
+  'xy5': 'Primal Clash',
+  'xy6': 'Ancient Origins',
+  'xy7': 'Breakthrough',
+  'xy8': 'Breakpoint',
+  'xy9': 'Generations',
+  'xy10': 'Fates Collide',
+  'xy11': 'Steam Siege',
+  'xy12': 'Evolutions',
+  'sm1': 'Sun Moon Base Set',
+  'sm2': 'Guardians Rising',
+  'sm3': 'Burning Shadows',
+  'sm4': 'Crimson Invasion',
+  'sm5': 'Ultra Prism',
+  'sm6': 'Forbidden Light',
+  'sm7': 'Celestial Storm',
+  'sm8': 'Lost Thunder',
+  'sm9': 'Team Up',
+  'sm10': 'Unbroken Bonds',
+  'sm11': 'Unified Minds',
+  'sm12': 'Cosmic Eclipse',
+  'swsh1': 'Sword Shield Base Set',
+  'swsh2': 'Rebel Clash',
+  'swsh3': 'Darkness Ablaze',
+  'swsh4': 'Vivid Voltage',
+  'swsh5': 'Battle Styles',
+  'swsh6': 'Chilling Reign',
+  'swsh7': 'Evolving Skies',
+  'swsh8': 'Fusion Strike',
+  'swsh9': 'Brilliant Stars',
+  'swsh10': 'Astral Radiance',
+  'swsh11': 'Lost Origin',
+  'swsh12': 'Silver Tempest',
+  'sv1': 'Scarlet Violet Base Set',
+  'sv2': 'Obsidian Flames',
+  'sv3': 'Paldea Evolved',
+  'sv4': 'Obsidian Flames',
+  'sv5': 'Temporal Forces',
+  'sv6': 'Prismatic Evolutions'
+};
+
+function getSearchQuery(cardName, setCode) {
+  const setName = setNameMap[setCode] || '';
+  if (setName) {
+    return encodeURIComponent(`${cardName} ${setName} pokemon card`);
+  }
+  return encodeURIComponent(`${cardName} pokemon card`);
+}
+
 async function getPriceForCard(page, cardName, setName) {
-  const query = encodeURIComponent(`${cardName} ${setName} pokemon card`);
+  const query = getSearchQuery(cardName, setName);
   const url = `https://www.tcgplayer.com/search/pokemon/product?q=${query}&view=grid`;
   
   await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });

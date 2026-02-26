@@ -196,4 +196,86 @@ cardsRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) 
   }
 });
 
+cardsRouter.get('/:id/price-history', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const cardId = req.params.id;
+    const period = (req.query.period as string) || '30';
+
+    const card = await prisma.card.findUnique({
+      where: { id: cardId },
+      include: {
+        prices: {
+          orderBy: { date: 'desc' },
+          take: 1
+        }
+      }
+    });
+
+    if (!card) {
+      return res.status(404).json({ error: 'Card not found' });
+    }
+
+    const priceHistory = await prisma.priceHistory.findMany({
+      where: { cardId },
+      orderBy: { date: 'asc' }
+    });
+
+    const currentPrice = card.prices[0]?.tcgplayerMarket || null;
+
+    if (priceHistory.length > 0) {
+      const data = priceHistory.map(ph => ({
+        date: ph.date.toISOString().split('T')[0],
+        price: ph.price
+      }));
+
+      const latest = data[data.length - 1];
+      const oldest = data[0];
+      const change = oldest ? ((latest.price - oldest.price) / oldest.price) * 100 : 0;
+
+      res.json({
+        data,
+        currentPrice: latest.price,
+        change: change.toFixed(2),
+        hasRealData: true
+      });
+    } else {
+      const mockData = generateMockPriceHistory(currentPrice, parseInt(period));
+      const latest = mockData[mockData.length - 1];
+      const oldest = mockData[0];
+      const change = oldest ? ((latest.price - oldest.price) / oldest.price) * 100 : 0;
+
+      res.json({
+        data: mockData,
+        currentPrice: latest.price,
+        change: change.toFixed(2),
+        hasRealData: false
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+function generateMockPriceHistory(currentPrice: number | null, days: number) {
+  const data = [];
+  const basePrice = currentPrice || 50;
+  const now = new Date();
+
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    
+    const variance = (Math.random() - 0.5) * 0.3;
+    const trend = (days - i) / days * 0.05;
+    const price = basePrice * (1 + variance + trend);
+    
+    data.push({
+      date: date.toISOString().split('T')[0],
+      price: Math.round(price * 100) / 100
+    });
+  }
+
+  return data;
+}
+
 export default cardsRouter;

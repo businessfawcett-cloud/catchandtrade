@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { GAME_TYPES } from '@catchandtrade/shared';
+import PriceHistoryChart from '../PriceHistoryChart';
 
 interface CardPrice {
   date: Date;
@@ -99,6 +100,8 @@ export default function CardDetailPage({ card, listings, expectedValue, trend, i
               </button>
             </div>
           </div>
+
+          <PriceHistoryChart cardId={card.id} currentPrice={currentPrice} />
 
           <div style={{ marginTop: '2rem' }}>
             <h3>Expected Value</h3>
