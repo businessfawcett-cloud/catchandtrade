@@ -7,7 +7,7 @@
     "dev": "ts-node-dev --respawn --transpile-only -r dotenv/config src/index.ts",
     "build": "tsc",
     "start": "PORT=3003 node dist/index.js",
-    "test": "jest",
+    "test": "DATABASE_URL=postgresql://postgres:postgres@localhost:5436/catchandtrade_test jest",
     "lint": "echo 'linting api'"
   },
   "dependencies": {

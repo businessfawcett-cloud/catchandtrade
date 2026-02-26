@@ -1,9 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+
+const containerStyle: React.CSSProperties = {
+  background: '#0a0f1e',
+  minHeight: '100vh',
+  padding: '2rem'
+};
+
+const getEraColor = (year: number): string => {
+  if (year >= 2020) return '#e63946'; // Modern - red
+  if (year >= 2010) return '#ffd700'; // Classic - gold  
+  return '#a855f7'; // Vintage - purple
+};
+
+const getEra = (year: number): string => {
+  if (year >= 2020) return 'modern';
+  if (year >= 2010) return 'classic';
+  return 'vintage';
+};
 
 interface PokemonSet {
   id: string;
@@ -70,7 +88,7 @@ export default function CollectionPage() {
             };
           }
         } catch (err) {
-          console.error(`Failed to fetch progress for ${set.code}:`, err);
+          // Use fallback - set will show 0 owned
         }
       }
 
@@ -80,99 +98,252 @@ export default function CollectionPage() {
     fetchProgress();
   }, [user, sets]);
 
+  const totalOwned = Object.values(progressMap).reduce((sum, p) => sum + p.owned, 0);
+  const totalCards = 20079;
+
+  const setsByYear = useMemo(() => {
+    const grouped: Record<number, PokemonSet[]> = {};
+    for (const set of sets) {
+      const year = set.releaseYear || 2024;
+      if (!grouped[year]) grouped[year] = [];
+      grouped[year].push(set);
+    }
+    return Object.entries(grouped).sort((a, b) => Number(b[0]) - Number(a[0]));
+  }, [sets]);
+
   const getProgressColor = (percentage: number) => {
-    if (percentage >= 75) return '#28a745';
-    if (percentage >= 25) return '#ffc107';
-    return '#6c757d';
+    if (percentage === 0) return '#e63946';
+    if (percentage >= 100) return '#10b981';
+    return '#ffd700';
+  };
+
+  const SetBadge = ({ name, code }: { name: string; code: string }) => {
+    const initial = name.charAt(0).toUpperCase();
+    const colors = ['#e63946', '#ffd700', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+    const colorIndex = name.length % colors.length;
+    const symbolUrl = `https://images.pokemontcg.io/${code}/symbol.png`;
+    
+    return (
+      <>
+        <img 
+          src={symbolUrl} 
+          alt={name} 
+          style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '8px' }}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+        <div style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '8px',
+          background: `linear-gradient(135deg, ${colors[colorIndex]}, ${colors[colorIndex]}dd)`,
+          display: 'none',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '20px',
+          fontWeight: 'bold',
+          color: 'white'
+        }}>
+          {initial}
+        </div>
+      </>
+    );
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div style={containerStyle}>
+        <div style={{ 
+          background: 'rgba(255,255,255,0.05)', 
+          borderRadius: '16px', 
+          padding: '3rem', 
+          textAlign: 'center',
+          color: 'white'
+        }}>
+          Loading...
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
     return (
-      <div>
-        <h1>Collection</h1>
-        <p>Please <a href="/login">login</a> to view your collection progress.</p>
+      <div style={containerStyle}>
+        <div style={{ 
+          background: 'rgba(255,255,255,0.05)', 
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '16px', 
+          padding: '3rem', 
+          textAlign: 'center',
+          maxWidth: '500px',
+          margin: '0 auto'
+        }}>
+          <h1 style={{ color: 'white', fontSize: '1.75rem', marginBottom: '1rem' }}>Collection</h1>
+          <p style={{ color: '#94a3b8' }}>Please <a href="/login" style={{ color: '#e63946' }}>login</a> to view your collection progress.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-      <h1>My Pokemon Collection</h1>
-      <p style={{ marginBottom: '2rem', color: '#666' }}>
-        Track your progress across Pokemon card sets
-      </p>
+    <div style={containerStyle}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        
+        {/* Header with total progress */}
+        <div style={{ 
+          background: 'rgba(255,255,255,0.05)', 
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '16px', 
+          padding: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          <h1 style={{ color: 'white', fontSize: '32px', fontWeight: 'bold', margin: 0 }}>
+            My Pokemon Collection
+          </h1>
+          <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>
+            Track your progress across Pokemon card sets
+          </p>
+          <div style={{ 
+            marginTop: '1rem', 
+            padding: '1rem', 
+            background: 'rgba(0,0,0,0.2)', 
+            borderRadius: '8px',
+            display: 'inline-block'
+          }}>
+            <span style={{ color: 'white', fontSize: '1.1rem' }}>
+              You own <span style={{ color: '#ffd700', fontWeight: 'bold' }}>{totalOwned.toLocaleString()}</span> of <span style={{ fontWeight: 'bold' }}>{totalCards.toLocaleString()}</span> total cards
+            </span>
+          </div>
+        </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-        {sets.map(set => {
-          const progress = progressMap[set.code];
-          return (
-            <Link 
-              key={set.id} 
-              href={`/collection/${set.code}`}
-              style={{ 
-                textDecoration: 'none', 
-                color: 'inherit',
-                display: 'block'
-              }}
-            >
-              <div style={{ 
-                border: '1px solid #ddd', 
-                borderRadius: '12px', 
-                padding: '1.5rem',
-                backgroundColor: 'white',
-                transition: 'box-shadow 0.2s ease',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+        {/* Sets grouped by year */}
+        {setsByYear.map(([year, yearSets]) => (
+          <div key={year} style={{ marginBottom: '2rem' }}>
+            {/* Year divider */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginBottom: '1rem',
+              gap: '1rem'
+            }}>
+              <span style={{ 
+                color: '#ffd700', 
+                fontSize: '24px', 
+                fontWeight: 'bold'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{set.name}</h3>
-                    <span style={{ fontSize: '0.85rem', color: '#666' }}>{set.releaseYear}</span>
-                  </div>
-                  <span style={{ 
-                    backgroundColor: '#f0f0f0', 
-                    padding: '0.25rem 0.5rem', 
-                    borderRadius: '4px',
-                    fontSize: '0.8rem',
-                    fontWeight: 'bold'
-                  }}>
-                    {set.code}
-                  </span>
-                </div>
+                {year}
+              </span>
+              <div style={{ 
+                flex: 1, 
+                height: '1px', 
+                background: 'linear-gradient(to right, rgba(255,215,0,0.3), transparent)' 
+              }} />
+            </div>
 
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.9rem' }}>
-                    <span>Progress</span>
-                    <span>
-                      {progress ? `${progress.owned}/${progress.total} (${progress.percentage}%)` : `0/${set.cardCount} (0%)`}
-                    </span>
-                  </div>
-                  <div style={{ 
-                    height: '8px', 
-                    backgroundColor: '#e9ecef', 
-                    borderRadius: '4px',
-                    overflow: 'hidden'
-                  }}>
+            {/* Set cards grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+              {yearSets.map(set => {
+                const progress = progressMap[set.code];
+                const owned = progress?.owned || 0;
+                const total = progress?.total || set.cardCount || set.totalCards || 0;
+                const percentage = progress?.percentage || 0;
+                const progressColor = getProgressColor(percentage);
+                const eraColor = getEraColor(set.releaseYear);
+                
+                return (
+                  <Link 
+                    key={set.id} 
+                    href={`/collection/${set.code}`}
+                    style={{ textDecoration: 'none', display: 'block' }}
+                  >
                     <div style={{ 
-                      height: '100%', 
-                      width: progress ? `${progress.percentage}%` : '0%',
-                      backgroundColor: progress ? getProgressColor(progress.percentage) : '#6c757d',
-                      borderRadius: '4px',
-                      transition: 'width 0.3s ease'
-                    }} />
-                  </div>
-                </div>
+                      background: 'rgba(255,255,255,0.05)',
+                      borderRadius: '12px', 
+                      padding: '1.5rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      height: '100%',
+                      minHeight: '140px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(230, 57, 70, 0.5)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(230, 57, 70, 0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                    >
+                      {/* Left accent bar */}
+                      <div style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: '3px',
+                        background: eraColor
+                      }} />
 
-                <div style={{ fontSize: '0.85rem', color: '#666' }}>
-                  {set.totalCards} cards in set
-                </div>
-              </div>
-            </Link>
-          );
-        })}
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <SetBadge name={set.name} code={set.code} />
+                        
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <h3 style={{ color: 'white', margin: 0, fontSize: '16px', fontWeight: 'bold' }}>
+                              {set.name}
+                            </h3>
+                            <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                              {set.releaseYear}
+                            </span>
+                          </div>
+
+                          {/* Progress bar */}
+                          <div style={{ marginTop: '1rem' }}>
+                            <div style={{ 
+                              height: '6px', 
+                              backgroundColor: '#1a2332', 
+                              borderRadius: '3px',
+                              overflow: 'hidden'
+                            }}>
+                              <div style={{ 
+                                height: '100%', 
+                                width: `${percentage}%`,
+                                backgroundColor: progressColor,
+                                borderRadius: '3px',
+                                transition: 'width 0.3s ease'
+                              }} />
+                            </div>
+                          </div>
+
+                          <div style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between',
+                            marginTop: '0.5rem',
+                            fontSize: '14px'
+                          }}>
+                            <span style={{ color: 'white' }}>
+                              {owned} / {total} cards
+                            </span>
+                            <span style={{ color: progressColor, fontWeight: 'bold' }}>
+                              {percentage}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
