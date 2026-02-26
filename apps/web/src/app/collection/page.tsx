@@ -117,37 +117,33 @@ export default function CollectionPage() {
     return '#ffd700';
   };
 
-  const SetBadge = ({ name, code }: { name: string; code: string }) => {
-    const initial = name.charAt(0).toUpperCase();
-    const colors = ['#e63946', '#ffd700', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
-    const colorIndex = name.length % colors.length;
-    const symbolUrl = `https://images.pokemontcg.io/${code}/symbol.png`;
-    
-    return (
-      <>
-        <img 
-          src={symbolUrl} 
-          alt={name} 
-          style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '8px' }}
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-          }}
-        />
+  const SetBadge = ({ name, imageUrl }: { name: string; imageUrl: string | null }) => {
+    if (!imageUrl) {
+      const initial = name.charAt(0).toUpperCase();
+      return (
         <div style={{
-          width: '48px',
-          height: '48px',
+          width: '120px',
+          height: '60px',
           borderRadius: '8px',
-          background: `linear-gradient(135deg, ${colors[colorIndex]}, ${colors[colorIndex]}dd)`,
-          display: 'none',
+          background: 'linear-gradient(135deg, #e63946, #c1121f)',
+          display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '20px',
+          fontSize: '32px',
           fontWeight: 'bold',
           color: 'white'
         }}>
           {initial}
         </div>
-      </>
+      );
+    }
+    
+    return (
+      <img 
+        src={imageUrl}
+        alt={name}
+        style={{ width: '120px', height: '50px', objectFit: 'contain', display: 'block' }}
+      />
     );
   };
 
@@ -292,7 +288,7 @@ export default function CollectionPage() {
                       }} />
 
                       <div style={{ display: 'flex', gap: '1rem' }}>
-                        <SetBadge name={set.name} code={set.code} />
+                        <SetBadge name={set.name} imageUrl={set.imageUrl || null} />
                         
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

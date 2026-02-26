@@ -4,7 +4,7 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "test": "jest",
+    "test": "DATABASE_URL=postgresql://postgres:postgres@localhost:5436/catchandtrade_test jest",
     "lint": "echo 'linting scanning'"
   },
   "dependencies": {

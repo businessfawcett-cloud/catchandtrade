@@ -12,10 +12,24 @@ function loadLocalData() {
 }
 
 async function main() {
+  // Load seed data early for logo updates
+  const seedData = loadLocalData();
+  
   // Safety guard - don't reseed if database already has cards
   const existingCardCount = await prisma.card.count();
   if (existingCardCount > 1000) {
-    console.log(`Database already has ${existingCardCount} cards. Skipping seed.`);
+    // Still update set logo URLs even if cards exist
+    console.log(`Database already has ${existingCardCount} cards. Updating set logos only...`);
+    
+    // Update only set logos
+    for (const set of seedData.sets) {
+      const logoUrl = `https://images.pokemontcg.io/${set.id}/logo.png`;
+      await prisma.pokemonSet.update({
+        where: { code: set.code },
+        data: { imageUrl: logoUrl }
+      });
+    }
+    console.log(`Updated ${seedData.sets.length} set logo URLs`);
     await prisma.$disconnect();
     return;
   }
@@ -23,26 +37,27 @@ async function main() {
   console.log('Starting database seed from local data...');
 
   console.log('\n=== Loading local card data ===');
-  const seedData = loadLocalData();
   console.log(`Loading ${seedData.sets.length} sets and ${Object.values(seedData.cards).flat().length} cards...`);
 
   // Upsert all sets (creates or updates)
   let setsCreated = 0;
   for (const set of seedData.sets) {
+    // Use logo URL instead of symbol
+    const logoUrl = `https://images.pokemontcg.io/${set.id}/logo.png`;
     await prisma.pokemonSet.upsert({
       where: { code: set.code },
       update: {
         name: set.name,
         totalCards: set.totalCards,
         releaseYear: set.releaseYear,
-        imageUrl: set.imageUrl,
+        imageUrl: logoUrl,
       },
       create: {
         name: set.name,
         code: set.code,
         totalCards: set.totalCards,
         releaseYear: set.releaseYear,
-        imageUrl: set.imageUrl,
+        imageUrl: logoUrl,
       },
     });
     setsCreated++;
