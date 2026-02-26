@@ -118,8 +118,9 @@ export default function CollectionPage() {
   };
 
   const SetBadge = ({ name, imageUrl }: { name: string; imageUrl: string | null }) => {
+    const initial = name.charAt(0).toUpperCase();
+    
     if (!imageUrl) {
-      const initial = name.charAt(0).toUpperCase();
       return (
         <div style={{
           width: '120px',
@@ -139,11 +140,21 @@ export default function CollectionPage() {
     }
     
     return (
-      <img 
-        src={imageUrl}
-        alt={name}
-        style={{ width: '120px', height: '50px', objectFit: 'contain', display: 'block' }}
-      />
+      <>
+        <img 
+          src={imageUrl}
+          alt={name}
+          style={{ width: '120px', height: '50px', objectFit: 'contain', display: 'block' }}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+            if (fallback) fallback.style.display = 'flex';
+          }}
+        />
+        <div style={{ display: 'none', width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #e63946, #c1121f)', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '20px' }}>
+          {initial}
+        </div>
+      </>
     );
   };
 
