@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
+import PriceHistoryChart from '@/components/PriceHistoryChart';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
 
@@ -263,6 +264,10 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
                 <span>High: ${latestPrice.tcgplayerHigh.toFixed(2)}</span>
               </div>
             </div>
+          )}
+
+          {latestPrice && (
+            <PriceHistoryChart cardId={card.id} currentPrice={latestPrice.tcgplayerMarket} />
           )}
 
           <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
