@@ -463,10 +463,11 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
           position: 'fixed',
           top: '1rem',
           right: '1rem',
-          backgroundColor: '#d4edda',
-          color: '#155724',
+          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+          color: '#22c55e',
           padding: '1rem',
-          borderRadius: '4px',
+          borderRadius: '8px',
+          border: '1px solid rgba(34, 197, 94, 0.3)',
           zIndex: 100
         }}>
           {successMessage}
@@ -480,85 +481,129 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
+          backgroundColor: 'rgba(0,0,0,0.7)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 100
         }}>
           <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            maxWidth: '400px',
-            width: '90%'
+            backgroundColor: '#1a2332',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            maxWidth: '450px',
+            width: '90%',
+            border: '1px solid rgba(255,255,255,0.1)'
           }}>
-            <h3 style={{ marginTop: 0 }}>Add to Portfolio</h3>
-            <p style={{ color: '#666' }}>{card?.name}</p>
+            {card?.imageUrl && (
+              <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+                <img 
+                  src={card.imageUrl} 
+                  alt={card.name} 
+                  style={{ maxHeight: '120px', objectFit: 'contain', borderRadius: '8px' }}
+                />
+              </div>
+            )}
             
-            <div style={{ marginTop: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.25rem' }}>Portfolio</label>
+            <h3 style={{ color: 'white', marginTop: 0, marginBottom: '0.5rem', textAlign: 'center' }}>Add to Portfolio</h3>
+            <p style={{ color: '#94a3b8', textAlign: 'center', marginBottom: '1.5rem' }}>{card?.name}</p>
+            
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Portfolio</label>
               <select
                 value={selectedPortfolio}
                 onChange={(e) => setSelectedPortfolio(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+                style={{ 
+                  width: '100%', 
+                  padding: '0.75rem', 
+                  background: '#0a0f1e', 
+                  color: 'white',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
               >
                 {portfolios.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id} style={{ background: '#0a0f1e' }}>{p.name}</option>
                 ))}
               </select>
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.25rem' }}>Condition</label>
-              <select
-                value={condition}
-                onChange={(e) => setCondition(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
-              >
-                <option value="MINT">Mint</option>
-                <option value="NEAR_MINT">Near Mint</option>
-                <option value="LIGHTLY_PLAYED">Lightly Played</option>
-                <option value="MODERATELY_PLAYED">Moderately Played</option>
-                <option value="HEAVILY_PLAYED">Heavily Played</option>
-                <option value="DAMAGED">Damaged</option>
-              </select>
+              <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Condition</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {['MINT', 'NEAR_MINT', 'LIGHTLY_PLAYED', 'MODERATELY_PLAYED', 'HEAVILY_PLAYED', 'DAMAGED'].map((cond) => (
+                  <button
+                    key={cond}
+                    onClick={() => setCondition(cond)}
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      background: condition === cond ? '#e63946' : 'rgba(255,255,255,0.05)',
+                      color: condition === cond ? 'white' : '#94a3b8',
+                      border: condition === cond ? '1px solid #e63946' : '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '20px',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {cond.replace('_', ' ')}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.25rem' }}>Quantity</label>
-              <input
-                type="number"
-                min="1"
-                max="99"
-                value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                style={{ width: '100%', padding: '0.5rem' }}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={quantity}
+                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                  style={{ 
+                    width: '100%', 
+                    padding: '0.75rem', 
+                    background: '#0a0f1e', 
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Price (opt)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(e.target.value)}
+                  placeholder="0.00"
+                  style={{ 
+                    width: '100%', 
+                    padding: '0.75rem', 
+                    background: '#0a0f1e', 
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
             </div>
 
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.25rem' }}>Purchase Price (optional)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={purchasePrice}
-                onChange={(e) => setPurchasePrice(e.target.value)}
-                placeholder="0.00"
-                style={{ width: '100%', padding: '0.5rem' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button
                 onClick={() => setShowModal(false)}
                 style={{
                   flex: 1,
                   padding: '0.75rem',
-                  backgroundColor: '#6c757d',
+                  background: 'rgba(255,255,255,0.05)',
                   color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
                   cursor: 'pointer'
                 }}
               >
@@ -570,114 +615,17 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
                 style={{
                   flex: 1,
                   padding: '0.75rem',
-                  backgroundColor: adding || !selectedPortfolio ? '#ccc' : '#28a745',
+                  background: adding || !selectedPortfolio ? '#666' : 'linear-gradient(135deg, #e63946, #c1121f)',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '4px',
-                  cursor: adding || !selectedPortfolio ? 'not-allowed' : 'pointer'
+                  borderRadius: '8px',
+                  cursor: adding || !selectedPortfolio ? 'not-allowed' : 'pointer',
+                  fontWeight: 'bold'
                 }}
               >
                 {adding ? 'Adding...' : 'Add to Portfolio'}
               </button>
             </div>
-
-            {showModal && (
-              <div style={{
-                marginTop: '1rem',
-                padding: '1.5rem',
-                backgroundColor: '#f8f9fa',
-                borderRadius: '8px',
-                border: '1px solid #dee2e6'
-              }}>
-                <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Add to Portfolio</h3>
-                <p style={{ color: '#666', marginBottom: '1rem' }}>{card?.name}</p>
-                
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Portfolio</label>
-                  <select
-                    value={selectedPortfolio}
-                    onChange={(e) => setSelectedPortfolio(e.target.value)}
-                    style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
-                  >
-                    {portfolios.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Condition</label>
-                  <select
-                    value={condition}
-                    onChange={(e) => setCondition(e.target.value)}
-                    style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
-                  >
-                    <option value="MINT">Mint</option>
-                    <option value="NEAR_MINT">Near Mint</option>
-                    <option value="LIGHTLY_PLAYED">Lightly Played</option>
-                    <option value="MODERATELY_PLAYED">Moderately Played</option>
-                    <option value="HEAVILY_PLAYED">Heavily Played</option>
-                    <option value="DAMAGED">Damaged</option>
-                  </select>
-                </div>
-
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Quantity</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="99"
-                    value={quantity}
-                    onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                    style={{ width: '100%', padding: '0.5rem' }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Purchase Price (optional)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={purchasePrice}
-                    onChange={(e) => setPurchasePrice(e.target.value)}
-                    placeholder="0.00"
-                    style={{ width: '100%', padding: '0.5rem' }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    onClick={() => setShowModal(false)}
-                    style={{
-                      flex: 1,
-                      padding: '0.75rem',
-                      backgroundColor: '#6c757d',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAddToPortfolio}
-                    disabled={adding || !selectedPortfolio}
-                    style={{
-                      flex: 1,
-                      padding: '0.75rem',
-                      backgroundColor: adding || !selectedPortfolio ? '#ccc' : '#28a745',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: adding || !selectedPortfolio ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    {adding ? 'Adding...' : 'Add to Portfolio'}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

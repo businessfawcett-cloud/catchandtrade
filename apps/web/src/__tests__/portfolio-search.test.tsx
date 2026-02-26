@@ -65,7 +65,7 @@ describe('PortfolioPage Search', () => {
     });
   });
 
-  it('has search button', async () => {
+  it('has search input with magnifying glass icon', async () => {
     (global.fetch as jest.Mock).mockImplementation((url: string) => {
       if (url.includes('/api/portfolios')) {
         return Promise.resolve({
@@ -79,7 +79,7 @@ describe('PortfolioPage Search', () => {
     render(<PortfolioPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Search')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/search for a card/i)).toBeInTheDocument();
     });
   });
 

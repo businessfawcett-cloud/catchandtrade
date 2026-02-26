@@ -6,6 +6,35 @@ import { useSearchParams } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
 
+const containerStyle: React.CSSProperties = {
+  background: '#0a0f1e',
+  minHeight: '100vh',
+  padding: '2rem'
+};
+
+const inputStyle: React.CSSProperties = {
+  background: '#1a2332',
+  border: '1px solid rgba(255,255,255,0.1)',
+  color: 'white',
+  padding: '0.75rem',
+  borderRadius: '8px',
+  width: '100%',
+  fontSize: '1rem',
+  boxSizing: 'border-box'
+};
+
+const buttonStyle: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #e63946, #c1121f)',
+  color: 'white',
+  border: 'none',
+  padding: '0.75rem 1.5rem',
+  borderRadius: '8px',
+  fontSize: '0.9rem',
+  fontWeight: 'bold',
+  cursor: 'pointer',
+  transition: 'opacity 0.2s'
+};
+
 interface Card {
   id: string;
   name: string;
@@ -96,10 +125,7 @@ export default function PortfolioSearchPage() {
   }, [fetchPortfolios, fetchCards]);
 
   const handleAddToPortfolio = async () => {
-    if (!selectedCard) {
-      alert('No card selected');
-      return;
-    }
+    if (!selectedCard) return;
 
     const token = localStorage.getItem('token');
     if (!token) {
@@ -150,229 +176,258 @@ export default function PortfolioSearchPage() {
 
   if (!user) {
     return (
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
-        <h1>Search Cards</h1>
-        <p>Please <a href="/login">login</a> to add cards to your portfolio.</p>
+      <div style={containerStyle}>
+        <div style={{ 
+          background: 'rgba(255,255,255,0.05)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '16px',
+          padding: '2rem',
+          textAlign: 'center',
+          maxWidth: '500px',
+          margin: '0 auto'
+        }}>
+          <h1 style={{ color: 'white', fontSize: '1.75rem', marginBottom: '1rem' }}>Search Cards</h1>
+          <p style={{ color: '#94a3b8' }}>Please <a href="/login" style={{ color: '#e63946' }}>login</a> to add cards to your portfolio.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
-      <div style={{ marginBottom: '1rem' }}>
-        <Link href="/portfolio" style={{ color: '#0066cc', textDecoration: 'none' }}>
-          ← Back to Portfolio
-        </Link>
-      </div>
-
-      <h1>Search Results{query ? ` for "${query}"` : ''}</h1>
-
-      {successMessage && (
-        <div style={{ 
-          backgroundColor: '#d4edda', 
-          color: '#155724', 
-          padding: '1rem', 
-          borderRadius: '4px',
-          marginBottom: '1rem' 
-        }}>
-          {successMessage}
+    <div style={containerStyle}>
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <Link href="/portfolio" style={{ color: '#e63946', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+            ← Back to Portfolio
+          </Link>
         </div>
-      )}
 
-      {loading ? (
-        <div>Loading...</div>
-      ) : cards.length === 0 ? (
-        <div>No results for "{query}"</div>
-      ) : (
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-          gap: '1.5rem',
-          marginTop: '1rem'
-        }}>
-          {cards.map((card) => (
-            <div 
-              key={card.id} 
-              style={{ 
-                border: '1px solid #ccc', 
-                borderRadius: '8px',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-            >
-              <div style={{ 
-                height: '180px', 
-                backgroundColor: '#f5f5f5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {card.imageUrl ? (
-                  <img 
-                    src={card.imageUrl} 
-                    alt={card.name}
-                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-                  />
-                ) : (
-                  'Card Image'
-                )}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h1 style={{ color: 'white', fontSize: '1.75rem', fontWeight: 'bold', margin: 0 }}>
+            Search Results{query ? ` for "${query}"` : ''}
+          </h1>
+        </div>
+
+        {successMessage && (
+          <div style={{ 
+            backgroundColor: 'rgba(34, 197, 94, 0.1)', 
+            color: '#22c55e', 
+            padding: '1rem', 
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            border: '1px solid rgba(34, 197, 94, 0.3)'
+          }}>
+            {successMessage}
+          </div>
+        )}
+
+        {loading ? (
+          <div style={{ textAlign: 'center', color: '#94a3b8', padding: '3rem' }}>Loading...</div>
+        ) : cards.length === 0 ? (
+          <div style={{ 
+            background: 'rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '16px',
+            padding: '3rem',
+            textAlign: 'center'
+          }}>
+            <p style={{ color: '#94a3b8' }}>No results for "{query}"</p>
+          </div>
+        ) : (
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+            gap: '1.5rem',
+            marginTop: '1rem'
+          }}>
+            {cards.map((card) => (
+              <div 
+                key={card.id} 
+                style={{ 
+                  background: 'rgba(255,255,255,0.05)', 
+                  border: '1px solid rgba(255,255,255,0.1)', 
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                <div style={{ 
+                  height: '180px', 
+                  background: '#1a2332',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {card.imageUrl ? (
+                    <img 
+                      src={card.imageUrl} 
+                      alt={card.name}
+                      style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                    />
+                  ) : (
+                    <span style={{ color: '#94a3b8' }}>Card Image</span>
+                  )}
+                </div>
+                <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <h3 style={{ color: 'white', margin: '0 0 0.25rem', fontSize: '1rem' }}>{card.name}</h3>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
+                    {card.setName} ({card.setCode} #{card.cardNumber})
+                  </p>
+                  {card.rarity && (
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#a855f7' }}>
+                      {card.rarity}
+                    </p>
+                  )}
+                  {card.currentPrice && (
+                    <p style={{ margin: '0.5rem 0', fontWeight: 'bold', fontSize: '1.1rem', color: '#ffd700' }}>
+                      ${card.currentPrice.toFixed(2)}
+                    </p>
+                  )}
+                  <button
+                    onClick={() => {
+                      setSelectedCard(card);
+                      setShowModal(true);
+                    }}
+                    style={{
+                      marginTop: 'auto',
+                      padding: '0.5rem',
+                      background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    Add to Portfolio
+                  </button>
+                </div>
               </div>
-              <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem' }}>{card.name}</h3>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: '#666' }}>
-                  {card.setName} ({card.setCode} #{card.cardNumber})
-                </p>
-                {card.rarity && (
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#888' }}>
-                    {card.rarity}
-                  </p>
-                )}
-                {card.currentPrice && (
-                  <p style={{ margin: '0.5rem 0', fontWeight: 'bold', fontSize: '1.1rem' }}>
-                    ${card.currentPrice.toFixed(2)}
-                  </p>
-                )}
+            ))}
+          </div>
+        )}
+
+        {showModal && selectedCard && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+          }}>
+            <div style={{
+              background: '#1a2332',
+              padding: '2rem',
+              borderRadius: '16px',
+              maxWidth: '400px',
+              width: '90%',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }}>
+              <h3 style={{ color: 'white', margin: '0 0 0.5rem' }}>Add {selectedCard.name} to Portfolio</h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 1.5rem' }}>
+                {selectedCard.setName} ({selectedCard.setCode} #{selectedCard.cardNumber})
+              </p>
+
+              {portfolios.length > 0 && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Portfolio</label>
+                  <select
+                    value={selectedPortfolio}
+                    onChange={(e) => setSelectedPortfolio(e.target.value)}
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  >
+                    {portfolios.map(p => (
+                      <option key={p.id} value={p.id} style={{ background: '#1a2332' }}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Condition</label>
+                <select
+                  value={condition}
+                  onChange={(e) => setCondition(e.target.value)}
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                >
+                  <option value="MINT" style={{ background: '#1a2332' }}>Mint</option>
+                  <option value="NEAR_MINT" style={{ background: '#1a2332' }}>Near Mint</option>
+                  <option value="LIGHTLY_PLAYED" style={{ background: '#1a2332' }}>Lightly Played</option>
+                  <option value="MODERATELY_PLAYED" style={{ background: '#1a2332' }}>Moderately Played</option>
+                  <option value="HEAVILY_PLAYED" style={{ background: '#1a2332' }}>Heavily Played</option>
+                  <option value="DAMAGED" style={{ background: '#1a2332' }}>Damaged</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={quantity}
+                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Purchase Price (optional)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(e.target.value)}
+                  placeholder="0.00"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button
-                  onClick={() => {
-                    console.log('Add to portfolio clicked', card);
-                    console.log('showModal before:', showModal);
-                    setSelectedCard(card);
-                    setShowModal(true);
-                    console.log('showModal after:', true);
-                  }}
+                  onClick={() => setShowModal(false)}
                   style={{
-                    marginTop: 'auto',
-                    padding: '0.5rem',
-                    backgroundColor: '#28a745',
+                    flex: 1,
+                    padding: '0.75rem',
+                    backgroundColor: 'rgba(255,255,255,0.1)',
                     color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
                     cursor: 'pointer'
                   }}
                 >
-                  Add to Portfolio
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddToPortfolio}
+                  disabled={adding}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: adding ? '#666' : 'linear-gradient(135deg, #22c55e, #16a34a)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: adding ? 'not-allowed' : 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {adding ? 'Adding...' : 'Add to Portfolio'}
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-
-      {showModal && selectedCard && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            maxWidth: '400px',
-            width: '90%'
-          }}>
-            <h3>Add {selectedCard.name} to Portfolio</h3>
-            <p style={{ color: '#666', fontSize: '0.9rem' }}>
-              {selectedCard.setName} ({selectedCard.setCode} #{selectedCard.cardNumber})
-            </p>
-
-            {portfolios.length > 0 && (
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.25rem' }}>Portfolio</label>
-                <select
-                  value={selectedPortfolio}
-                  onChange={(e) => setSelectedPortfolio(e.target.value)}
-                  style={{ width: '100%', padding: '0.5rem' }}
-                >
-                  {portfolios.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div style={{ marginTop: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.25rem' }}>Condition</label>
-              <select
-                value={condition}
-                onChange={(e) => setCondition(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
-              >
-                <option value="MINT">Mint</option>
-                <option value="NEAR_MINT">Near Mint</option>
-                <option value="LIGHTLY_PLAYED">Lightly Played</option>
-                <option value="MODERATELY_PLAYED">Moderately Played</option>
-                <option value="HEAVILY_PLAYED">Heavily Played</option>
-                <option value="DAMAGED">Damaged</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.25rem' }}>Quantity</label>
-              <input
-                type="number"
-                min="1"
-                max="99"
-                value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                style={{ width: '100%', padding: '0.5rem' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.25rem' }}>Purchase Price (optional)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={purchasePrice}
-                onChange={(e) => setPurchasePrice(e.target.value)}
-                placeholder="0.00"
-                style={{ width: '100%', padding: '0.5rem' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddToPortfolio}
-                disabled={adding}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  backgroundColor: '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: adding ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {adding ? 'Adding...' : 'Add to Portfolio'}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
