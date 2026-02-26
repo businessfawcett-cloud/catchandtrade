@@ -83,7 +83,12 @@ describe('PortfolioSearchPage API Calls', () => {
   });
 
   it('shows modal when Add to Portfolio button is clicked', async () => {
-    (global.fetch as jest.Mock).mockReset();
+    jest.clearAllMocks();
+    mockLocalStorage.getItem.mockImplementation((key: string) => {
+      if (key === 'token') return 'mock-token';
+      if (key === 'user') return JSON.stringify({ id: 'user-1', displayName: 'Test User' });
+      return null;
+    });
     (global.fetch as jest.Mock).mockImplementation((url: string) => {
       if (url.includes('/value')) {
         return Promise.resolve({
