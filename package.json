@@ -16,6 +16,7 @@
     "db:migrate": "turbo run db:migrate",
     "db:seed": "turbo run db:seed",
     "sync-prices": "node packages/db/scripts/sync-prices.js",
+    "scrape-prices": "node packages/db/scripts/scrape-prices.js",
     "stripe:listen": "stripe listen --forward-to localhost:3003/api/webhooks/stripe"
   },
   "devDependencies": {
