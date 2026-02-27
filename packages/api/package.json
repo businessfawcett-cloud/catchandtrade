@@ -5,8 +5,8 @@
   "types": "./src/index.ts",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only -r dotenv/config src/index.ts",
-    "build": "npx prisma generate --schema=../db/prisma/schema.prisma && tsc",
-    "start": "PORT=3003 node dist/index.js",
+    "build": "npx prisma generate --schema=../db/prisma/schema.prisma && (cd ../db && npx tsc) && (cd ../shared && npx tsc) && tsc",
+    "start": "node dist/index.js",
     "test": "DATABASE_URL=postgresql://postgres:postgres@localhost:5436/catchandtrade_test jest",
     "lint": "echo 'linting api'"
   },
