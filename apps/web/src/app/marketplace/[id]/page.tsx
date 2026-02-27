@@ -179,24 +179,43 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
   };
 
   if (loading) {
-    return <div style={{ padding: '2rem' }}>Loading...</div>;
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        background: '#0a0f1e', 
+        padding: '2rem',
+        color: 'white'
+      }}>
+        Loading...
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div style={{ padding: '2rem' }}>
+      <div style={{ 
+        minHeight: '100vh', 
+        background: '#0a0f1e', 
+        padding: '2rem',
+        color: 'white'
+      }}>
         <h1>Error</h1>
         <p>{error}</p>
-        <a href="/marketplace">Back to Marketplace</a>
+        <a href="/marketplace" style={{ color: '#e63946' }}>Back to Marketplace</a>
       </div>
     );
   }
 
   if (!card) {
     return (
-      <div style={{ padding: '2rem' }}>
+      <div style={{ 
+        minHeight: '100vh', 
+        background: '#0a0f1e', 
+        padding: '2rem',
+        color: 'white'
+      }}>
         <h1>Card Not Found</h1>
-        <a href="/marketplace">Back to Marketplace</a>
+        <a href="/marketplace" style={{ color: '#e63946' }}>Back to Marketplace</a>
       </div>
     );
   }

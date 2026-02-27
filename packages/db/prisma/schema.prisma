@@ -62,6 +62,7 @@ model Card {
   setId           String?
   set             PokemonSet?    @relation(fields: [setId], references: [id])
   prices          CardPrice[]
+  priceHistory    PriceHistory[]
   portfolioItems  PortfolioItem[]
   listings        Listing[]
   watchlistItems  WatchlistItem[]

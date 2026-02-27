@@ -193,12 +193,18 @@ cardsRouter.get('/:id/price-history', async (req: Request, res: Response, next: 
       return res.status(404).json({ error: 'Card not found' });
     }
 
-    const priceHistory = await prisma.priceHistory.findMany({
-      where: { cardId },
-      orderBy: { date: 'asc' }
-    });
-
     const currentPrice = card.prices[0]?.tcgplayerMarket || null;
+
+    let priceHistory: any[] = [];
+    try {
+      priceHistory = await prisma.priceHistory.findMany({
+        where: { cardId },
+        orderBy: { date: 'asc' }
+      });
+    } catch (e) {
+      // PriceHistory model may not exist yet, use mock data
+      priceHistory = [];
+    }
 
     if (priceHistory.length > 0) {
       const data = priceHistory.map(ph => ({
@@ -245,7 +251,7 @@ function generateMockPriceHistory(currentPrice: number | null, days: number) {
     
     const variance = (Math.random() - 0.5) * 0.3;
     const trend = (days - i) / days * 0.05;
-    const price = basePrice * (1 + variance + trend);
+    const price = Math.max(1, basePrice * (1 + variance + trend));
     
     data.push({
       date: date.toISOString().split('T')[0],
