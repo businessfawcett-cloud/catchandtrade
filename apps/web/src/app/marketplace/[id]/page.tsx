@@ -227,23 +227,24 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
   const minPrice = Math.min(...priceHistory.map(p => p.tcgplayerMarket), 0);
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem', background: '#0a0f1e', minHeight: '100vh' }}>
+    <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem', background: '#0a0f1e', minHeight: '100vh' }}>
       <a href="/marketplace" style={{ display: 'block', marginBottom: '1rem', color: '#e63946', textDecoration: 'none' }}>
         ← Back to Marketplace
       </a>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 3fr', gap: '2.5rem', alignItems: 'start' }}>
+        {/* Left Column - Image & Actions */}
         <div>
           {card.imageUrl ? (
             <img
               src={card.imageUrl}
               alt={card.name}
-              style={{ width: '100%', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+              style={{ width: '100%', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}
             />
           ) : (
             <div style={{ 
               width: '100%', 
-              height: '400px', 
+              height: '350px', 
               backgroundColor: '#1a2332',
               display: 'flex',
               alignItems: 'center',
@@ -255,29 +256,124 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
               Card Image
             </div>
           )}
+
+          {/* Buy Buttons Row */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+            <a
+              href={links.tcgplayer}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                flex: 1,
+                padding: '0.6rem',
+                backgroundColor: '#28a745',
+                color: 'white',
+                textAlign: 'center',
+                borderRadius: '4px',
+                fontSize: '0.85rem',
+                fontWeight: 'bold',
+                textDecoration: 'none'
+              }}
+            >
+              TCGPlayer
+            </a>
+            <a
+              href={links.amazon}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                flex: 1,
+                padding: '0.6rem',
+                backgroundColor: '#ff9900',
+                color: 'white',
+                textAlign: 'center',
+                borderRadius: '4px',
+                textDecoration: 'none',
+                fontSize: '0.85rem'
+              }}
+            >
+              Amazon
+            </a>
+            <a
+              href={links.ebay}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                flex: 1,
+                padding: '0.6rem',
+                backgroundColor: '#0064d2',
+                color: 'white',
+                textAlign: 'center',
+                borderRadius: '4px',
+                textDecoration: 'none',
+                fontSize: '0.85rem'
+              }}
+            >
+              eBay
+            </a>
+          </div>
+
+          {/* Add to Portfolio Button - Red */}
+          <button
+            onClick={handleAddToPortfolioClick}
+            style={{
+              width: '100%',
+              padding: '0.875rem',
+              backgroundColor: '#e63946',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              fontWeight: 'bold',
+              marginTop: '0.75rem'
+            }}
+          >
+            Add to Portfolio
+          </button>
+
+          {/* Add to Watchlist Button - Gold Outlined */}
+          <button
+            onClick={handleAddToWatchlist}
+            style={{
+              width: '100%',
+              padding: '0.875rem',
+              backgroundColor: 'transparent',
+              color: '#ffd700',
+              border: '2px solid #ffd700',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              fontWeight: 'bold',
+              marginTop: '0.5rem'
+            }}
+          >
+            Add to Watchlist
+          </button>
         </div>
 
+        {/* Right Column - Info & Price */}
         <div>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'white' }}>{card.name}</h1>
+          <h1 style={{ fontSize: '1.75rem', marginBottom: '0.5rem', color: 'white', fontWeight: 'bold' }}>{card.name}</h1>
           <p style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>
             {card.setName} ({card.setCode} #{card.cardNumber})
           </p>
           
           {card.rarity && (
-            <p style={{ marginBottom: '0.5rem', color: '#a855f7' }}>Rarity: {card.rarity}</p>
+            <p style={{ marginBottom: '0.5rem', color: '#a855f7', fontWeight: '600' }}>Rarity: {card.rarity}</p>
           )}
           
-          <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: '#94a3b8' }}>
+          <p style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: '#94a3b8' }}>
             {card.gameType} • {card.language}
           </p>
 
           {latestPrice && (
             <div style={{ marginTop: '1.5rem' }}>
               <p style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '0.25rem' }}>Current Market Price</p>
-              <p style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0, color: '#ffd700' }}>
+              <p style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0, color: '#ffd700' }}>
                 ${latestPrice.tcgplayerMarket.toFixed(2)}
               </p>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.85rem', color: '#94a3b8' }}>
+              <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem', fontSize: '0.9rem', color: '#94a3b8' }}>
                 <span>Low: ${latestPrice.tcgplayerLow.toFixed(2)}</span>
                 <span>Mid: ${latestPrice.tcgplayerMid.toFixed(2)}</span>
                 <span>High: ${latestPrice.tcgplayerHigh.toFixed(2)}</span>
@@ -286,188 +382,12 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
           )}
 
           {latestPrice && (
-            <PriceHistoryChart cardId={card.id} currentPrice={latestPrice.tcgplayerMarket} />
-          )}
-
-          <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <a
-              href={links.tcgplayer}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'block',
-                padding: '1rem',
-                backgroundColor: '#28a745',
-                color: 'white',
-                textAlign: 'center',
-                borderRadius: '4px',
-                fontSize: '1.1rem',
-                fontWeight: 'bold',
-                textDecoration: 'none'
-              }}
-            >
-              Buy on TCGPlayer
-            </a>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <a
-                href={links.amazon}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  backgroundColor: '#ff9900',
-                  color: 'white',
-                  textAlign: 'center',
-                  borderRadius: '4px',
-                  textDecoration: 'none',
-                  fontSize: '0.9rem'
-                }}
-              >
-                Find on Amazon
-              </a>
-              <a
-                href={links.ebay}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  backgroundColor: '#0064d2',
-                  color: 'white',
-                  textAlign: 'center',
-                  borderRadius: '4px',
-                  textDecoration: 'none',
-                  fontSize: '0.9rem'
-                }}
-              >
-                Find on eBay
-              </a>
+            <div style={{ marginTop: '1.5rem' }}>
+              <PriceHistoryChart cardId={card.id} currentPrice={latestPrice.tcgplayerMarket} />
             </div>
-          </div>
-
-          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem' }}>
-            <button
-              onClick={handleAddToPortfolioClick}
-              style={{
-                flex: 1,
-                padding: '0.75rem',
-                backgroundColor: '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.9rem'
-              }}
-            >
-              Add to Portfolio
-            </button>
-            <button
-              onClick={handleAddToWatchlist}
-              style={{
-                flex: 1,
-                padding: '0.75rem',
-                backgroundColor: '#17a2b8',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.9rem'
-              }}
-            >
-              Add to Watchlist
-            </button>
-          </div>
+          )}
         </div>
       </div>
-
-      {priceHistory.length > 1 && (
-        <div style={{ marginTop: '3rem' }}>
-          <h2 style={{ marginBottom: '1rem', color: 'white' }}>Price History</h2>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-            <button
-              onClick={() => setPriceRange('30d')}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: priceRange === '30d' ? '#e63946' : 'rgba(255,255,255,0.1)',
-                color: priceRange === '30d' ? 'white' : '#94a3b8',
-                border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              30D
-            </button>
-            <button
-              onClick={() => setPriceRange('90d')}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: priceRange === '90d' ? '#e63946' : 'rgba(255,255,255,0.1)',
-                color: priceRange === '90d' ? 'white' : '#94a3b8',
-                border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              90D
-            </button>
-            <button
-              onClick={() => setPriceRange('1y')}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: priceRange === '1y' ? '#e63946' : 'rgba(255,255,255,0.1)',
-                color: priceRange === '1y' ? 'white' : '#94a3b8',
-                border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              1Y
-            </button>
-          </div>
-          <div style={{ 
-            height: '200px', 
-            border: '1px solid rgba(255,255,255,0.1)', 
-            borderRadius: '4px',
-            padding: '1rem',
-            position: 'relative',
-            background: 'rgba(255,255,255,0.05)'
-          }}>
-            <div style={{ 
-              position: 'absolute', 
-              top: 0, 
-              left: 0, 
-              right: 0, 
-              bottom: 0, 
-              display: 'flex', 
-              alignItems: 'flex-end',
-              padding: '0.5rem'
-            }}>
-              {priceHistory.map((price, idx) => {
-                const height = ((price.tcgplayerMarket - minPrice) / (maxPrice - minPrice)) * 100;
-                return (
-                  <div
-                    key={idx}
-                    style={{
-                      flex: 1,
-                      backgroundColor: '#e63946',
-                      margin: '0 1px',
-                      height: `${Math.max(height, 2)}%`,
-                      minHeight: '2px',
-                      borderRadius: '2px 2px 0 0'
-                    }}
-                    title={`$${price.tcgplayerMarket.toFixed(2)}`}
-                  />
-                );
-              })}
-            </div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.8rem', color: '#94a3b8' }}>
-            <span>${minPrice.toFixed(2)}</span>
-            <span>${maxPrice.toFixed(2)}</span>
-          </div>
-        </div>
-      )}
 
       {successMessage && (
         <div style={{ 
