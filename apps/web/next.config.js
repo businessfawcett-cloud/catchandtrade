@@ -13,10 +13,11 @@ const nextConfig = {
     ],
   },
   webpack: (config) => {
+    // Force all React imports to the same instance to prevent
+    // styled-jsx/useContext failures during SSR in monorepo setups
     config.resolve.alias = {
       ...config.resolve.alias,
       react: path.resolve(__dirname, '../../node_modules/react'),
-      'react-dom': path.resolve(__dirname, '../../node_modules/react-dom'),
     };
     return config;
   },
