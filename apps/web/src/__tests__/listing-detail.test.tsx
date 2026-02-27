@@ -79,10 +79,10 @@ describe('CardDetailPage', () => {
     render(<ListingDetailPage params={{ id: 'card-123' }} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Buy on TCGPlayer')).toBeInTheDocument();
+      expect(screen.getByText('TCGPlayer')).toBeInTheDocument();
     });
-    expect(screen.getByText('Find on Amazon')).toBeInTheDocument();
-    expect(screen.getByText('Find on eBay')).toBeInTheDocument();
+    expect(screen.getByText('Amazon')).toBeInTheDocument();
+    expect(screen.getByText('eBay')).toBeInTheDocument();
   });
 
   it('shows Add to Portfolio and Watchlist buttons', async () => {

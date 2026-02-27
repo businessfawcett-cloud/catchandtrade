@@ -51,6 +51,7 @@ model Card {
   id              String         @id @default(cuid())
   gameType        GameType       @default(POKEMON)
   name            String
+  supertype       String?        // Pokémon, Trainer, Energy
   setName         String
   setCode         String
   cardNumber      String

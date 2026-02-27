@@ -18,6 +18,7 @@ interface CardPrice {
 interface Card {
   id: string;
   name: string;
+  supertype: string | null;
   setName: string;
   setCode: string;
   cardNumber: string;
@@ -364,7 +365,13 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
           )}
           
           <p style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: '#94a3b8' }}>
-            {card.gameType} • {card.language}
+            {(() => {
+              const supertype = card.supertype || (card.name.toLowerCase().includes('trainer') ? 'Trainer' : card.name.toLowerCase().includes('energy') ? 'Energy' : 'Pokémon');
+              if (supertype === 'Pokémon') return 'POKÉMON';
+              if (supertype === 'Trainer') return 'TRAINER CARD';
+              if (supertype === 'Energy') return 'ENERGY CARD';
+              return `${supertype.toUpperCase()} • ${card.language}`;
+            })()}
           </p>
 
           {latestPrice && (
