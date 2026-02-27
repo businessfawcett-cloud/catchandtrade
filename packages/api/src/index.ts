@@ -30,6 +30,7 @@ if (process.env.WEB_URL) {
 
 export const app: Express = express();
 
+app.use(express.json());
 app.use(cors({ origin: CORS_ORIGINS }));
 
 app.get('/ping', (req: Request, res: Response) => {
