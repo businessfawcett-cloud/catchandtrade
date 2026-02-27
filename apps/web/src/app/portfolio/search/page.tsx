@@ -51,7 +51,7 @@ interface Portfolio {
   name: string;
 }
 
-export function PortfolioSearchContent() {
+function PortfolioSearchContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
   
