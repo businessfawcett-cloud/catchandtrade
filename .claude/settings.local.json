@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push)",
+      "Bash(npm run build)",
+      "Bash(npx next build)",
+      "Bash(node -e \"console.log\\(''local:'', require\\(''d:/Card Idea/cardvault/apps/web/node_modules/react/package.json''\\).version\\)\")",
+      "Bash(node -e \"console.log\\(''root:'', require\\(''d:/Card Idea/cardvault/node_modules/react/package.json''\\).version\\)\")",
+      "Bash(npm install)",
+      "Bash(node -e \":*)",
+      "Bash(npm install --force)",
+      "Bash(node -e \"const d=require\\(''./package-lock.json''\\); const r=d.packages||{}; console.log\\(''root react:'', r[''node_modules/react'']?.version||''not found''\\); console.log\\(''web react:'', r[''apps/web/node_modules/react'']?.version||''not found''\\); console.log\\(''mobile react:'', r[''apps/mobile/node_modules/react'']?.version||''not found''\\); const styledJsx = Object.keys\\(r\\).filter\\(k=>k.includes\\(''styled-jsx''\\)\\); styledJsx.forEach\\(k=>console.log\\(k, r[k].version\\)\\);\")",
+      "Bash(node -e \"const findPagesDir = require\\(''./node_modules/next/dist/lib/find-pages-dir''\\); try { console.log\\(JSON.stringify\\(findPagesDir.findPagesDir\\(process.cwd\\(\\)\\)\\)\\); } catch\\(e\\) { console.error\\(e.message\\); }\")"
+    ]
+  }
+}
