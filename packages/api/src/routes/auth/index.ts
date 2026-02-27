@@ -17,10 +17,11 @@ const generateTokens = (user: { id: string; email: string }) => {
   return { token, refreshToken };
 };
 
-const passwordValidation = (password: string): void => {
+const passwordValidation = (password: string): boolean => {
   if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
     throw new Error('Password must be at least 8 characters with 1 uppercase letter and 1 number');
   }
+  return true;
 };
 
 authRouter.post(
