@@ -53,19 +53,32 @@ export const affiliateService = {
     return url;
   },
 
-  ebayUrl(cardName: string): string | null {
+  ebayUrl(cardName: string, setName?: string, cardNumber?: string): string | null {
     const campaignId = process.env.EBAY_CAMPAIGN_ID;
     if (!campaignId) return null;
 
-    const encoded = encodeURIComponent(cardName);
+    let query: string;
+    if (cardNumber && setName) {
+      query = `${cardName} ${setName} ${cardNumber} Pokemon Card`;
+    } else {
+      query = `${cardName} Pokemon Card`;
+    }
+    
+    const encoded = encodeURIComponent(query);
     return `https://www.ebay.com/sch/i.html?_nkw=${encoded}&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${campaignId}&customid=&toolid=10001&mkevt=1`;
   },
 
-  amazonUrl(cardName: string): string | null {
+  amazonUrl(cardName: string, setName?: string, cardNumber?: string): string | null {
     const associateTag = process.env.AMAZON_ASSOCIATE_TAG;
     if (!associateTag) return null;
 
-    const searchQuery = `${cardName} Pokemon Card`;
+    let searchQuery: string;
+    if (cardNumber && setName) {
+      searchQuery = `${cardName} ${setName} ${cardNumber} Pokemon Card`;
+    } else {
+      searchQuery = `${cardName} Pokemon Card`;
+    }
+    
     const encoded = encodeURIComponent(searchQuery);
     return `https://www.amazon.com/s?k=${encoded}&tag=${associateTag}`;
   }

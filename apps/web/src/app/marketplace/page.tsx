@@ -125,14 +125,14 @@ export default function MarketplacePage() {
   }, [searchQuery, sortBy, selectedSet, fetchCards]);
 
   const getAffiliateLinks = (card: Card) => {
-    const searchTerm = `${card.name} ${card.setName}`;
+    const searchTerm = `${card.name} ${card.setName} ${card.cardNumber} Pokemon Card`;
     const amazonTag = process.env.NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG || '';
     const ebayCampaignId = process.env.NEXT_PUBLIC_EBAY_CAMPAIGN_ID || '';
-    const ebaySearchTerm = encodeURIComponent(`${card.name} Pokemon Card`);
+    const ebaySearchTerm = encodeURIComponent(`${card.name} ${card.setName} ${card.cardNumber} Pokemon Card`);
     const ebayUrl = ebayCampaignId 
       ? `https://www.ebay.com/sch/i.html?_nkw=${ebaySearchTerm}&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${ebayCampaignId}&customid=&toolid=10001&mkevt=1`
       : '';
-    const amazonSearchTerm = encodeURIComponent(`${searchTerm} Pokemon Card`);
+    const amazonSearchTerm = encodeURIComponent(`${card.name} ${card.setName} ${card.cardNumber} Pokemon Card`);
     const amazonUrl = amazonTag 
       ? `https://www.amazon.com/s?k=${amazonSearchTerm}&tag=${amazonTag}`
       : '';

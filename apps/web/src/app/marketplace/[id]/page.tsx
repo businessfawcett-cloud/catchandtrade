@@ -68,12 +68,12 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
 
   const getAffiliateLinks = () => {
     if (!card) return { tcgplayer: '#', amazon: '#', ebay: '#' };
-    const searchTerm = `${card.name} ${card.setName}`;
+    const searchTerm = `${card.name} ${card.setName} ${card.cardNumber} Pokemon Card`;
     const searchTermEncoded = encodeURIComponent(searchTerm);
     return {
       tcgplayer: `https://www.tcgplayer.com/search?affiliate=true&q=${searchTermEncoded}`,
-      amazon: `https://www.amazon.com/s?k=${encodeURIComponent(searchTerm + ' Pokemon Card')}`,
-      ebay: `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(searchTerm + ' Pokemon Card')}`
+      amazon: `https://www.amazon.com/s?k=${searchTermEncoded}`,
+      ebay: `https://www.ebay.com/sch/i.html?_nkw=${searchTermEncoded}&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=5339143267&customid=&toolid=10001&mkevt=1`
     };
   };
 
