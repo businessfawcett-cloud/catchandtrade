@@ -33,5 +33,9 @@
     "tailwindcss": "^3.4.19",
     "ts-jest": "^29.4.6",
     "typescript": "^5.3.0"
+  },
+  "overrides": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   }
 }

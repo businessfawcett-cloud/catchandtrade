@@ -19,12 +19,22 @@ import { startNightlySync } from './cron/nightlySync';
 
 const PORT = process.env.PORT || 3003;
 
+const CORS_ORIGINS = [
+  'http://localhost:3002',
+  'https://catchandtrade.com',
+  'https://www.catchandtrade.com'
+];
+if (process.env.WEB_URL) {
+  CORS_ORIGINS.push(process.env.WEB_URL);
+}
+
 export const app: Express = express();
 
-app.use(cors());
-app.use(express.json());
-app.use(express.raw({ type: 'application/json' }));
-app.use(passport.initialize());
+app.use(cors({ origin: CORS_ORIGINS }));
+
+app.get('/ping', (req: Request, res: Response) => {
+  res.json({ status: 'ok', timestamp: new Date() });
+});
 
 app.get('/health', async (req: Request, res: Response) => {
   let dbStatus = 'disconnected';

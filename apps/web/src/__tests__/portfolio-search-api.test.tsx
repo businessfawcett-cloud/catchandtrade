@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import PortfolioSearchPage from '../app/portfolio/search/page';
+import { PortfolioSearchContent } from '../app/portfolio/search/page';
 
 jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams({ q: 'charizard' }),
@@ -77,7 +77,7 @@ describe('PortfolioSearchPage API Calls', () => {
       return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
-    render(<PortfolioSearchPage />);
+    render(<PortfolioSearchContent />);
 
     await waitFor(() => {
       expect(screen.getByText('Charizard')).toBeInTheDocument();
@@ -115,7 +115,7 @@ describe('PortfolioSearchPage API Calls', () => {
       return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
-    render(<PortfolioSearchPage />);
+    render(<PortfolioSearchContent />);
 
     await waitFor(() => {
       expect(screen.getByText('Charizard')).toBeInTheDocument();

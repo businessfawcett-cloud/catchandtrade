@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Library, CreditCard, DollarSign, BookOpen, Twitter, Instagram, Music, ArrowLeft } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import PokeballLoader from '@/components/PokeballLoader';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
@@ -165,7 +165,7 @@ export default function PublicProfilePage({ params }: { params: { username: stri
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link href="/" className="inline-flex items-center text-poke-text-muted hover:text-white transition-colors mb-8">
-          <ArrowLeft className="w-5 h-5 mr-2" />
+          <span className="mr-2">←</span>
           Back to Home
         </Link>
 
@@ -200,24 +200,24 @@ export default function PublicProfilePage({ params }: { params: { username: stri
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1 lg:ml-12">
               <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(230,57,70,0.1)', border: '1px solid rgba(230,57,70,0.2)' }}>
-                <div className="flex justify-center mb-2"><Library className="w-8 h-8" style={{ color: '#e63946' }} /></div>
+                <div className="flex justify-center mb-2 text-3xl">📚</div>
                 <div className="font-rajdhani text-2xl font-bold text-poke-red">{uniquePokemon.size}</div>
                 <div className="text-xs text-poke-text-muted">Unique Pokemon</div>
               </div>
               <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(104,144,240,0.1)', border: '1px solid rgba(104,144,240,0.2)' }}>
-                <div className="flex justify-center mb-2"><CreditCard className="w-8 h-8" style={{ color: '#6890f0' }} /></div>
+                <div className="flex justify-center mb-2 text-3xl">💳</div>
                 <div className="font-rajdhani text-2xl font-bold text-blue-400">{totalCards}</div>
                 <div className="text-xs text-poke-text-muted">Cards</div>
               </div>
               <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.2)' }}>
-                <div className="flex justify-center mb-2"><DollarSign className="w-8 h-8" style={{ color: '#ffd700' }} /></div>
+                <div className="flex justify-center mb-2 text-3xl">💰</div>
                 <div className="font-rajdhani text-2xl font-bold text-poke-gold">
                   {user?.hideCollectionValue ? '***' : `$${totalValue.toFixed(2)}`}
                 </div>
                 <div className="text-xs text-poke-text-muted">Value</div>
               </div>
               <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)' }}>
-                <div className="flex justify-center mb-2"><BookOpen className="w-8 h-8" style={{ color: '#a855f7' }} /></div>
+                <div className="flex justify-center mb-2 text-3xl">📖</div>
                 <div className="font-rajdhani text-2xl font-bold text-purple-400">{uniqueSets.size}</div>
                 <div className="text-xs text-poke-text-muted">Sets</div>
               </div>
@@ -232,7 +232,7 @@ export default function PublicProfilePage({ params }: { params: { username: stri
                     rel="noopener noreferrer"
                     className="p-2 rounded-lg bg-[#1a2332] hover:bg-[#243044] transition-colors"
                   >
-                    <Twitter className="w-5 h-5 text-white" />
+                    <span className="text-xl">𝕏</span>
                   </a>
                 )}
                 {user?.instagramHandle && (
@@ -242,7 +242,7 @@ export default function PublicProfilePage({ params }: { params: { username: stri
                     rel="noopener noreferrer"
                     className="p-2 rounded-lg bg-[#1a2332] hover:bg-[#243044] transition-colors"
                   >
-                    <Instagram className="w-5 h-5 text-white" />
+                    <span className="text-xl">📷</span>
                   </a>
                 )}
                 {user?.tiktokHandle && (
@@ -252,7 +252,7 @@ export default function PublicProfilePage({ params }: { params: { username: stri
                     rel="noopener noreferrer"
                     className="p-2 rounded-lg bg-[#1a2332] hover:bg-[#243044] transition-colors"
                   >
-                    <Music className="w-5 h-5 text-white" />
+                    <span className="text-xl">🎵</span>
                   </a>
                 )}
               </div>

@@ -4,6 +4,21 @@ import { Strategy as AppleStrategy } from 'passport-apple';
 import { prisma } from '@catchandtrade/db';
 import bcrypt from 'bcrypt';
 
+interface Profile {
+  id: string;
+  displayName?: string;
+  emails?: Array<{ value: string }>;
+  photos?: Array<{ value: string }>;
+}
+
+interface AppleProfile {
+  id: string;
+  email?: string;
+  name?: {
+    fullName?: string;
+  };
+}
+
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const APPLE_CLIENT_ID = process.env.APPLE_CLIENT_ID || '';
@@ -32,7 +47,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
         clientSecret: GOOGLE_CLIENT_SECRET,
         callbackURL: `${process.env.API_URL || 'http://localhost:4000'}/api/auth/google/callback`
       },
-      async (accessToken, refreshToken, profile, done) => {
+      async (accessToken: string, refreshToken: string, profile: Profile, done: (err: Error | null, user?: any) => void) => {
         try {
           let user = await prisma.user.findUnique({
             where: { googleId: profile.id }
@@ -64,7 +79,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
 
           return done(null, user);
         } catch (error) {
-          return done(error);
+          return done(error as Error);
         }
       }
     )
@@ -81,7 +96,7 @@ if (APPLE_CLIENT_ID) {
         privateKeyLocation: APPLE_PRIVATE_KEY,
         callbackURL: `${process.env.API_URL || 'http://localhost:4000'}/api/auth/apple/callback`
       },
-      async (accessToken, refreshToken, idToken, profile, done) => {
+      async (accessToken: string, refreshToken: string, idToken: string, profile: AppleProfile, done: (err: Error | null, user?: any) => void) => {
         try {
           let user = await prisma.user.findUnique({
             where: { appleId: profile.id }
@@ -109,7 +124,7 @@ if (APPLE_CLIENT_ID) {
 
           return done(null, user);
         } catch (error) {
-          return done(error);
+          return done(error as Error);
         }
       }
     )

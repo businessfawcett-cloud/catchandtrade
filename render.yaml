@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: catchandtrade-api
+    env: node
+    region: oregon
+    buildCommand: npm ci && cd packages/db && npx prisma generate && npx prisma migrate deploy && cd ../.. && npm run build --filter=@catchandtrade/api
+    startCommand: node packages/api/dist/index.js
+    healthCheckPath: /ping
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: NODE_ENV
+        value: production
+      - key: POKEMON_TCG_API_KEY
+        value: a3751a33-9ed6-4662-9ae3-870939002fcc
+      - key: PORT
+        value: 3003
+
+  - type: web
+    name: catchandtrade-web
+    env: node
+    region: oregon
+    buildCommand: npm ci && npm run build --filter=@catchandtrade/web
+    startCommand: npm run start --filter=@catchandtrade/web
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG
+        value: catchandtrade-20
+      - key: NEXT_PUBLIC_EBAY_CAMPAIGN_ID
+        value: 5339143267

@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: false,
   transpilePackages: ['@cardvault/shared'],
+  output: 'standalone',
   images: {
     remotePatterns: [
       {

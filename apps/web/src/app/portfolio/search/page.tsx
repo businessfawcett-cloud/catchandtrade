@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
@@ -51,7 +51,7 @@ interface Portfolio {
   name: string;
 }
 
-export default function PortfolioSearchPage() {
+export function PortfolioSearchContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
   
@@ -436,5 +436,28 @@ export default function PortfolioSearchPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div style={{
+      background: '#0a0f1e',
+      minHeight: '100vh',
+      padding: '2rem',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      <div style={{ color: '#94a3b8' }}>Loading...</div>
+    </div>
+  );
+}
+
+export default function PortfolioSearchPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <PortfolioSearchContent />
+    </Suspense>
   );
 }

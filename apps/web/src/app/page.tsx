@@ -402,8 +402,7 @@ function Dashboard({ user }: { user: User }) {
     .sort((a, b) => new Date(b.card?.createdAt || 0).getTime() - new Date(a.card?.createdAt || 0).getTime())
     .slice(0, 6);
 
-  const pokemonCards = allItems.filter(i => i.card?.gameType === 'POKEMON');
-  const uniquePokemon = new Set(pokemonCards.map(i => i.card.name));
+  const uniquePokemon = new Set(allItems.map(i => i.card.name));
   const totalCards = allItems.reduce((sum, item) => sum + item.quantity, 0);
   const uniqueSets = new Set(allItems.map(i => i.card.setName));
 
@@ -418,13 +417,13 @@ function Dashboard({ user }: { user: User }) {
   const displayName = user.username || user.displayName || 'User';
 
   const StatIcon = ({ type }: { type: 'pokemon' | 'cards' | 'value' | 'sets' }) => {
-    const icons = {
-      pokemon: <Library className="w-8 h-8" style={{ color: '#e63946' }} />,
-      cards: <CreditCard className="w-8 h-8" style={{ color: '#6890f0' }} />,
-      value: <DollarSign className="w-8 h-8" style={{ color: '#ffd700' }} />,
-      sets: <BookOpen className="w-8 h-8" style={{ color: '#a855f7' }} />
+    const icons: Record<string, string> = {
+      pokemon: '🎯',
+      cards: '🃏',
+      value: '💰',
+      sets: '📚'
     };
-    return icons[type];
+    return <span style={{ fontSize: '1.5rem' }}>{icons[type]}</span>;
   };
 
   const ActionCard = ({ icon, title, subtitle, href }: { icon: React.ReactNode; title: string; subtitle: string; href: string }) => (
