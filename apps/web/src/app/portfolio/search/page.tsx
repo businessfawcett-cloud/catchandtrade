@@ -53,7 +53,7 @@ interface Portfolio {
 
 function PortfolioSearchContent() {
   const searchParams = useSearchParams();
-  const query = searchParams.get('q') || '';
+  const query = searchParams?.get('q') || '';
   
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);

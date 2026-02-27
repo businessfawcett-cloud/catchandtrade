@@ -1,5 +1,3 @@
-const path = require('path');
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
@@ -11,15 +9,6 @@ const nextConfig = {
         hostname: '**',
       },
     ],
-  },
-  webpack: (config) => {
-    // Force all React imports to the same instance to prevent
-    // styled-jsx/useContext failures during SSR in monorepo setups
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      react: path.resolve(__dirname, '../../node_modules/react'),
-    };
-    return config;
   },
   async rewrites() {
     return [
