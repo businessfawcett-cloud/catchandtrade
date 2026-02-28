@@ -63,3 +63,7 @@ pids
 
 # OS
 Thumbs.db
+
+# CDN assets (hosted externally)
+packages/db/card-images/
+packages/db/set-logos/
