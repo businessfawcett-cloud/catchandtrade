@@ -15,6 +15,7 @@ import { alertsRouter } from './routes/alerts';
 import { setsRouter } from './routes/sets';
 import { adminRouter } from './routes/admin';
 import { webhooksRouter } from './routes/webhooks/stripe';
+import { ebayRouter } from './routes/ebay';
 import { startNightlySync } from './cron/nightlySync';
 
 const PORT = process.env.PORT || 3003;
@@ -67,6 +68,7 @@ app.use('/api/alerts', alertsRouter);
 app.use('/api/sets', setsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/webhooks', webhooksRouter);
+app.use('/api/ebay', ebayRouter);
 
 if (require.main === module) {
   app.listen(PORT, () => {
