@@ -200,6 +200,13 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
   }
 
   const displayCards = user ? (showMissing ? missingCards : ownedCards) : cards;
+  
+  const sortedCards = [...displayCards].sort((a, b) => {
+    const numA = parseInt(a.cardNumber, 10) || 0;
+    const numB = parseInt(b.cardNumber, 10) || 0;
+    return numA - numB;
+  });
+  
   const ownedSet = new Set(ownedCards.map(c => c.id));
 
   return (
@@ -370,7 +377,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
-            {displayCards.map(card => {
+            {sortedCards.map(card => {
               const isOwned = user && ownedSet.has(card.id);
               const rarityColor = getRarityColor(card.rarity);
               
