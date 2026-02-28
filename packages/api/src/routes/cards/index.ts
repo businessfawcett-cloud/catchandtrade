@@ -63,6 +63,7 @@ cardsRouter.get(
       }
 
       res.json({ cards: results, total });
+    } catch (error) {
       next(error);
     }
   }
