@@ -26,8 +26,6 @@ cardsRouter.get(
       let orderByField: any = orderBy;
       if (sort === 'name') {
         orderByField = { name: 'asc' };
-      } else if (sort === 'price-desc' || sort === 'price-asc') {
-        orderByField = { prices: { tcgplayerMarket: sort === 'price-desc' ? 'desc' : 'asc' } };
       }
 
       const [cards, total] = await Promise.all([
@@ -46,21 +44,25 @@ cardsRouter.get(
         prisma.card.count({ where })
       ]);
 
-      res.json({
-        cards: cards.map(card => ({
-          id: card.id,
-          name: card.name,
-          setName: card.setName,
-          setCode: card.setCode,
-          cardNumber: card.cardNumber,
-          gameType: card.gameType,
-          rarity: card.rarity,
-          imageUrl: card.imageUrl,
-          currentPrice: card.prices[0]?.tcgplayerMarket || null
-        })),
-        total
-      });
-    } catch (error) {
+      let results = cards.map(card => ({
+        id: card.id,
+        name: card.name,
+        setName: card.setName,
+        setCode: card.setCode,
+        cardNumber: card.cardNumber,
+        gameType: card.gameType,
+        rarity: card.rarity,
+        imageUrl: card.imageUrl,
+        currentPrice: card.prices[0]?.tcgplayerMarket || null
+      }));
+
+      if (sort === 'price-desc') {
+        results.sort((a, b) => (b.currentPrice || 0) - (a.currentPrice || 0));
+      } else if (sort === 'price-asc') {
+        results.sort((a, b) => (a.currentPrice || 0) - (b.currentPrice || 0));
+      }
+
+      res.json({ cards: results, total });
       next(error);
     }
   }

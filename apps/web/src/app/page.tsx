@@ -368,6 +368,17 @@ function Dashboard({ user }: { user: User }) {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
   const [portfolioValue, setPortfolioValue] = useState<{ totalValue: number; cardCount: number; uniqueCards: number } | null>(null);
+  const [totalCardsCount, setTotalCardsCount] = useState<number>(0);
+
+  useEffect(() => {
+    // Fetch total cards in database
+    fetch(`${API_URL}/api/cards?limit=1`)
+      .then(res => res.json())
+      .then(data => {
+        setTotalCardsCount(data.total || 0);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -525,7 +536,7 @@ function Dashboard({ user }: { user: User }) {
               <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(230,57,70,0.1)', border: '1px solid rgba(230,57,70,0.2)' }}>
                 <div className="flex justify-center mb-2"><StatIcon type="pokemon" /></div>
                 <div className="font-rajdhani text-2xl font-bold text-poke-red">{uniquePokemon.size}</div>
-                <div className="text-xs text-poke-text-muted">of {TOTAL_POKEMON}</div>
+                <div className="text-xs text-poke-text-muted">{totalCardsCount.toLocaleString()} cards available</div>
               </div>
               <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(104,144,240,0.1)', border: '1px solid rgba(104,144,240,0.2)' }}>
                 <div className="flex justify-center mb-2"><StatIcon type="cards" /></div>
@@ -641,17 +652,6 @@ function Dashboard({ user }: { user: User }) {
           <h2 className="font-rajdhani text-2xl font-bold text-white mb-6">Quick Actions</h2>
           <div className="flex flex-wrap gap-4">
             <ActionCard 
-              href="/scan"
-              icon={
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                  <circle cx="12" cy="13" r="4" />
-                </svg>
-              }
-              title="Scan a Card"
-              subtitle="Identify cards instantly"
-            />
-            <ActionCard 
               href="/marketplace"
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -659,8 +659,8 @@ function Dashboard({ user }: { user: User }) {
                   <path d="M21 21l-4.35-4.35" />
                 </svg>
               }
-              title="Browse Marketplace"
-              subtitle="20,078 cards available"
+              title="Search Cards"
+              subtitle="Find cards in our 20,000+ database"
             />
             <ActionCard 
               href="/collection"

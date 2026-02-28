@@ -71,34 +71,36 @@ export default function PriceHistoryChart({ cardId, currentPrice }: Props) {
               {isPositive ? '▲' : '▼'} {Math.abs(parseFloat(change)).toFixed(1)}%
             </span>
           </div>
-          {!hasRealData && (
+          {!hasRealData && currentPrice && (
             <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
-              Showing estimated prices
+              Showing current price only
             </span>
           )}
         </div>
         
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {periods.map(p => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value as any)}
-              style={{
-                padding: '0.375rem 0.75rem',
-                borderRadius: '6px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                background: period === p.value ? '#e63946' : 'rgba(255,255,255,0.1)',
-                color: period === p.value ? 'white' : '#94a3b8',
-                transition: 'all 0.2s'
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        {data.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            {periods.map(p => (
+              <button
+                key={p.value}
+                onClick={() => setPeriod(p.value as any)}
+                style={{
+                  padding: '0.375rem 0.75rem',
+                  borderRadius: '6px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  background: period === p.value ? '#e63946' : 'rgba(255,255,255,0.1)',
+                  color: period === p.value ? 'white' : '#94a3b8',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -144,9 +146,30 @@ export default function PriceHistoryChart({ cardId, currentPrice }: Props) {
             />
           </LineChart>
         </ResponsiveContainer>
-      ) : (
+      ) : currentPrice ? (
         <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-          No price history available
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={[{date: new Date().toISOString(), price: currentPrice}]} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <YAxis 
+                stroke="#94a3b8" 
+                fontSize={11}
+                domain={[currentPrice * 0.9, currentPrice * 1.1]}
+                tickFormatter={(v) => `$${v.toFixed(0)}`}
+                width={50}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="price" 
+                stroke="#ffd700" 
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+          No price data available
         </div>
       )}
     </div>

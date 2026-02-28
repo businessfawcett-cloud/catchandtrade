@@ -367,11 +367,13 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
             textAlign: 'center'
           }}>
             <p style={{ color: '#94a3b8', fontSize: '18px' }}>
-              {user
-                ? (showMissing 
-                    ? '🎉 No missing cards! You have the complete set!' 
-                    : 'No owned cards in this set yet.')
-                : 'No cards found in this set.'
+              {!user 
+                ? 'Sign in to track your collection'
+                : showMissing 
+                  ? (ownedCards.length === 0 && cards.length > 0 
+                      ? `You don't own any cards in this set yet`
+                      : '🎉 No missing cards! You have the complete set!')
+                  : 'No owned cards in this set yet.'
               }
             </p>
           </div>
