@@ -241,18 +241,15 @@ function FeaturedCards() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const iconicNames = ['Charizard', 'Pikachu', 'Mewtwo', 'Blastoise', 'Venusaur', 'Gengar'];
-    const promises = iconicNames.map(name => 
-      fetch(`${API_URL}/api/cards/search?q=${encodeURIComponent(name)}&limit=1`)
-        .then(res => res.json())
-        .then(data => data.results?.[0] || null)
-        .catch(() => null)
-    );
-    
-    Promise.all(promises).then(results => {
-      setCards(results.filter(Boolean));
-      setLoading(false);
-    });
+    fetch(`${API_URL}/api/cards?setCode=base1&limit=20`)
+      .then(res => res.json())
+      .then(data => {
+        const iconicCards = ['Charizard', 'Pikachu', 'Mewtwo', 'Blastoise', 'Venusaur'];
+        const filtered = data.cards?.filter((c: Card) => iconicCards.includes(c.name)) || [];
+        setCards(filtered.slice(0, 5));
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
   
   return (
@@ -316,8 +313,8 @@ function HowItWorks() {
           <circle cx="12" cy="13" r="4" stroke="currentColor" className="text-poke-gold" />
         </svg>
       ),
-      title: 'Scan Cards',
-      description: 'Use your camera to quickly scan and identify any Pokemon card'
+      title: 'Search Cards',
+      description: 'Find any Pokemon card in our database of 20,000+ cards'
     },
     {
       icon: (
