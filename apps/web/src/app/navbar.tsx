@@ -24,6 +24,7 @@ const navLinks = [
   { href: '/marketplace', label: 'Marketplace' },
   { href: '/portfolio', label: 'Portfolio' },
   { href: '/collection', label: 'Collection' },
+  { href: '/watchlist', label: 'Watchlist', authRequired: true },
 ];
 
 export default function Navbar() {
@@ -55,6 +56,7 @@ export default function Navbar() {
           {/* Navigation Links */}
           <div className="flex items-center gap-1">
             {navLinks.map((link) => {
+              if (link.authRequired && !isLoggedIn) return null;
               const isActive = pathname === link.href || pathname?.startsWith(link.href + '/');
               return (
                 <Link

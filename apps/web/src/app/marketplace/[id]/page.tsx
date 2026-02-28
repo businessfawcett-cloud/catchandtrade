@@ -44,6 +44,14 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
   const [purchasePrice, setPurchasePrice] = useState('');
   const [adding, setAdding] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   useEffect(() => {
     const fetchCard = async () => {
@@ -155,7 +163,25 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
       return;
     }
     
-    alert('Added to watchlist!');
+    try {
+      const response = await fetch(`${API_URL}/api/watchlist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ cardId: card?.id })
+      });
+      
+      if (response.ok) {
+        setToast({ message: 'Added to watchlist!', type: 'success' });
+      } else {
+        const data = await response.json();
+        setToast({ message: data.error || 'Failed to add to watchlist', type: 'error' });
+      }
+    } catch (err) {
+      setToast({ message: 'Failed to add to watchlist', type: 'error' });
+    }
   };
 
   const getPriceHistory = () => {
@@ -230,6 +256,25 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem', background: '#0a0f1e', minHeight: '100vh' }}>
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '80px',
+          right: '20px',
+          padding: '1rem 1.5rem',
+          borderRadius: '8px',
+          background: toast.type === 'success' ? '#10b981' : '#ef4444',
+          color: 'white',
+          fontWeight: 'bold',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          zIndex: 1000,
+          animation: 'fadeIn 0.3s ease'
+        }}>
+          {toast.message}
+        </div>
+      )}
+      
       <a href="/marketplace" style={{ display: 'block', marginBottom: '1rem', color: '#e63946', textDecoration: 'none' }}>
         ← Back to Marketplace
       </a>
