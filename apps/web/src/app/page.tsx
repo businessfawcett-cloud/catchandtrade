@@ -414,13 +414,32 @@ function Dashboard({ user }: { user: User }) {
   const displayName = user.username || user.displayName || 'User';
 
   const StatIcon = ({ type }: { type: 'pokemon' | 'cards' | 'value' | 'sets' }) => {
-    const icons: Record<string, string> = {
-      pokemon: '🎯',
-      cards: '🃏',
-      value: '💰',
-      sets: '📚'
+    const icons: Record<string, React.ReactNode> = {
+      pokemon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#e63946" strokeWidth="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 2a7 7 0 0 1 7 7c0 5-7 11-7 11S5 14 5 9a7 7 0 0 1 7-7z"/>
+        </svg>
+      ),
+      cards: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#6890f0" strokeWidth="2">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <path d="M12 8v8M8 12h8"/>
+        </svg>
+      ),
+      value: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#ffd700" strokeWidth="2">
+          <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+      ),
+      sets: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+      )
     };
-    return <span style={{ fontSize: '1.5rem' }}>{icons[type]}</span>;
+    return icons[type];
   };
 
   const ActionCard = ({ icon, title, subtitle, href }: { icon: React.ReactNode; title: string; subtitle: string; href: string }) => (
