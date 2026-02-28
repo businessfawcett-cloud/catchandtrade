@@ -10,7 +10,7 @@ const prisma = new PrismaClient({
 });
 
 async function importCards() {
-  const cards = JSON.parse(fs.readFileSync('cards-export.json', 'utf-8'));
+  const cards = JSON.parse(fs.readFileSync(__dirname + '/../cards-export.json', 'utf-8'));
   
   console.log(`Importing ${cards.length} cards to production...`);
   

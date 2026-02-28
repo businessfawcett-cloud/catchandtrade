@@ -4,10 +4,10 @@ const https = require('https');
 const http = require('http');
 
 const CARDS_FILE = path.join(__dirname, '..', 'cards-export.json');
-const IMAGES_DIR = path.join(__dirname, '..', 'card-images');
+const SET_LOGOS_DIR = path.join(__dirname, '..', 'set-logos');
 
-if (!fs.existsSync(IMAGES_DIR)) {
-  fs.mkdirSync(IMAGES_DIR, { recursive: true });
+if (!fs.existsSync(SET_LOGOS_DIR)) {
+  fs.mkdirSync(SET_LOGOS_DIR, { recursive: true });
 }
 
 function httpGet(url) {
@@ -53,64 +53,55 @@ async function downloadImage(url, filepath) {
 }
 
 async function main() {
-  console.log('Loading cards...');
+  console.log('Loading cards to get unique sets...');
   const cardsData = fs.readFileSync(CARDS_FILE, 'utf-8');
   const cards = JSON.parse(cardsData);
   
-  console.log(`Found ${cards.length} cards`);
+  // Get unique sets
+  const sets = {};
+  for (const card of cards) {
+    if (card.setCode && card.setName) {
+      sets[card.setCode] = card.setName;
+    }
+  }
+  
+  console.log(`Found ${Object.keys(sets).length} unique sets`);
   
   let downloaded = 0;
   let failed = 0;
   let skipped = 0;
   
-  for (let i = 0; i < cards.length; i++) {
-    const card = cards[i];
+  const setCodes = Object.keys(sets);
+  
+  for (let i = 0; i < setCodes.length; i++) {
+    const setCode = setCodes[i];
     
-    if (!card.imageUrl) {
-      skipped++;
-      continue;
-    }
+    // Download logo from pokemontcg.io
+    const logoUrl = `https://images.pokemontcg.io/${setCode}/logo.png`;
+    const filename = `${setCode}.png`;
+    const filepath = path.join(SET_LOGOS_DIR, filename);
     
-    // Use pokemontcg.io URL if available, otherwise try current URL
-    let imageUrl = card.imageUrl;
-    if (imageUrl.includes('scrydex.com')) {
-      // Convert scrydex URL to pokemontcg.io format
-      const match = imageUrl.match(/images\.scrydex\.com\/pokemon\/(\w+)-(\d+)\/large/);
-      if (match) {
-        imageUrl = `https://images.pokemontcg.io/${match[1]}/${match[2]}_hires.png`;
-      }
-    }
-    
-    if (!imageUrl.includes('pokemontcg.io')) {
-      skipped++;
-      continue;
-    }
-    
-    const filename = `${card.setCode}-${card.cardNumber}.png`;
-    // Sanitize filename - remove special characters
-    const sanitized = filename.replace(/[?<>:"/\\|*]/g, '_');
-    const filepath = path.join(IMAGES_DIR, sanitized);
-    
-    const success = await downloadImage(imageUrl, filepath);
+    const success = await downloadImage(logoUrl, filepath);
     
     if (success) downloaded++;
-    else failed++;
+    else if (!filepath.includes('Already')) failed++;
+    else skipped++;
     
-    // Progress every 100 cards
-    if ((i + 1) % 100 === 0) {
-      console.log(`Progress: ${i + 1}/${cards.length} - Downloaded: ${downloaded}, Failed: ${failed}, Skipped: ${skipped}`);
+    // Progress every 20 sets
+    if ((i + 1) % 20 === 0) {
+      console.log(`Progress: ${i + 1}/${setCodes.length} - Downloaded: ${downloaded}, Failed: ${failed}`);
     }
     
-    // Rate limit - wait a bit between downloads
-    await new Promise(r => setTimeout(r, 50));
+    // Rate limit
+    await new Promise(r => setTimeout(r, 100));
   }
   
   console.log('\n=== Summary ===');
-  console.log(`Total cards: ${cards.length}`);
+  console.log(`Total sets: ${setCodes.length}`);
   console.log(`Downloaded: ${downloaded}`);
   console.log(`Failed: ${failed}`);
   console.log(`Skipped: ${skipped}`);
-  console.log(`Images saved to: ${IMAGES_DIR}`);
+  console.log(`Logos saved to: ${SET_LOGOS_DIR}`);
 }
 
 main().catch(console.error);
