@@ -131,7 +131,7 @@ export default function MarketplacePage() {
     const ebaySearchTerm = encodeURIComponent(`${card.name} ${card.setName} ${card.cardNumber} Pokemon Card`);
     const ebayUrl = ebayCampaignId 
       ? `https://www.ebay.com/sch/i.html?_nkw=${ebaySearchTerm}&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${ebayCampaignId}&customid=&toolid=10001&mkevt=1`
-      : '';
+      : `https://www.ebay.com/sch/i.html?_nkw=${ebaySearchTerm}`;
     const amazonSearchTerm = encodeURIComponent(`${card.name} ${card.setName} ${card.cardNumber} Pokemon Card`);
     const amazonUrl = amazonTag 
       ? `https://www.amazon.com/s?k=${amazonSearchTerm}&tag=${amazonTag}`
@@ -321,9 +321,7 @@ export default function MarketplacePage() {
                     <div className="quick-links flex gap-1 px-3 pb-3">
                       <a href={links.tcgplayer} target="_blank" rel="noopener noreferrer" className="flex-1 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white text-center rounded transition-colors">TCG</a>
                       <a href={links.amazon} target="_blank" rel="noopener noreferrer" className="flex-1 py-1.5 text-xs bg-yellow-500 hover:bg-yellow-400 text-black text-center rounded transition-colors">Amazon</a>
-                      {links.ebay && (
-                        <a href={links.ebay} target="_blank" rel="noopener noreferrer" className="flex-1 py-1.5 text-xs bg-red-600 hover:bg-red-500 text-white text-center rounded transition-colors">eBay</a>
-                      )}
+                      <a href={links.ebay} target="_blank" rel="noopener noreferrer" className="flex-1 py-1.5 text-xs bg-red-600 hover:bg-red-500 text-white text-center rounded transition-colors">eBay</a>
                     </div>
                   </div>
                 );
