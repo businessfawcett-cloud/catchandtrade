@@ -126,8 +126,8 @@ export default function MarketplacePage() {
 
   const getAffiliateLinks = (card: Card) => {
     const searchTerm = `${card.name} ${card.setName} ${card.cardNumber} Pokemon Card`;
-    const amazonTag = process.env.NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG || '';
-    const ebayCampaignId = process.env.NEXT_PUBLIC_EBAY_CAMPAIGN_ID || '';
+    const amazonTag = process.env.NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG || 'catchandtrade-20';
+    const ebayCampaignId = process.env.NEXT_PUBLIC_EBAY_CAMPAIGN_ID || '5339143267';
     const ebaySearchTerm = encodeURIComponent(`${card.name} ${card.setName} ${card.cardNumber} Pokemon Card`);
     const ebayUrl = ebayCampaignId 
       ? `https://www.ebay.com/sch/i.html?_nkw=${ebaySearchTerm}&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${ebayCampaignId}&customid=&toolid=10001&mkevt=1`
@@ -135,7 +135,7 @@ export default function MarketplacePage() {
     const amazonSearchTerm = encodeURIComponent(`${card.name} ${card.setName} ${card.cardNumber} Pokemon Card`);
     const amazonUrl = amazonTag 
       ? `https://www.amazon.com/s?k=${amazonSearchTerm}&tag=${amazonTag}`
-      : '';
+      : `https://www.amazon.com/s?k=${amazonSearchTerm}`;
     return {
       tcgplayer: `https://www.tcgplayer.com/search?affiliate=true&q=${encodeURIComponent(searchTerm)}`,
       amazon: amazonUrl,
