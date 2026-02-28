@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { BookOpen } from 'lucide-react';
 import PokeballLoader from '@/components/PokeballLoader';
 
@@ -73,16 +74,21 @@ const FloatingPokeball = ({ delay, left, top }: { delay: number; left: string; t
   </div>
 );
 
-export default function PublicProfilePage({ params }: { params: { username: string } }) {
+export default function PublicProfilePage() {
+  const params = useParams();
+  const username = params?.username as string;
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
 
   useEffect(() => {
+    if (!username) return;
+    
     const fetchProfile = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/users/${params.username.toLowerCase()}`);
+        const response = await fetch(`${API_URL}/api/users/${username.toLowerCase()}`);
         
         if (!response.ok) {
           const data = await response.json();
@@ -115,7 +121,7 @@ export default function PublicProfilePage({ params }: { params: { username: stri
     };
 
     fetchProfile();
-  }, [params.username]);
+  }, [username]);
 
   if (loading) {
     return (

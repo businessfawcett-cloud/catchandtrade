@@ -46,21 +46,34 @@ usersRouter.get(
 
 usersRouter.get(
   '/:username',
-  query('u').isString().notEmpty(),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
+      const username = req.params.username;
+      
+      if (!username) {
         return res.status(400).json({ error: 'Username is required' });
       }
-
-      const username = req.query.u as string;
       
-      const existing = await prisma.user.findUnique({
-        where: { username: username.toLowerCase() }
+      const user = await prisma.user.findUnique({
+        where: { username: username.toLowerCase() },
+        include: {
+          portfolios: {
+            where: { isPublic: true },
+            include: {
+              items: {
+                include: { card: true }
+              }
+            }
+          }
+        }
       });
 
-      res.json({ available: !existing });
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const { passwordHash: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
     } catch (error) {
       next(error);
     }
