@@ -177,11 +177,11 @@ catchandtrade/
 | Package | Tests | Status |
 |---------|-------|--------|
 | @catchandtrade/db | 5 | ✅ Pass |
-| @catchandtrade/shared | 9 | ✅ Pass |
+| @catchandtrade/shared | 12 | ✅ Pass |
 | @catchandtrade/scanning | 11 | ✅ Pass |
-| @catchandtrade/web | 40 | ✅ Pass |
+| @catchandtrade/web | 42 | ✅ Pass |
 | @catchandtrade/api | 71 | ✅ Pass |
-| **Total** | **136** | ✅ Pass |
+| **Total** | **141** | ✅ Pass |
 
 ### Test Categories
 
@@ -262,14 +262,54 @@ npm run dev
 
 ---
 
+## Production Deployment
+
+### Live URLs
+
+| Service | URL |
+|---------|-----|
+| Web App | https://catchandtrade.com |
+| API | https://api.catchandtrade.com |
+| Database | PostgreSQL on Render (dpg-d6gge4p4tr6s73b81asg-a) |
+
+### Production Database
+
+- **Card Count**: 20,083 Pokemon cards
+- **Set Count**: 171 Pokemon sets
+- **Seeded**: Feb 2026
+
+### Production Environment Variables
+
+```
+DATABASE_URL=<render-internal-url>
+JWT_SECRET=catchandtrade_super_secret_jwt_key_2025
+NODE_ENV=production
+POKEMON_TCG_API_KEY=a3751a33-9ed6-4662-9ae3-870939002fcc
+PORT=3003
+
+NEXT_PUBLIC_API_URL=https://api.catchandtrade.com
+NEXT_PUBLIC_AMAZON_ASSIST_TAG=catchandtrade-20
+NEXT_PUBLIC_EBAY_CAMPAIGN_ID=5339143267
+```
+
+### Render Services
+
+| Service | Name | Status |
+|---------|------|--------|
+| Web | catchandtrade-web | Deployed |
+| API | catchandtrade-api | Deployed |
+| Database | Catchandtrade-db | Available |
+
+---
+
 ## Known Issues / TODO
 
-- [ ] Price expectedValue calculation (90-day linear regression)
 - [ ] Email notifications for alerts
 - [ ] Stripe Connect for seller payouts
 - [ ] Mobile app completion
-- [ ] Real Pokemon TCG API integration (currently uses cached data)
-- [ ] Refactor affiliate link formatting
+- [ ] Price expectedValue calculation (90-day linear regression)
+- [x] Production deployment to Render
+- [x] Full Pokemon card database (20,000+ cards)
 
 ---
 
@@ -277,21 +317,22 @@ npm run dev
 
 ### Latest Features Added
 
-1. **Collection Progress** (Feb 2026)
+1. **Production Deployment** (Feb 2026)
+   - Deployed to Render (catchandtrade.com, api.catchandtrade.com)
+   - PostgreSQL database with 20,083 Pokemon cards
+   - Express.json middleware fix for API requests
+   - NEXT_PUBLIC_API_URL configuration for production
+
+2. **Collection Progress** (Feb 2026)
    - Pokemon set tracking with progress bars
    - Owned/missing card views
    - TCGPlayer & Amazon affiliate links
 
-2. **Nightly Sync Worker** (Feb 2026)
+3. **Nightly Sync Worker** (Feb 2026)
    - Automated Pokemon set/card sync
    - Daily price updates
    - Price alert triggers
    - Admin manual trigger endpoint
-
-3. **Real Card Data** (Feb 2026)
-   - Seeded 171 Pokemon sets
-   - Seeded 102 cards from major sets
-   - Local JSON fallback for API reliability
 
 ---
 
