@@ -53,7 +53,7 @@ cardsRouter.get(
         gameType: card.gameType,
         rarity: card.rarity,
         imageUrl: card.imageUrl,
-        currentPrice: card.prices[0]?.tcgplayerMarket || null
+        currentPrice: card.prices[0]?.priceMarket || null
       }));
 
       if (sort === 'price-desc') {
@@ -152,9 +152,9 @@ cardsRouter.get(
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
       } else if (sort === 'price-desc') {
-        sortedResults = results.sort((a, b) => (b.prices[0]?.tcgplayerMarket || 0) - (a.prices[0]?.tcgplayerMarket || 0));
+        sortedResults = results.sort((a, b) => (b.prices[0]?.priceMarket || 0) - (a.prices[0]?.priceMarket || 0));
       } else if (sort === 'price-asc') {
-        sortedResults = results.sort((a, b) => (a.prices[0]?.tcgplayerMarket || 0) - (b.prices[0]?.tcgplayerMarket || 0));
+        sortedResults = results.sort((a, b) => (a.prices[0]?.priceMarket || 0) - (b.prices[0]?.priceMarket || 0));
       }
 
       res.json({
@@ -167,7 +167,7 @@ cardsRouter.get(
           gameType: card.gameType,
           rarity: card.rarity,
           imageUrl: card.imageUrl,
-          currentPrice: card.prices[0]?.tcgplayerMarket || null
+          currentPrice: card.prices[0]?.priceMarket || null
         })),
         total
       });
@@ -196,7 +196,7 @@ cardsRouter.get('/:id/price-history', async (req: Request, res: Response, next: 
       return res.status(404).json({ error: 'Card not found' });
     }
 
-    const currentPrice = card.prices[0]?.tcgplayerMarket || null;
+    const currentPrice = card.prices[0]?.priceMarket || null;
 
     let priceHistory: any[] = [];
     try {

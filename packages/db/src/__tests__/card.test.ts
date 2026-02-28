@@ -31,13 +31,13 @@ describe('Card model', () => {
     expect(card.name).toBe('Charizard');
   });
 
-  it('enforces unique tcgplayerId', async () => {
+  it('enforces unique pokemonTcgId', async () => {
     const cardData = {
       name: 'Charizard',
       setName: 'Base Set',
       setCode: 'BS',
       cardNumber: '4',
-      tcgplayerId: 'dup123'
+      pokemonTcgId: 'dup123'
     };
 
     await prisma.card.create({ data: cardData });

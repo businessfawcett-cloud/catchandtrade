@@ -27,10 +27,10 @@ describe('CardDetailPage', () => {
       {
         id: 'price-1',
         date: '2024-01-01T00:00:00Z',
-        tcgplayerLow: 100.00,
-        tcgplayerMid: 150.00,
-        tcgplayerHigh: 200.00,
-        tcgplayerMarket: 150.00
+        priceLow: 100.00,
+        priceMid: 150.00,
+        priceHigh: 200.00,
+        priceMarket: 150.00
       }
     ]
   };
@@ -79,9 +79,8 @@ describe('CardDetailPage', () => {
     render(<ListingDetailPage params={{ id: 'card-123' }} />);
 
     await waitFor(() => {
-      expect(screen.getByText('TCGPlayer')).toBeInTheDocument();
+      expect(screen.getByText('Amazon')).toBeInTheDocument();
     });
-    expect(screen.getByText('Amazon')).toBeInTheDocument();
     expect(screen.getByText('eBay')).toBeInTheDocument();
   });
 

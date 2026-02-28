@@ -21,7 +21,7 @@ async function main() {
   
   for (let i = 0; i < cards.length; i++) {
     const card = cards[i];
-    const latestPrice = card.prices[0]?.tcgplayerMarket;
+    const latestPrice = card.prices[0]?.priceMarket;
     
     if (!latestPrice) {
       skipped++;
@@ -34,7 +34,7 @@ async function main() {
           cardId: card.id,
           price: latestPrice,
           date: new Date(),
-          source: 'tcgplayer'
+          source: 'ebay'
         }
       });
       created++;

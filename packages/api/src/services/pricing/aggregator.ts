@@ -1,20 +1,17 @@
 import { prisma } from '@catchandtrade/db';
-import { TCGPlayerFetcher } from './tcgplayer';
+import EbayPriceFetcher, { BudgetTracker, type CalculatedPrices } from './ebay';
 
 export interface AggregatedPrice {
-  tcgplayerLow: number | null;
-  tcgplayerMid: number | null;
-  tcgplayerHigh: number | null;
-  tcgplayerMarket: number | null;
-  ebayAvg: number | null;
+  priceLow: number | null;
+  priceMid: number | null;
+  priceHigh: number | null;
+  priceMarket: number | null;
+  ebayBuyNowLow: number | null;
+  ebaySoldAvg: number | null;
   priceCharting: number | null;
-  consensusPrice: number | null;
-}
-
-export interface PriceHistory {
-  date: Date;
-  tcgplayerMarket: number | null;
-  expectedValue?: number;
+  lastUpdated: Date | null;
+  isStale: boolean;
+  listingCount: number;
 }
 
 export interface ExpectedValueResult {
@@ -23,35 +20,12 @@ export interface ExpectedValueResult {
 }
 
 export class PriceAggregator {
-  private tcgFetcher: TCGPlayerFetcher;
+  private ebayFetcher: EbayPriceFetcher;
+  private budgetTracker: BudgetTracker;
 
   constructor() {
-    this.tcgFetcher = new TCGPlayerFetcher();
-  }
-
-  async aggregate(prices: {
-    tcgplayerMarket?: number | null;
-    ebayAvg?: number | null;
-    priceCharting?: number | null;
-  }): Promise<AggregatedPrice> {
-    const sources: number[] = [];
-    if (prices.tcgplayerMarket) sources.push(prices.tcgplayerMarket);
-    if (prices.ebayAvg) sources.push(prices.ebayAvg);
-    if (prices.priceCharting) sources.push(prices.priceCharting);
-
-    const consensusPrice = sources.length > 0
-      ? sources.reduce((a, b) => a + b, 0) / sources.length
-      : null;
-
-    return {
-      tcgplayerLow: null,
-      tcgplayerMid: null,
-      tcgplayerHigh: null,
-      tcgplayerMarket: prices.tcgplayerMarket || null,
-      ebayAvg: prices.ebayAvg || null,
-      priceCharting: prices.priceCharting || null,
-      consensusPrice: consensusPrice ? Math.round(consensusPrice * 100) / 100 : null
-    };
+    this.ebayFetcher = new EbayPriceFetcher();
+    this.budgetTracker = new BudgetTracker();
   }
 
   async calculateExpectedValue(cardId: string): Promise<ExpectedValueResult> {
@@ -67,13 +41,13 @@ export class PriceAggregator {
 
     if (prices.length < 2) {
       return {
-        expectedValue: prices[0]?.tcgplayerMarket || 0,
+        expectedValue: prices[0]?.priceMarket || 0,
         trend: 'stable'
       };
     }
 
-    const values = prices.map(p => p.tcgplayerMarket).filter((v): v is number => v !== null);
-    
+    const values = prices.map(p => p.priceMarket).filter((v): v is number => v !== null);
+
     if (values.length < 2) {
       return {
         expectedValue: values[0] || 0,
@@ -91,7 +65,7 @@ export class PriceAggregator {
     const intercept = (sumY - slope * sumX) / n;
 
     const expectedValue = Math.max(0, Math.round(intercept * 100) / 100);
-    
+
     let trend: 'rising' | 'falling' | 'stable';
     if (slope > 0.5) {
       trend = 'rising';
@@ -105,20 +79,53 @@ export class PriceAggregator {
   }
 
   async snapshotPrices(cardId: string): Promise<void> {
-    const card = await prisma.card.findUnique({ where: { id: cardId } });
-    if (!card?.tcgplayerId) return;
+    if (!this.budgetTracker.canMakeCall(true)) {
+      console.log('Daily budget exhausted, skipping on-demand snapshot');
+      return;
+    }
 
-    const tcgPrice = await this.tcgFetcher.fetch(card.tcgplayerId);
+    const card = await prisma.card.findUnique({
+      where: { id: cardId },
+      include: { set: true }
+    });
+    if (!card?.set) return;
+
+    const listings = await this.ebayFetcher.searchByCard(card.set.name, card.cardNumber);
+    this.budgetTracker.recordCall();
+
+    const matched = this.ebayFetcher.matchListingsToCards(
+      listings,
+      [{ id: card.id, cardNumber: card.cardNumber }]
+    );
+
+    const cardListings = matched.get(card.id) || [];
+    const calculated = this.ebayFetcher.calculatePrices(cardListings);
+    const now = new Date();
 
     await prisma.cardPrice.create({
       data: {
         cardId,
-        tcgplayerLow: tcgPrice.low,
-        tcgplayerMid: tcgPrice.mid,
-        tcgplayerHigh: tcgPrice.high,
-        tcgplayerMarket: tcgPrice.market
+        priceLow: calculated.priceLow,
+        priceMid: calculated.priceMid,
+        priceHigh: calculated.priceHigh,
+        priceMarket: calculated.priceMarket,
+        ebayBuyNowLow: calculated.ebayBuyNowLow,
+        lastUpdated: now,
+        isStale: false,
+        listingCount: calculated.listingCount,
       }
     });
+
+    // Also record in price history
+    if (calculated.priceMarket !== null) {
+      await prisma.priceHistory.create({
+        data: {
+          cardId,
+          price: calculated.priceMarket,
+          source: 'ebay',
+        }
+      });
+    }
   }
 }
 

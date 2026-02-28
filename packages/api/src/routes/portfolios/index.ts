@@ -298,9 +298,10 @@ portfoliosRouter.get('/:id/summary', authenticate, async (req: Request, res: Res
     let totalCostBasis = 0;
 
     for (const item of portfolio.items) {
-      const currentPrice = item.card.prices[0]?.tcgplayerMarket || 0;
-      const itemValue = currentPrice * item.quantity;
-      totalCurrentValue += itemValue;
+      const currentPrice = item.card.prices[0]?.priceMarket;
+      if (currentPrice != null) {
+        totalCurrentValue += currentPrice * item.quantity;
+      }
 
       if (item.purchasePrice) {
         totalCostBasis += item.purchasePrice * item.quantity;
@@ -353,8 +354,10 @@ portfoliosRouter.get('/:id/value', authenticate, async (req: Request, res: Respo
 
     for (const item of portfolio.items) {
       uniqueCardIds.add(item.cardId);
-      const currentPrice = item.card.prices[0]?.tcgplayerMarket || 0;
-      totalValue += currentPrice * item.quantity;
+      const currentPrice = item.card.prices[0]?.priceMarket;
+      if (currentPrice != null) {
+        totalValue += currentPrice * item.quantity;
+      }
     }
 
     res.json({

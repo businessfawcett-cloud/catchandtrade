@@ -9,10 +9,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
 interface CardPrice {
   id: string;
   date: string;
-  tcgplayerLow: number;
-  tcgplayerMid: number;
-  tcgplayerHigh: number;
-  tcgplayerMarket: number;
+  priceLow: number | null;
+  priceMid: number | null;
+  priceHigh: number | null;
+  priceMarket: number | null;
+  ebayBuyNowLow: number | null;
+  lastUpdated: string | null;
+  listingCount: number;
 }
 
 interface Card {
@@ -75,12 +78,11 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
   }, [cardId]);
 
   const getAffiliateLinks = () => {
-    if (!card) return { tcgplayer: '#', amazon: '#', ebay: '#' };
+    if (!card) return { amazon: '#', ebay: '#' };
     const searchTerm = `${card.name} ${card.setName} ${card.cardNumber} Pokemon Card`;
     const searchTermEncoded = encodeURIComponent(searchTerm);
     const amazonTag = process.env.NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG || 'catchandtrade-20';
     return {
-      tcgplayer: `https://www.tcgplayer.com/search?affiliate=true&q=${searchTermEncoded}`,
       amazon: `https://www.amazon.com/s?k=${searchTermEncoded}&tag=${amazonTag}`,
       ebay: `https://www.ebay.com/sch/i.html?_nkw=${searchTermEncoded}&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=5339143267&customid=&toolid=10001&mkevt=1`
     };
@@ -138,7 +140,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
       });
 
       if (response.ok) {
-        const priceMsg = latestPrice ? ` +$${latestPrice.tcgplayerMarket.toFixed(2)}` : '';
+        const priceMsg = latestPrice?.priceMarket ? ` +$${latestPrice.priceMarket.toFixed(2)}` : '';
         setSuccessMessage(`✓ Added to Portfolio${priceMsg}`);
         setShowModal(false);
         setCondition('NEAR_MINT');
@@ -251,8 +253,8 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
   const links = getAffiliateLinks();
   const latestPrice = card.prices?.[0];
   const priceHistory = getPriceHistory();
-  const maxPrice = Math.max(...priceHistory.map(p => p.tcgplayerMarket), 1);
-  const minPrice = Math.min(...priceHistory.map(p => p.tcgplayerMarket), 0);
+  const maxPrice = Math.max(...priceHistory.map(p => p.priceMarket ?? 0), 1);
+  const minPrice = Math.min(...priceHistory.map(p => p.priceMarket ?? 0), 0);
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem', background: '#0a0f1e', minHeight: '100vh' }}>
@@ -306,24 +308,6 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
 
           {/* Buy Buttons Row */}
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-            <a
-              href={links.tcgplayer}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                flex: 1,
-                padding: '0.6rem',
-                backgroundColor: '#28a745',
-                color: 'white',
-                textAlign: 'center',
-                borderRadius: '4px',
-                fontSize: '0.85rem',
-                fontWeight: 'bold',
-                textDecoration: 'none'
-              }}
-            >
-              TCGPlayer
-            </a>
             <a
               href={links.amazon}
               target="_blank"
@@ -420,23 +404,32 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
             })()}
           </p>
 
-          {latestPrice && (
+          {latestPrice && latestPrice.priceMarket != null ? (
             <div style={{ marginTop: '1.5rem' }}>
               <p style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '0.25rem' }}>Current Market Price</p>
               <p style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0, color: '#ffd700' }}>
-                ${latestPrice.tcgplayerMarket.toFixed(2)}
+                ${latestPrice.priceMarket.toFixed(2)}
               </p>
               <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem', fontSize: '0.9rem', color: '#94a3b8' }}>
-                <span>Low: ${latestPrice.tcgplayerLow.toFixed(2)}</span>
-                <span>Mid: ${latestPrice.tcgplayerMid.toFixed(2)}</span>
-                <span>High: ${latestPrice.tcgplayerHigh.toFixed(2)}</span>
+                {latestPrice.priceLow != null && <span>Low: ${latestPrice.priceLow.toFixed(2)}</span>}
+                {latestPrice.priceMid != null && <span>Mid: ${latestPrice.priceMid.toFixed(2)}</span>}
+                {latestPrice.priceHigh != null && <span>High: ${latestPrice.priceHigh.toFixed(2)}</span>}
               </div>
+              {latestPrice.ebayBuyNowLow != null && (
+                <p style={{ marginTop: '0.75rem', fontSize: '1rem', color: '#10b981', fontWeight: '600' }}>
+                  Buy Now From: ${latestPrice.ebayBuyNowLow.toFixed(2)}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div style={{ marginTop: '1.5rem' }}>
+              <p style={{ fontSize: '1rem', color: '#94a3b8' }}>No market data available</p>
             </div>
           )}
 
-          {latestPrice && (
+          {latestPrice && latestPrice.priceMarket != null && (
             <div style={{ marginTop: '1.5rem' }}>
-              <PriceHistoryChart cardId={card.id} currentPrice={latestPrice.tcgplayerMarket} />
+              <PriceHistoryChart cardId={card.id} currentPrice={latestPrice.priceMarket} />
             </div>
           )}
         </div>

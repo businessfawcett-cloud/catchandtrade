@@ -11,12 +11,11 @@ import { sellerRouter } from './routes/seller';
 import { listingsRouter } from './routes/listings';
 import { cardsRouter } from './routes/cards';
 import { watchlistRouter } from './routes/watchlist';
-import { alertsRouter } from './routes/alerts';
 import { setsRouter } from './routes/sets';
 import { adminRouter } from './routes/admin';
 import { webhooksRouter } from './routes/webhooks/stripe';
 import ebayRouter from './routes/ebay';
-import { startNightlySync } from './cron/nightlySync';
+import { startNightlySync, runNightlySync, syncPrices } from './cron/nightlySync';
 
 const PORT = process.env.PORT || 3003;
 
@@ -64,11 +63,33 @@ app.use('/api/seller', sellerRouter);
 app.use('/api/listings', listingsRouter);
 app.use('/api/cards', cardsRouter);
 app.use('/api/watchlist', watchlistRouter);
-app.use('/api/alerts', alertsRouter);
 app.use('/api/sets', setsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/webhooks', webhooksRouter);
 app.use('/api/ebay', ebayRouter);
+
+// Dev-only: manual sync trigger
+if (process.env.NODE_ENV !== 'production') {
+  app.post('/api/dev/sync-prices', async (req: Request, res: Response) => {
+    console.log('\n🔧 Manual price sync triggered via /api/dev/sync-prices');
+    try {
+      const result = await syncPrices();
+      res.json({ success: true, ...result });
+    } catch (err) {
+      res.status(500).json({ success: false, error: (err as Error).message });
+    }
+  });
+
+  app.post('/api/dev/sync-nightly', async (req: Request, res: Response) => {
+    console.log('\n🔧 Manual nightly sync triggered via /api/dev/sync-nightly');
+    try {
+      await runNightlySync();
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ success: false, error: (err as Error).message });
+    }
+  });
+}
 
 if (require.main === module) {
   app.listen(PORT, () => {

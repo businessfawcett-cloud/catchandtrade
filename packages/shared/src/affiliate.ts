@@ -6,23 +6,6 @@ export interface AffiliateOptions {
 }
 
 export const affiliateService = {
-  tcgplayer(options: AffiliateOptions): string | null {
-    const affiliateId = process.env.TCGPLAYER_AFFILIATE_ID;
-    if (!affiliateId) return null;
-
-    const { productId, cardName } = options;
-    let url = 'https://www.tcgplayer.com?affiliate=true';
-
-    if (productId) {
-      url = `https://www.tcgplayer.com/product/${productId}?affiliate=${affiliateId}`;
-    } else if (cardName) {
-      const encoded = encodeURIComponent(cardName);
-      url = `https://www.tcgplayer.com/search?affiliate=${affiliateId}&q=${encoded}`;
-    }
-
-    return url;
-  },
-
   amazon(options: AffiliateOptions): string | null {
     const associateTag = process.env.AMAZON_ASSOCIATE_TAG;
     if (!associateTag) return null;

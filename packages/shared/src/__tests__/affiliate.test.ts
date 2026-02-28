@@ -2,15 +2,7 @@ import { affiliateService } from '../affiliate';
 
 describe('AffiliateService', () => {
   beforeEach(() => {
-    delete process.env.TCGPLAYER_AFFILIATE_ID;
     delete process.env.AMAZON_ASSOCIATE_TAG;
-  });
-
-  it('generates TCGPlayer affiliate URL with affiliate ID', () => {
-    process.env.TCGPLAYER_AFFILIATE_ID = 'test-affiliate-123';
-    const url = affiliateService.tcgplayer({ productId: '12345', cardName: 'Charizard' });
-    expect(url).toContain('tcgplayer.com');
-    expect(url).toContain('test-affiliate-123');
   });
 
   it('generates Amazon search URL with associate tag', () => {
@@ -24,11 +16,6 @@ describe('AffiliateService', () => {
     const url = affiliateService.ebay({ query: 'Charizard Base Set', soldOnly: true });
     expect(url).toContain('ebay.com');
     expect(url).toContain('LH_Sold=1');
-  });
-
-  it('returns null gracefully when affiliate ID not configured', () => {
-    const url = affiliateService.tcgplayer({ productId: '12345', cardName: 'Charizard' });
-    expect(url).toBeNull();
   });
 
   it('returns null for Amazon when associate tag not configured', () => {

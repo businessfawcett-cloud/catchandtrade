@@ -120,7 +120,7 @@ describe('Sync Jobs', () => {
           setCode: 'base1',
           cardNumber: '4',
           rarity: 'Common',
-          tcgplayerId: 'base1-4',
+          pokemonTcgId: 'base1-4',
           setId: set.id,
         }
       });
@@ -139,7 +139,7 @@ describe('Sync Jobs', () => {
 
       expect(result.newCards).toBe(0);
 
-      const card = await prisma.card.findUnique({ where: { tcgplayerId: 'base1-4' } });
+      const card = await prisma.card.findUnique({ where: { pokemonTcgId: 'base1-4' } });
       expect(card?.rarity).toBe('Common');
     });
   });
@@ -157,7 +157,7 @@ describe('Sync Jobs', () => {
           setCode: 'base1',
           cardNumber: '4',
           rarity: 'Rare Holo',
-          tcgplayerId: 'base1-4',
+          pokemonTcgId: 'base1-4',
           setId: set.id,
         }
       });
@@ -180,7 +180,7 @@ describe('Sync Jobs', () => {
 
       const prices = await prisma.cardPrice.findMany({ where: { cardId: card.id } });
       expect(prices).toHaveLength(1);
-      expect(prices[0].tcgplayerMarket).toBe(500.00);
+      expect(prices[0].priceMarket).toBe(500.00);
     });
 
     it('triggers price alerts when threshold met', async () => {
@@ -199,7 +199,7 @@ describe('Sync Jobs', () => {
           setCode: 'base1',
           cardNumber: '4',
           rarity: 'Rare Holo',
-          tcgplayerId: 'base1-4',
+          pokemonTcgId: 'base1-4',
           setId: set.id,
         }
       });
@@ -207,7 +207,7 @@ describe('Sync Jobs', () => {
       await prisma.cardPrice.create({
         data: {
           cardId: card.id,
-          tcgplayerMarket: 100.00,
+          priceMarket: 100.00,
         }
       });
 

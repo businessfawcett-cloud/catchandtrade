@@ -137,7 +137,6 @@ export default function MarketplacePage() {
       ? `https://www.amazon.com/s?k=${amazonSearchTerm}&tag=${amazonTag}`
       : `https://www.amazon.com/s?k=${amazonSearchTerm}`;
     return {
-      tcgplayer: `https://www.tcgplayer.com/search?affiliate=true&q=${encodeURIComponent(searchTerm)}`,
       amazon: amazonUrl,
       ebay: ebayUrl
     };
@@ -319,7 +318,6 @@ export default function MarketplacePage() {
                       </div>
                     </Link>
                     <div className="quick-links flex gap-1 px-3 pb-3">
-                      <a href={links.tcgplayer} target="_blank" rel="noopener noreferrer" className="flex-1 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white text-center rounded transition-colors">TCG</a>
                       <a href={links.amazon} target="_blank" rel="noopener noreferrer" className="flex-1 py-1.5 text-xs bg-yellow-500 hover:bg-yellow-400 text-black text-center rounded transition-colors">Amazon</a>
                       <a href={links.ebay} target="_blank" rel="noopener noreferrer" className="flex-1 py-1.5 text-xs bg-red-600 hover:bg-red-500 text-white text-center rounded transition-colors">eBay</a>
                     </div>

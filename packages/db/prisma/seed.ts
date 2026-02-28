@@ -111,7 +111,7 @@ async function main() {
               cardNumber: card.number || '',
               rarity: card.rarity,
               imageUrl: card.images?.large || card.images?.small,
-              tcgplayerId: card.id,
+              pokemonTcgId: card.id,
               gameType: 'POKEMON',
               language: card.language || 'EN',
               setId,
