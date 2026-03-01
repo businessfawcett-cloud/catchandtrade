@@ -470,7 +470,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
             })()}
           </p>
 
-          {!inPortfolioItem && latestPrice && latestPrice.priceMarket != null ? (
+          {latestPrice && latestPrice.priceMarket != null ? (
             <div style={{ marginTop: '1.5rem' }}>
               <p style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '0.25rem' }}>Current Market Price</p>
               <p style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0, color: '#ffd700' }}>
@@ -493,7 +493,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
             </div>
           )}
 
-          {!inPortfolioItem && latestPrice && latestPrice.priceMarket != null && (
+          {latestPrice && latestPrice.priceMarket != null && (
             <div style={{ marginTop: '1.5rem' }}>
               <PriceHistoryChart cardId={card.id} currentPrice={latestPrice.priceMarket} />
             </div>
