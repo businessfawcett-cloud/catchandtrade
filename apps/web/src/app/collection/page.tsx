@@ -302,7 +302,7 @@ export default function CollectionPage() {
                 const progress = progressMap[set.code];
                 const owned = progress?.owned || 0;
                 const total = progress?.total || set.cardCount || set.totalCards || 0;
-                const percentage = progress?.percentage || 0;
+                const percentage = progress?.percentage || (progress?.owned > 0 ? 1 : 0);
                 const progressColor = getProgressColor(percentage);
                 const eraColor = getEraColor(set.releaseYear);
                 
