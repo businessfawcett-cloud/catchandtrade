@@ -29,24 +29,27 @@ setsRouter.get(
         orderBy: { releaseYear: 'desc' }
       });
 
-      const setsWithCounts = await Promise.all(
-        sets.map(async (set) => {
-          const cardCount = await prisma.card.count({
-            where: { setCode: set.code }
-          });
-          return {
-            id: set.id,
-            name: set.name,
-            code: set.code,
-            totalCards: set.totalCards,
-            releaseYear: set.releaseYear,
-            imageUrl: set.imageUrl,
-            cardCount
-          };
-        })
-      );
+      const allSetCodes = sets.map(s => s.code);
+      
+      const cardCounts = await prisma.card.groupBy({
+        by: ['setCode'],
+        _count: { setCode: true },
+        where: { setCode: { in: allSetCodes } }
+      });
+      
+      const countMap = new Map(cardCounts.map(c => [c.setCode, c._count.setCode]));
 
-      res.json({ sets: setsWithCounts });
+      const result = sets.map(set => ({
+        id: set.id,
+        name: set.name,
+        code: set.code,
+        totalCards: set.totalCards,
+        releaseYear: set.releaseYear,
+        imageUrl: set.imageUrl,
+        cardCount: countMap.get(set.code) || 0
+      }));
+
+      res.json({ sets: result });
     } catch (error) {
       next(error);
     }
