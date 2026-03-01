@@ -68,26 +68,46 @@ app.use('/api/admin', adminRouter);
 app.use('/api/webhooks', webhooksRouter);
 app.use('/api/ebay', ebayRouter);
 
-// Dev-only: manual sync trigger
+// Dev-only: manual sync trigger (async — responds immediately, runs in background)
 if (process.env.NODE_ENV !== 'production') {
-  app.post('/api/dev/sync-prices', async (req: Request, res: Response) => {
-    console.log('\n🔧 Manual price sync triggered via /api/dev/sync-prices');
-    try {
-      const result = await syncPrices();
-      res.json({ success: true, ...result });
-    } catch (err) {
-      res.status(500).json({ success: false, error: (err as Error).message });
+  let syncStatus: { running: boolean; startedAt: string | null; result: any; error: string | null } = {
+    running: false, startedAt: null, result: null, error: null
+  };
+
+  app.post('/api/dev/sync-prices', (req: Request, res: Response) => {
+    if (syncStatus.running) {
+      res.status(409).json({ success: false, error: 'Sync already running', startedAt: syncStatus.startedAt });
+      return;
     }
+
+    syncStatus = { running: true, startedAt: new Date().toISOString(), result: null, error: null };
+    console.log('\n🔧 Manual price sync triggered via /api/dev/sync-prices');
+
+    syncPrices()
+      .then(result => { syncStatus.running = false; syncStatus.result = result; })
+      .catch(err => { syncStatus.running = false; syncStatus.error = (err as Error).message; });
+
+    res.status(202).json({ success: true, message: 'Sync started in background', startedAt: syncStatus.startedAt });
   });
 
-  app.post('/api/dev/sync-nightly', async (req: Request, res: Response) => {
-    console.log('\n🔧 Manual nightly sync triggered via /api/dev/sync-nightly');
-    try {
-      await runNightlySync();
-      res.json({ success: true });
-    } catch (err) {
-      res.status(500).json({ success: false, error: (err as Error).message });
+  app.post('/api/dev/sync-nightly', (req: Request, res: Response) => {
+    if (syncStatus.running) {
+      res.status(409).json({ success: false, error: 'Sync already running', startedAt: syncStatus.startedAt });
+      return;
     }
+
+    syncStatus = { running: true, startedAt: new Date().toISOString(), result: null, error: null };
+    console.log('\n🔧 Manual nightly sync triggered via /api/dev/sync-nightly');
+
+    runNightlySync()
+      .then(() => { syncStatus.running = false; syncStatus.result = { completed: true }; })
+      .catch(err => { syncStatus.running = false; syncStatus.error = (err as Error).message; });
+
+    res.status(202).json({ success: true, message: 'Nightly sync started in background', startedAt: syncStatus.startedAt });
+  });
+
+  app.get('/api/dev/sync-status', (req: Request, res: Response) => {
+    res.json(syncStatus);
   });
 }
 

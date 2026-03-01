@@ -180,6 +180,11 @@ async function runBulkPass(): Promise<{ updatedPrices: number; errorCount: numbe
         try {
           const calculated = ebayFetcher.calculatePrices(cardListings);
 
+          // Skip if no eBay data found - preserve existing price
+          if (calculated.priceMarket === null) {
+            continue;
+          }
+
           await prisma.cardPrice.create({
             data: {
               cardId,
@@ -194,15 +199,13 @@ async function runBulkPass(): Promise<{ updatedPrices: number; errorCount: numbe
             }
           });
 
-          if (calculated.priceMarket !== null) {
-            await prisma.priceHistory.create({
-              data: {
-                cardId,
-                price: calculated.priceMarket,
-                source: 'ebay',
-              }
-            });
-          }
+          await prisma.priceHistory.create({
+            data: {
+              cardId,
+              price: calculated.priceMarket,
+              source: 'ebay',
+            }
+          });
 
           updatedPrices++;
           setUpdated++;
@@ -285,6 +288,12 @@ async function runPrecisionPass(): Promise<{ updatedPrices: number; errorCount: 
 
       const cardListings = matched.get(card.id) || [];
       const calculated = ebayFetcher.calculatePrices(cardListings);
+
+      // Skip if no eBay data found - preserve existing price
+      if (calculated.priceMarket === null) {
+        continue;
+      }
+
       const now = new Date();
 
       await prisma.cardPrice.create({
@@ -301,15 +310,13 @@ async function runPrecisionPass(): Promise<{ updatedPrices: number; errorCount: 
         }
       });
 
-      if (calculated.priceMarket !== null) {
-        await prisma.priceHistory.create({
-          data: {
-            cardId: card.id,
-            price: calculated.priceMarket,
-            source: 'ebay',
-          }
-        });
-      }
+      await prisma.priceHistory.create({
+        data: {
+          cardId: card.id,
+          price: calculated.priceMarket,
+          source: 'ebay',
+        }
+      });
 
       updatedPrices++;
     } catch (err) {
