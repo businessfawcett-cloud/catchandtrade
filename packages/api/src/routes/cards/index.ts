@@ -35,7 +35,7 @@ cardsRouter.get(
             LIMIT 1
           ) cp ON true
           ${setCode ? `WHERE c."setCode" = ${`'${setCode}'`}` : ''}
-          ORDER BY cp."priceMarket" ${priceOrder} NULLS ${sort === 'price-desc' ? 'LAST' : 'FIRST'}
+          ORDER BY cp."priceMarket" ${priceOrder} NULLS LAST
           LIMIT ${limit} OFFSET ${(page - 1) * limit}
         `;
         
@@ -166,7 +166,7 @@ cardsRouter.get(
             LIMIT 1
           ) cp ON true
           WHERE 1=1 ${searchCondition}
-          ORDER BY cp."priceMarket" ${priceOrder} NULLS ${sort === 'price-desc' ? 'LAST' : 'FIRST'}
+          ORDER BY cp."priceMarket" ${priceOrder} NULLS LAST
           LIMIT ${limit} OFFSET 0
         `;
         

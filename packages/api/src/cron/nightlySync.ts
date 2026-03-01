@@ -185,6 +185,12 @@ async function runBulkPass(): Promise<{ updatedPrices: number; errorCount: numbe
             continue;
           }
 
+          // Skip outliers - filter out unrealistic prices
+          if (calculated.priceMarket < 0.10 || calculated.priceMarket > 10000) {
+            console.log(`  Skipping outlier price for card ${cardId}: $${calculated.priceMarket}`);
+            continue;
+          }
+
           await prisma.cardPrice.create({
             data: {
               cardId,
@@ -291,6 +297,11 @@ async function runPrecisionPass(): Promise<{ updatedPrices: number; errorCount: 
 
       // Skip if no eBay data found - preserve existing price
       if (calculated.priceMarket === null) {
+        continue;
+      }
+
+      // Skip outliers - filter out unrealistic prices
+      if (calculated.priceMarket < 0.10 || calculated.priceMarket > 10000) {
         continue;
       }
 
