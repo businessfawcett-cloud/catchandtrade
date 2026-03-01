@@ -13,7 +13,6 @@ afterEach(async () => {
   await prisma.listing.deleteMany();
   await prisma.portfolioItem.deleteMany();
   await prisma.portfolio.deleteMany();
-  await prisma.priceAlert.deleteMany();
   await prisma.watchlistItem.deleteMany();
   await prisma.cardPrice.deleteMany();
   await prisma.card.deleteMany();
