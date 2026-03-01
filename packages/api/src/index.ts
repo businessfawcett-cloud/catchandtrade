@@ -11,12 +11,11 @@ import { sellerRouter } from './routes/seller';
 import { listingsRouter } from './routes/listings';
 import { cardsRouter } from './routes/cards';
 import { watchlistRouter } from './routes/watchlist';
-import { alertsRouter } from './routes/alerts';
 import { setsRouter } from './routes/sets';
 import { adminRouter } from './routes/admin';
 import { webhooksRouter } from './routes/webhooks/stripe';
 import ebayRouter from './routes/ebay';
-import { startNightlySync } from './cron/nightlySync';
+import { startNightlySync, runNightlySync, syncPrices } from './cron/nightlySync';
 
 const PORT = process.env.PORT || 3003;
 
@@ -64,11 +63,53 @@ app.use('/api/seller', sellerRouter);
 app.use('/api/listings', listingsRouter);
 app.use('/api/cards', cardsRouter);
 app.use('/api/watchlist', watchlistRouter);
-app.use('/api/alerts', alertsRouter);
 app.use('/api/sets', setsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/webhooks', webhooksRouter);
 app.use('/api/ebay', ebayRouter);
+
+// Dev-only: manual sync trigger (async — responds immediately, runs in background)
+if (process.env.NODE_ENV !== 'production') {
+  let syncStatus: { running: boolean; startedAt: string | null; result: any; error: string | null } = {
+    running: false, startedAt: null, result: null, error: null
+  };
+
+  app.post('/api/dev/sync-prices', (req: Request, res: Response) => {
+    if (syncStatus.running) {
+      res.status(409).json({ success: false, error: 'Sync already running', startedAt: syncStatus.startedAt });
+      return;
+    }
+
+    syncStatus = { running: true, startedAt: new Date().toISOString(), result: null, error: null };
+    console.log('\n🔧 Manual price sync triggered via /api/dev/sync-prices');
+
+    syncPrices()
+      .then(result => { syncStatus.running = false; syncStatus.result = result; })
+      .catch(err => { syncStatus.running = false; syncStatus.error = (err as Error).message; });
+
+    res.status(202).json({ success: true, message: 'Sync started in background', startedAt: syncStatus.startedAt });
+  });
+
+  app.post('/api/dev/sync-nightly', (req: Request, res: Response) => {
+    if (syncStatus.running) {
+      res.status(409).json({ success: false, error: 'Sync already running', startedAt: syncStatus.startedAt });
+      return;
+    }
+
+    syncStatus = { running: true, startedAt: new Date().toISOString(), result: null, error: null };
+    console.log('\n🔧 Manual nightly sync triggered via /api/dev/sync-nightly');
+
+    runNightlySync()
+      .then(() => { syncStatus.running = false; syncStatus.result = { completed: true }; })
+      .catch(err => { syncStatus.running = false; syncStatus.error = (err as Error).message; });
+
+    res.status(202).json({ success: true, message: 'Nightly sync started in background', startedAt: syncStatus.startedAt });
+  });
+
+  app.get('/api/dev/sync-status', (req: Request, res: Response) => {
+    res.json(syncStatus);
+  });
+}
 
 if (require.main === module) {
   app.listen(PORT, () => {

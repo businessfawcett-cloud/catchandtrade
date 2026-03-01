@@ -48,7 +48,7 @@ watchlistRouter.get(
         cardId: item.cardId,
         addedAt: item.addedAt,
         card: item.card,
-        currentPrice: item.card.prices[0]?.tcgplayerMarket || null
+        currentPrice: item.card.prices[0]?.priceMarket || null
       })));
     } catch (error) {
       next(error);

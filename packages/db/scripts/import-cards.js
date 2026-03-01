@@ -21,8 +21,6 @@ async function importCards() {
   console.log('Deleted price history');
   await prisma.watchlistItem.deleteMany();
   console.log('Deleted watchlist');
-  await prisma.priceAlert.deleteMany();
-  console.log('Deleted alerts');
   await prisma.listing.deleteMany();
   console.log('Deleted listings');
   await prisma.portfolioItem.deleteMany();
@@ -41,7 +39,7 @@ async function importCards() {
       cardNumber: c.cardNumber || '',
       rarity: c.rarity,
       imageUrl: c.imageUrl,
-      tcgplayerId: c.tcgplayerId,
+      pokemonTcgId: c.pokemonTcgId,
       gameType: c.gameType || 'POKEMON',
       language: c.language || 'EN'
     }));

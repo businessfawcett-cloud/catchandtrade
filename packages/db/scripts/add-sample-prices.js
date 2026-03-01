@@ -60,10 +60,10 @@ async function addSamplePrices() {
       data: {
         cardId: card.id,
         date: today,
-        tcgplayerLow: cardPrices.low,
-        tcgplayerMid: cardPrices.mid,
-        tcgplayerMarket: cardPrices.market,
-        tcgplayerHigh: cardPrices.high
+        priceLow: cardPrices.low,
+        priceMid: cardPrices.mid,
+        priceMarket: cardPrices.market,
+        priceHigh: cardPrices.high
       }
     });
     

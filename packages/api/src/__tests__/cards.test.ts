@@ -37,10 +37,10 @@ describe('Cards API', () => {
     await prisma.cardPrice.create({
       data: {
         cardId: card.id,
-        tcgplayerLow: 4000,
-        tcgplayerMid: 5000,
-        tcgplayerHigh: 6000,
-        tcgplayerMarket: 5000,
+        priceLow: 4000,
+        priceMid: 5000,
+        priceHigh: 6000,
+        priceMarket: 5000,
         date: new Date()
       }
     });

@@ -1,18 +1,11 @@
 import { prisma } from '@catchandtrade/db';
 import * as cron from 'node-cron';
+import EbayPriceFetcher, { BudgetTracker } from '../services/pricing/ebay';
 
 const POKEMON_TCG_API_URL = 'https://api.pokemontcg.io/v2';
 const GITHUB_SETS_URL = 'https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json';
 
-const TCGPLAYER_API_KEY = 'a3751a33-9ed6-4662-9ae3-870939002fcc';
-
-interface TCGCardSet {
-  id: string;
-  name: string;
-  images: { logo: string; symbol: string };
-  printedTotal: number;
-  releaseDate: string;
-}
+const STALE_THRESHOLD_HOURS = parseInt(process.env.STALE_THRESHOLD_HOURS || '48', 10);
 
 interface GithubSet {
   id: string;
@@ -28,13 +21,6 @@ interface TCGCard {
   number: string;
   rarity: string | null;
   images: { small: string; large: string };
-  tcgplayer?: {
-    prices?: {
-      holofoil?: { market: number };
-      normal?: { market: number };
-      reverseHolofoil?: { market: number };
-    };
-  };
   set: { id: string; name: string };
 }
 
@@ -63,9 +49,11 @@ async function fetchWithRetry<T>(url: string, retries = 3): Promise<T | null> {
   return null;
 }
 
+// ── Set Sync (unchanged — fetches from GitHub/PokemonTCG data) ──────────
+
 export async function syncSets(): Promise<{ newSets: number }> {
   console.log('Starting Job 1: Sync Sets (new only)...');
-  
+
   let newSets = 0;
 
   const response = await fetchWithRetry<GithubSet[]>(GITHUB_SETS_URL);
@@ -86,7 +74,7 @@ export async function syncSets(): Promise<{ newSets: number }> {
 
     const releaseYear = parseInt(tcgSet.releaseDate.split('-')[0], 10);
     const logoUrl = `https://images.pokemontcg.io/${tcgSet.id}/logo.png`;
-    
+
     await prisma.pokemonSet.create({
       data: {
         name: tcgSet.name,
@@ -104,9 +92,11 @@ export async function syncSets(): Promise<{ newSets: number }> {
   return { newSets };
 }
 
+// ── Card Sync (updated: pokemonTcgId) ───────────────────────────────────
+
 export async function syncCards(): Promise<{ newCards: number }> {
   console.log('Starting Job 2: Sync Cards (new only)...');
-  
+
   let newCards = 0;
 
   const sets = await prisma.pokemonSet.findMany();
@@ -116,14 +106,14 @@ export async function syncCards(): Promise<{ newCards: number }> {
     const response = await fetchWithRetry<TCGCard[]>(
       `https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en/${set.code}.json`
     );
-    
+
     if (!response || !Array.isArray(response)) continue;
 
     const existingCards = await prisma.card.findMany({
       where: { setCode: set.code },
-      select: { tcgplayerId: true }
+      select: { pokemonTcgId: true }
     });
-    const existingIds = new Set(existingCards.map(c => c.tcgplayerId));
+    const existingIds = new Set(existingCards.map(c => c.pokemonTcgId));
 
     for (const card of response) {
       if (existingIds.has(card.id)) {
@@ -138,7 +128,7 @@ export async function syncCards(): Promise<{ newCards: number }> {
           cardNumber: card.number || '',
           rarity: card.rarity || null,
           imageUrl: card.images?.large || card.images?.small || null,
-          tcgplayerId: card.id,
+          pokemonTcgId: card.id,
           gameType: 'POKEMON',
           language: 'EN',
           setId: set.id,
@@ -154,97 +144,243 @@ export async function syncCards(): Promise<{ newCards: number }> {
   return { newCards };
 }
 
-export async function syncPrices(): Promise<{ updatedPrices: number; triggeredAlerts: number }> {
-  console.log('Starting Job 3: Sync Prices...');
-  
+// ── Price Sync (rewritten: two-tiered eBay engine) ──────────────────────
+
+const ebayFetcher = new EbayPriceFetcher();
+const budgetTracker = new BudgetTracker();
+
+async function runBulkPass(): Promise<{ updatedPrices: number; errorCount: number }> {
+  console.log('  Tier 1: Bulk Discovery Pass — searching by set name');
   let updatedPrices = 0;
-  let triggeredAlerts = 0;
+  let errorCount = 0;
 
-  const cards = await prisma.card.findMany({
-    where: { tcgplayerId: { not: null } }
-  });
-
-  console.log(`  Fetching prices for ${cards.length} cards in batches of 50...`);
-
-  const BATCH_SIZE = 50;
-  const cardsWithPrices = cards.filter(c => c.tcgplayerId);
-
-  for (let i = 0; i < cardsWithPrices.length; i += BATCH_SIZE) {
-    const batch = cardsWithPrices.slice(i, i + BATCH_SIZE);
-    console.log(`  Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(cardsWithPrices.length / BATCH_SIZE)}...`);
-
-    for (const card of batch) {
-      try {
-        const response = await fetchWithRetry<{ data: TCGCard[] }>(
-          `${POKEMON_TCG_API_URL}/cards/${card.tcgplayerId}`,
-          2
-        );
-        
-        if (!response || !response.data || !response.data[0]) {
-          await delay(200);
-          continue;
-        }
-
-        const cardData = response.data[0];
-        const marketPrice = 
-          cardData.tcgplayer?.prices?.holofoil?.market ||
-          cardData.tcgplayer?.prices?.normal?.market ||
-          cardData.tcgplayer?.prices?.reverseHolofoil?.market ||
-          null;
-
-        if (marketPrice) {
-          await prisma.cardPrice.create({
-            data: {
-              cardId: card.id,
-              tcgplayerMarket: marketPrice,
-              tcgplayerLow: Math.round(marketPrice * 0.7 * 100) / 100,
-              tcgplayerMid: Math.round(marketPrice * 100) / 100,
-              tcgplayerHigh: Math.round(marketPrice * 1.3 * 100) / 100,
-            },
-          });
-          updatedPrices++;
-        }
-
-        await delay(200);
-      } catch (err) {
-        console.log(`  Error fetching price for ${card.tcgplayerId}: ${err}`);
-        await delay(200);
+  const sets = await prisma.pokemonSet.findMany({
+    include: {
+      cards: {
+        select: { id: true, cardNumber: true }
       }
     }
-  }
-
-  const alerts = await prisma.priceAlert.findMany({
-    where: { isActive: true },
-    include: { card: { include: { prices: { orderBy: { date: 'desc' }, take: 1 } } } }
   });
 
-  for (const alert of alerts) {
-    const latestPrice = alert.card.prices[0]?.tcgplayerMarket;
-    if (!latestPrice) continue;
-
-    let shouldTrigger = false;
-    if (alert.alertType === 'PRICE_ABOVE' && latestPrice >= alert.targetPrice) {
-      shouldTrigger = true;
-    } else if (alert.alertType === 'PRICE_BELOW' && latestPrice <= alert.targetPrice) {
-      shouldTrigger = true;
+  for (const set of sets) {
+    if (!budgetTracker.canMakeCall()) {
+      console.log(`  Bulk pass stopping — budget low (${budgetTracker.getRemainingBudget()} remaining)`);
+      break;
     }
 
-    if (shouldTrigger) {
-      await prisma.priceAlert.update({
-        where: { id: alert.id },
-        data: { isActive: false, triggeredAt: new Date() }
-      });
-      triggeredAlerts++;
+    try {
+      const listings = await ebayFetcher.searchBySet(set.name);
+      budgetTracker.recordCall();
+
+      const matched = ebayFetcher.matchListingsToCards(listings, set.cards);
+      let setUpdated = 0;
+
+      const now = new Date();
+      for (const [cardId, cardListings] of matched.entries()) {
+        try {
+          const calculated = ebayFetcher.calculatePrices(cardListings);
+
+          // Skip if no eBay data found - preserve existing price
+          if (calculated.priceMarket === null) {
+            continue;
+          }
+
+          await prisma.cardPrice.create({
+            data: {
+              cardId,
+              priceLow: calculated.priceLow,
+              priceMid: calculated.priceMid,
+              priceHigh: calculated.priceHigh,
+              priceMarket: calculated.priceMarket,
+              ebayBuyNowLow: calculated.ebayBuyNowLow,
+              lastUpdated: now,
+              isStale: false,
+              listingCount: calculated.listingCount,
+            }
+          });
+
+          await prisma.priceHistory.create({
+            data: {
+              cardId,
+              price: calculated.priceMarket,
+              source: 'ebay',
+            }
+          });
+
+          updatedPrices++;
+          setUpdated++;
+        } catch (err) {
+          errorCount++;
+          console.log(`  Error updating price for card ${cardId}: ${(err as Error).message}`);
+        }
+      }
+
+      console.log(`  Set "${set.name}": ${listings.length} listings → ${setUpdated} cards priced`);
+    } catch (err) {
+      errorCount++;
+      console.log(`  Error searching set "${set.name}": ${(err as Error).message}`);
     }
   }
 
-  console.log(`  Updated prices for ${updatedPrices} cards, triggered ${triggeredAlerts} alerts`);
-  return { updatedPrices, triggeredAlerts };
+  console.log(`  Bulk pass complete: ${updatedPrices} cards updated, ${errorCount} errors`);
+  return { updatedPrices, errorCount };
 }
+
+async function runPrecisionPass(): Promise<{ updatedPrices: number; errorCount: number }> {
+  console.log('  Tier 2: Precision Cleanup Pass — targeting stale high-priority cards');
+  let updatedPrices = 0;
+  let errorCount = 0;
+
+  // Prioritize: portfolio/watchlist membership → highest value → oldest lastUpdated
+  const staleCards = await prisma.card.findMany({
+    where: {
+      prices: {
+        some: {
+          OR: [
+            { isStale: true },
+            { lastUpdated: null },
+          ]
+        }
+      }
+    },
+    include: {
+      set: true,
+      prices: {
+        orderBy: { date: 'desc' },
+        take: 1,
+      },
+      portfolioItems: { take: 1 },
+      watchlistItems: { take: 1 },
+    },
+  });
+
+  // Sort: portfolio/watchlist first, then highest price, then oldest update
+  staleCards.sort((a, b) => {
+    const aInCollection = (a.portfolioItems.length > 0 || a.watchlistItems.length > 0) ? 1 : 0;
+    const bInCollection = (b.portfolioItems.length > 0 || b.watchlistItems.length > 0) ? 1 : 0;
+    if (aInCollection !== bInCollection) return bInCollection - aInCollection;
+
+    const aPrice = a.prices[0]?.priceMarket ?? 0;
+    const bPrice = b.prices[0]?.priceMarket ?? 0;
+    if (aPrice !== bPrice) return bPrice - aPrice;
+
+    const aUpdated = a.prices[0]?.lastUpdated?.getTime() ?? 0;
+    const bUpdated = b.prices[0]?.lastUpdated?.getTime() ?? 0;
+    return aUpdated - bUpdated;
+  });
+
+  for (const card of staleCards) {
+    if (!budgetTracker.canMakeCall()) {
+      console.log(`  Precision pass stopping — budget exhausted (${budgetTracker.getRemainingBudget()} remaining)`);
+      break;
+    }
+
+    if (!card.set) continue;
+
+    try {
+      const listings = await ebayFetcher.searchByCard(card.set.name, card.cardNumber);
+      budgetTracker.recordCall();
+
+      const matched = ebayFetcher.matchListingsToCards(
+        listings,
+        [{ id: card.id, cardNumber: card.cardNumber }]
+      );
+
+      const cardListings = matched.get(card.id) || [];
+      const calculated = ebayFetcher.calculatePrices(cardListings);
+
+      // Skip if no eBay data found - preserve existing price
+      if (calculated.priceMarket === null) {
+        continue;
+      }
+
+      const now = new Date();
+
+      await prisma.cardPrice.create({
+        data: {
+          cardId: card.id,
+          priceLow: calculated.priceLow,
+          priceMid: calculated.priceMid,
+          priceHigh: calculated.priceHigh,
+          priceMarket: calculated.priceMarket,
+          ebayBuyNowLow: calculated.ebayBuyNowLow,
+          lastUpdated: now,
+          isStale: false,
+          listingCount: calculated.listingCount,
+        }
+      });
+
+      await prisma.priceHistory.create({
+        data: {
+          cardId: card.id,
+          price: calculated.priceMarket,
+          source: 'ebay',
+        }
+      });
+
+      updatedPrices++;
+    } catch (err) {
+      errorCount++;
+      console.log(`  Error in precision pass for card ${card.id}: ${(err as Error).message}`);
+    }
+  }
+
+  console.log(`  Precision pass complete: ${updatedPrices} cards updated, ${errorCount} errors`);
+  return { updatedPrices, errorCount };
+}
+
+async function markStaleCards(): Promise<number> {
+  const staleThreshold = new Date(Date.now() - STALE_THRESHOLD_HOURS * 60 * 60 * 1000);
+
+  // Get the latest CardPrice for each card and mark stale if lastUpdated is old
+  const result = await prisma.$executeRaw`
+    UPDATE "CardPrice" cp
+    SET "isStale" = true
+    FROM (
+      SELECT DISTINCT ON ("cardId") id
+      FROM "CardPrice"
+      ORDER BY "cardId", "date" DESC
+    ) latest
+    WHERE cp.id = latest.id
+      AND (cp."lastUpdated" IS NULL OR cp."lastUpdated" < ${staleThreshold})
+      AND cp."isStale" = false
+  `;
+
+  return result;
+}
+
+export async function syncPrices(): Promise<{ updatedPrices: number }> {
+  console.log('Starting Job 3: Sync Prices (eBay two-tiered engine)...');
+  const syncStart = Date.now();
+
+  console.log(`  Budget at start: ${budgetTracker.getRemainingBudget()} calls remaining`);
+
+  // Tier 1: Bulk pass
+  const bulk = await runBulkPass();
+  console.log(`  Budget after bulk pass: ${budgetTracker.getRemainingBudget()} calls remaining`);
+
+  // Tier 2: Precision pass
+  const precision = await runPrecisionPass();
+  console.log(`  Budget after precision pass: ${budgetTracker.getRemainingBudget()} calls remaining`);
+
+  // Staleness sweep
+  const markedStale = await markStaleCards();
+  console.log(`  Staleness sweep: ${markedStale} cards marked stale (threshold: ${STALE_THRESHOLD_HOURS}h)`);
+
+  const totalUpdated = bulk.updatedPrices + precision.updatedPrices;
+  const totalErrors = bulk.errorCount + precision.errorCount;
+  const duration = Date.now() - syncStart;
+
+  console.log(`  Price sync complete in ${duration}ms: ${totalUpdated} updated, ${totalErrors} errors, ${budgetTracker.getRemainingBudget()} budget remaining`);
+
+  return { updatedPrices: totalUpdated };
+}
+
+// ── Weekly/Nightly Orchestration ────────────────────────────────────────
 
 export async function runWeeklySync(): Promise<void> {
   const startTime = Date.now();
-  
+
   console.log('\n=== Starting Weekly Sync (Sets + Cards) ===');
 
   let newSets = 0, newCards = 0, errors: string[] = [];
@@ -274,7 +410,6 @@ export async function runWeeklySync(): Promise<void> {
       newCards,
       updatedCards: 0,
       updatedPrices: 0,
-      triggeredAlerts: 0,
       errors: errors.length > 0 ? errors.join('; ') : null,
       duration
     }
@@ -286,15 +421,14 @@ export async function runWeeklySync(): Promise<void> {
 export async function runNightlySync(): Promise<void> {
   const startTime = Date.now();
   let errors: string[] = [];
-  
+
   console.log('\n=== Starting Nightly Sync (Prices only) ===');
 
-  let updatedPrices = 0, triggeredAlerts = 0;
+  let updatedPrices = 0;
 
   try {
     const pricesResult = await syncPrices();
     updatedPrices = pricesResult.updatedPrices;
-    triggeredAlerts = pricesResult.triggeredAlerts;
   } catch (err) {
     errors.push(`Job 3 (syncPrices) failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     console.error('  Job 3 failed:', err);
@@ -309,7 +443,6 @@ export async function runNightlySync(): Promise<void> {
       newCards: 0,
       updatedCards: 0,
       updatedPrices,
-      triggeredAlerts,
       errors: errors.length > 0 ? errors.join('; ') : null,
       duration
     }

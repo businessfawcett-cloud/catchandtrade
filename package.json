@@ -15,10 +15,7 @@
     "db:push": "turbo run db:push",
     "db:migrate": "turbo run db:migrate",
     "db:seed": "turbo run db:seed",
-    "sync-prices": "node packages/db/scripts/sync-prices.js",
-    "fetch-prices": "node packages/db/scripts/puppeteer-prices.js",
     "record-snapshot": "node packages/db/scripts/record-price-snapshot.js",
-    "scrape-prices": "node packages/db/scripts/scrape-prices.js",
     "stripe:listen": "stripe listen --forward-to localhost:3003/api/webhooks/stripe"
   },
   "dependencies": {

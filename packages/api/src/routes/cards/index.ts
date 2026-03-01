@@ -13,38 +13,60 @@ cardsRouter.get(
       const setCode = req.query.setCode as string;
       const sort = req.query.sort as string;
 
-      let orderBy: any = { createdAt: 'desc' };
-      if (sort === 'oldest') {
-        orderBy = { createdAt: 'asc' };
-      }
-
       const where: any = {};
       if (setCode) {
         where.setCode = setCode;
       }
 
-      let orderByField: any = orderBy;
-      if (sort === 'name') {
-        orderByField = { name: 'asc' };
+      let cards: any[];
+      let total: number;
+
+      if (sort === 'price-desc' || sort === 'price-asc') {
+        const priceOrder = sort === 'price-desc' ? 'DESC' : 'ASC';
+        
+        const sql = `
+          SELECT c.*, cp."priceMarket" as "currentPrice"
+          FROM "Card" c
+          LEFT JOIN LATERAL (
+            SELECT "priceMarket" 
+            FROM "CardPrice" 
+            WHERE "cardId" = c.id 
+            ORDER BY "date" DESC 
+            LIMIT 1
+          ) cp ON true
+          ${setCode ? `WHERE c."setCode" = ${`'${setCode}'`}` : ''}
+          ORDER BY cp."priceMarket" ${priceOrder} NULLS ${sort === 'price-desc' ? 'LAST' : 'FIRST'}
+          LIMIT ${limit} OFFSET ${(page - 1) * limit}
+        `;
+        
+        cards = await prisma.$queryRawUnsafe(sql);
+        total = await prisma.card.count({ where });
+      } else {
+        let orderBy: any = { createdAt: 'desc' };
+        if (sort === 'oldest') {
+          orderBy = { createdAt: 'asc' };
+        } else if (sort === 'name') {
+          orderBy = { name: 'asc' };
+        }
+
+        [cards, total] = await Promise.all([
+          prisma.card.findMany({
+            where,
+            take: limit,
+            skip: (page - 1) * limit,
+            orderBy,
+            include: {
+              prices: {
+                orderBy: { date: 'desc' },
+                take: 1
+              }
+            }
+          }),
+          prisma.card.count({ where })
+        ]);
       }
 
-      const [cards, total] = await Promise.all([
-        prisma.card.findMany({
-          where,
-          take: limit,
-          skip: (page - 1) * limit,
-          orderBy: orderByField,
-          include: {
-            prices: {
-              orderBy: { date: 'desc' },
-              take: 1
-            }
-          }
-        }),
-        prisma.card.count({ where })
-      ]);
-
-      let results = cards.map(card => ({
+      const results = cards.map((card: any) => ({
         id: card.id,
         name: card.name,
         setName: card.setName,
@@ -53,14 +75,8 @@ cardsRouter.get(
         gameType: card.gameType,
         rarity: card.rarity,
         imageUrl: card.imageUrl,
-        currentPrice: card.prices[0]?.tcgplayerMarket || null
+        currentPrice: card.currentPrice ?? card.prices?.[0]?.priceMarket ?? null
       }));
-
-      if (sort === 'price-desc') {
-        results.sort((a, b) => (b.currentPrice || 0) - (a.currentPrice || 0));
-      } else if (sort === 'price-asc') {
-        results.sort((a, b) => (a.currentPrice || 0) - (b.currentPrice || 0));
-      }
 
       res.json({ cards: results, total });
     } catch (error) {
@@ -113,27 +129,79 @@ cardsRouter.get(
       }
 
       const limit = parseInt(req.query.limit as string) || 50;
-      const fetchLimit = Math.min(limit * 4, 200);
 
-      const [results, total] = await Promise.all([
-        prisma.card.findMany({
-          where,
-          take: fetchLimit,
-          orderBy,
-          include: {
-            prices: {
-              orderBy: { date: 'desc' },
-              take: 1
+      let cards: any[];
+      let total: number;
+
+      if (sort === 'price-desc' || sort === 'price-asc') {
+        const priceOrder = sort === 'price-desc' ? 'DESC' : 'ASC';
+        
+        let searchCondition = '';
+        const params: any[] = [];
+        
+        if (searchQuery && searchQuery.trim().length >= 2) {
+          const q = searchQuery.trim();
+          searchCondition = `AND (c."name" ILIKE $1 OR c."setName" ILIKE $1 OR c."setCode" ILIKE $1)`;
+          params.push(`%${q}%`);
+        }
+        
+        if (gameType) {
+          searchCondition += params.length > 0 ? ` AND c."gameType" = $${params.length + 1}` : ` AND c."gameType" = $1`;
+          params.push(gameType);
+        }
+        
+        if (setCode) {
+          searchCondition += params.length > 0 ? ` AND c."setCode" = $${params.length + 1}` : ` AND c."setCode" = $1`;
+          params.push(setCode);
+        }
+
+        const sql = `
+          SELECT c.*, cp."priceMarket" as "currentPrice"
+          FROM "Card" c
+          LEFT JOIN LATERAL (
+            SELECT "priceMarket" 
+            FROM "CardPrice" 
+            WHERE "cardId" = c.id 
+            ORDER BY "date" DESC 
+            LIMIT 1
+          ) cp ON true
+          WHERE 1=1 ${searchCondition}
+          ORDER BY cp."priceMarket" ${priceOrder} NULLS ${sort === 'price-desc' ? 'LAST' : 'FIRST'}
+          LIMIT ${limit} OFFSET 0
+        `;
+        
+        cards = await prisma.$queryRawUnsafe(sql, ...params);
+        
+        const countSql = `
+          SELECT COUNT(*) as count
+          FROM "Card" c
+          WHERE 1=1 ${searchCondition}
+        `;
+        const countResult = await prisma.$queryRawUnsafe<[{ count: bigint }]>(countSql, ...params);
+        total = Number(countResult[0].count);
+      } else {
+        const fetchLimit = Math.min(limit * 4, 200);
+
+        [cards, total] = await Promise.all([
+          prisma.card.findMany({
+            where,
+            take: fetchLimit,
+            orderBy,
+            include: {
+              prices: {
+                orderBy: { date: 'desc' },
+                take: 1
+              }
             }
-          }
-        }),
-        prisma.card.count({ where })
-      ]);
+          }),
+          prisma.card.count({ where })
+        ]);
+      }
 
-      let sortedResults = results;
-      if (searchQuery && searchQuery.trim().length >= 2) {
+      let sortedResults = cards;
+      if (searchQuery && searchQuery.trim().length >= 2 && sort !== 'price-desc' && sort !== 'price-asc') {
         const q = searchQuery.toLowerCase();
-        sortedResults = results.sort((a, b) => {
+        sortedResults = cards.sort((a: any, b: any) => {
           const aName = a.name.toLowerCase();
           const bName = b.name.toLowerCase();
           
@@ -151,14 +219,10 @@ cardsRouter.get(
           
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
-      } else if (sort === 'price-desc') {
-        sortedResults = results.sort((a, b) => (b.prices[0]?.tcgplayerMarket || 0) - (a.prices[0]?.tcgplayerMarket || 0));
-      } else if (sort === 'price-asc') {
-        sortedResults = results.sort((a, b) => (a.prices[0]?.tcgplayerMarket || 0) - (b.prices[0]?.tcgplayerMarket || 0));
       }
 
       res.json({
-        results: sortedResults.slice(0, limit).map(card => ({
+        results: sortedResults.slice(0, limit).map((card: any) => ({
           id: card.id,
           name: card.name,
           setName: card.setName,
@@ -167,7 +231,7 @@ cardsRouter.get(
           gameType: card.gameType,
           rarity: card.rarity,
           imageUrl: card.imageUrl,
-          currentPrice: card.prices[0]?.tcgplayerMarket || null
+          currentPrice: card.currentPrice ?? card.prices?.[0]?.priceMarket ?? null
         })),
         total
       });
@@ -196,7 +260,7 @@ cardsRouter.get('/:id/price-history', async (req: Request, res: Response, next: 
       return res.status(404).json({ error: 'Card not found' });
     }
 
-    const currentPrice = card.prices[0]?.tcgplayerMarket || null;
+    const currentPrice = card.prices[0]?.priceMarket || null;
 
     let priceHistory: any[] = [];
     try {

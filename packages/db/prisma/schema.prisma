@@ -32,7 +32,6 @@ model User {
   listings          Listing[]
   bids              Bid[]
   watchlistItems    WatchlistItem[]
-  priceAlerts       PriceAlert[]
   orders            Order[]        @relation("buyer")
   sales             Order[]        @relation("seller")
 }
@@ -57,7 +56,7 @@ model Card {
   cardNumber      String
   rarity          String?
   imageUrl        String?
-  tcgplayerId     String?        @unique
+  pokemonTcgId    String?        @unique
   language        String         @default("EN")
   createdAt       DateTime       @default(now())
   setId           String?
@@ -67,7 +66,6 @@ model Card {
   portfolioItems  PortfolioItem[]
   listings        Listing[]
   watchlistItems  WatchlistItem[]
-  priceAlerts     PriceAlert[]
 }
 
 enum GameType {
@@ -85,17 +83,21 @@ model CardPrice {
   cardId              String
   card                Card      @relation(fields: [cardId], references: [id])
   date                DateTime  @default(now())
-  tcgplayerLow        Float?
-  tcgplayerMid        Float?
-  tcgplayerHigh       Float?
-  tcgplayerMarket     Float?
-  ebayRecentAvg       Float?
+  priceLow            Float?
+  priceMid            Float?
+  priceHigh           Float?
+  priceMarket         Float?
+  ebaySoldAvg         Float?
+  ebayBuyNowLow       Float?
   priceChartingValue  Float?
   gradedPSA10         Float?
   gradedPSA9          Float?
   gradedBGS10         Float?
   gradedBGS95         Float?
   expectedValue       Float?
+  lastUpdated         DateTime?
+  isStale             Boolean   @default(false)
+  listingCount        Int       @default(0)
   @@index([cardId, date])
 }
 
@@ -104,7 +106,7 @@ model PriceHistory {
   cardId    String
   price     Float
   date      DateTime @default(now())
-  source    String   @default("tcgplayer")
+  source    String   @default("ebay")
   card      Card     @relation(fields: [cardId], references: [id])
 
   @@index([cardId, date])
@@ -226,25 +228,6 @@ model WatchlistItem {
   @@unique([userId, cardId])
 }
 
-model PriceAlert {
-  id            String          @id @default(cuid())
-  userId        String
-  user          User            @relation(fields: [userId], references: [id])
-  cardId        String
-  card          Card            @relation(fields: [cardId], references: [id])
-  alertType     AlertType
-  targetPrice   Float
-  isActive      Boolean         @default(true)
-  triggeredAt   DateTime?
-  createdAt     DateTime        @default(now())
-}
-
-enum AlertType {
-  PRICE_ABOVE
-  PRICE_BELOW
-  PERCENT_CHANGE
-}
-
 model SyncLog {
   id              String   @id @default(cuid())
   runAt           DateTime @default(now())
@@ -253,7 +236,6 @@ model SyncLog {
   newCards        Int      @default(0)
   updatedCards    Int      @default(0)
   updatedPrices   Int      @default(0)
-  triggeredAlerts Int      @default(0)
   errors          String?
   duration        Int
 }

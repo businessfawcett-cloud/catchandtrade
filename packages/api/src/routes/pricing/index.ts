@@ -20,12 +20,16 @@ pricingRouter.get('/cards/:id/prices', async (req: Request, res: Response, next:
       orderBy: { date: 'asc' },
       select: {
         date: true,
-        tcgplayerMarket: true,
-        tcgplayerLow: true,
-        tcgplayerMid: true,
-        tcgplayerHigh: true,
-        ebayRecentAvg: true,
-        priceChartingValue: true
+        priceMarket: true,
+        priceLow: true,
+        priceMid: true,
+        priceHigh: true,
+        ebaySoldAvg: true,
+        ebayBuyNowLow: true,
+        priceChartingValue: true,
+        lastUpdated: true,
+        isStale: true,
+        listingCount: true
       }
     });
 
@@ -34,12 +38,16 @@ pricingRouter.get('/cards/:id/prices', async (req: Request, res: Response, next:
     res.json({
       history: history.map(h => ({
         date: h.date,
-        tcgplayerMarket: h.tcgplayerMarket,
-        tcgplayerLow: h.tcgplayerLow,
-        tcgplayerMid: h.tcgplayerMid,
-        tcgplayerHigh: h.tcgplayerHigh,
-        ebayRecentAvg: h.ebayRecentAvg,
-        priceChartingValue: h.priceChartingValue
+        priceMarket: h.priceMarket,
+        priceLow: h.priceLow,
+        priceMid: h.priceMid,
+        priceHigh: h.priceHigh,
+        ebaySoldAvg: h.ebaySoldAvg,
+        ebayBuyNowLow: h.ebayBuyNowLow,
+        priceChartingValue: h.priceChartingValue,
+        lastUpdated: h.lastUpdated,
+        isStale: h.isStale,
+        listingCount: h.listingCount
       })),
       expectedValue: expectedValueResult.expectedValue,
       trend: expectedValueResult.trend

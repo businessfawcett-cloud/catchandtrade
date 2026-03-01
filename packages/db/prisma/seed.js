@@ -96,11 +96,11 @@ async function main() {
         continue;
       }
       
-      // Use card.id as tcgplayerId (e.g., "base1-1")
-      const tcgplayerId = card.id;
+      // Use card.id as pokemonTcgId (e.g., "base1-1")
+      const pokemonTcgId = card.id;
       
       await prisma.card.upsert({
-        where: { tcgplayerId },
+        where: { pokemonTcgId },
         update: {
           name: card.name,
           setName: card.setName,
@@ -117,7 +117,7 @@ async function main() {
           cardNumber: card.number || '',
           rarity: card.rarity,
           imageUrl: card.images?.large || card.images?.small,
-          tcgplayerId,
+          pokemonTcgId,
           gameType: 'POKEMON',
           language: card.language || 'EN',
           setId,

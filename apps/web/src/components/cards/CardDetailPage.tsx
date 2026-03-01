@@ -4,7 +4,7 @@ import PriceHistoryChart from '../PriceHistoryChart';
 
 interface CardPrice {
   date: Date;
-  tcgplayerMarket: number | null;
+  priceMarket: number | null;
 }
 
 interface Card {
@@ -37,7 +37,7 @@ interface Props {
 }
 
 export default function CardDetailPage({ card, listings, expectedValue, trend, isGraded }: Props) {
-  const currentPrice = card.prices[0]?.tcgplayerMarket || 0;
+  const currentPrice = card.prices[0]?.priceMarket || 0;
 
   const trendIcon = trend === 'rising' ? '↑' : trend === 'falling' ? '↓' : '→';
   const trendColor = trend === 'rising' ? 'green' : trend === 'falling' ? 'red' : 'gray';
@@ -91,12 +91,6 @@ export default function CardDetailPage({ card, listings, expectedValue, trend, i
                 style={{ padding: '0.75rem 1.5rem', cursor: 'pointer' }}
               >
                 Add to Watchlist
-              </button>
-              <button 
-                onClick={() => window.location.href = `/alerts/new?cardId=${card.id}`}
-                style={{ padding: '0.75rem 1.5rem', cursor: 'pointer' }}
-              >
-                Set Price Alert
               </button>
             </div>
           </div>
@@ -171,9 +165,6 @@ export default function CardDetailPage({ card, listings, expectedValue, trend, i
       <div style={{ marginTop: '3rem', padding: '1rem', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
         <h3>Buy Links</h3>
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <a href={`https://www.tcgplayer.com/search?productName=${encodeURIComponent(card.name)}`} target="_blank" rel="noopener noreferrer">
-            Buy on TCGPlayer
-          </a>
           {(() => {
             const amazonTag = process.env.NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG || '';
             const amazonSearchTerm = encodeURIComponent(`${card.name} Pokemon Card`);

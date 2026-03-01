@@ -163,7 +163,7 @@ describe('Portfolios API', () => {
           gameType: 'POKEMON',
           prices: {
             create: {
-              tcgplayerMarket: 10.00,
+              priceMarket: 10.00,
               date: new Date()
             }
           }
