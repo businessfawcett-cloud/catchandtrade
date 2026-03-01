@@ -72,31 +72,21 @@ export default function CollectionPage() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const progress: Record<string, { owned: number; total: number; percentage: number }> = {};
-
-      for (const set of sets) {
-        try {
-          const response = await fetch(`${API_URL}/api/sets/${set.code}/progress`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            progress[set.code] = {
-              owned: data.progress.owned,
-              total: data.progress.total,
-              percentage: data.progress.percentage
-            };
-          }
-        } catch (err) {
-          // Use fallback - set will show 0 owned
+      try {
+        const response = await fetch(`${API_URL}/api/sets/progress`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setProgressMap(data.progress || {});
         }
+      } catch (err) {
+        console.error('Failed to fetch progress:', err);
       }
-
-      setProgressMap(progress);
     };
 
     fetchProgress();
-  }, [user, sets]);
+  }, [user]);
 
   const totalOwned = Object.values(progressMap).reduce((sum, p) => sum + p.owned, 0);
   const totalCards = 20079;

@@ -99,6 +99,76 @@ setsRouter.get(
 );
 
 setsRouter.get(
+  '/progress',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req as any).userId;
+
+      const sets = await prisma.pokemonSet.findMany({
+        orderBy: { releaseYear: 'desc' }
+      });
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          portfolios: {
+            include: {
+              items: true
+            }
+          }
+        }
+      });
+
+      const ownedCardIds = new Set<string>();
+      for (const portfolio of user?.portfolios || []) {
+        for (const item of portfolio.items) {
+          ownedCardIds.add(item.cardId);
+        }
+      }
+
+      const cardsBySet = await prisma.card.groupBy({
+        by: ['setCode'],
+        _count: { id: true },
+        where: { setCode: { in: sets.map(s => s.code) } }
+      });
+
+      const cardCountMap = new Map(cardsBySet.map(c => [c.setCode, c._count.id]));
+
+      const cards = await prisma.card.findMany({
+        where: { setCode: { in: sets.map(s => s.code) } }
+      });
+
+      const cardsBySetCode = new Map<string, typeof cards>();
+      for (const card of cards) {
+        const existing = cardsBySetCode.get(card.setCode) || [];
+        existing.push(card);
+        cardsBySetCode.set(card.setCode, existing);
+      }
+
+      const progressBySet: Record<string, { owned: number; total: number; percentage: number }> = {};
+
+      for (const set of sets) {
+        const setCards = cardsBySetCode.get(set.code) || [];
+        const ownedCards = setCards.filter(card => ownedCardIds.has(card.id));
+        const totalCards = cardCountMap.get(set.code) || setCards.length;
+        const percentage = totalCards > 0 ? Math.round((ownedCards.length / totalCards) * 100) : 0;
+
+        progressBySet[set.code] = {
+          owned: ownedCards.length,
+          total: totalCards,
+          percentage
+        };
+      }
+
+      res.json({ progress: progressBySet });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+setsRouter.get(
   '/:code/progress',
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
