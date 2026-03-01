@@ -251,7 +251,35 @@ export default function PortfolioPage() {
       console.error('Add failed:', err);
       alert('Failed to add card');
     } finally {
-      setAdding(false);
+    setAdding(false);
+    }
+  };
+
+  const handleRemoveItem = async (itemId: string, portfolioId: string, cardName: string) => {
+    if (!confirm(`Remove "${cardName}" from portfolio?`)) return;
+    
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/portfolios/${portfolioId}/items/${itemId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        setSuccessMessage(`✓ Removed from Portfolio`);
+        fetchPortfolios();
+        if (selectedPortfolio) fetchPortfolioValue(selectedPortfolio);
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        alert('Failed to remove card');
+      }
+    } catch (err) {
+      console.error('Remove failed:', err);
+      alert('Failed to remove card');
     }
   };
 
@@ -741,6 +769,15 @@ export default function PortfolioPage() {
                   <div className="quick-links flex gap-1 px-3 pb-3">
                     <a href={links.amazon} target="_blank" rel="noopener noreferrer" className="flex-1 py-1.5 text-xs bg-yellow-500 hover:bg-yellow-400 text-black text-center rounded transition-colors">Amazon</a>
                     <a href={links.ebay} target="_blank" rel="noopener noreferrer" className="flex-1 py-1.5 text-xs bg-red-600 hover:bg-red-500 text-white text-center rounded transition-colors">eBay</a>
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleRemoveItem(item.id, currentPortfolio.id, item.card.name);
+                      }}
+                      className="flex-1 py-1.5 text-xs bg-gray-600 hover:bg-red-500 text-white text-center rounded transition-colors"
+                    >
+                      Remove
+                    </button>
                   </div>
                 </div>
               );
