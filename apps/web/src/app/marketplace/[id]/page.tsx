@@ -46,6 +46,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
   const [quantity, setQuantity] = useState(1);
   const [purchasePrice, setPurchasePrice] = useState('');
   const [adding, setAdding] = useState(false);
+  const [inPortfolioItem, setInPortfolioItem] = useState<{portfolioId: string, itemId: string} | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
@@ -76,6 +77,42 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
 
     fetchCard();
   }, [cardId]);
+
+  useEffect(() => {
+    if (!card) return;
+    
+    const checkPortfolio = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${API_URL}/api/portfolios`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const portfolios = await response.json();
+          
+          for (const portfolio of portfolios) {
+            const itemsResponse = await fetch(`${API_URL}/api/portfolios/${portfolio.id}/items`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (itemsResponse.ok) {
+              const items = await itemsResponse.json();
+              const existingItem = items.find((item: any) => item.card?.id === cardId);
+              if (existingItem) {
+                setInPortfolioItem({ portfolioId: portfolio.id, itemId: existingItem.id });
+                return;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to check portfolio:', err);
+      }
+    };
+
+    checkPortfolio();
+  }, [card]);
 
   const getAffiliateLinks = () => {
     if (!card) return { amazon: '#', ebay: '#' };
@@ -155,6 +192,35 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
       alert('Failed to add card');
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleRemoveFromPortfolio = async () => {
+    if (!inPortfolioItem) return;
+    if (!confirm('Remove this card from your portfolio?')) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/portfolios/${inPortfolioItem.portfolioId}/items/${inPortfolioItem.itemId}`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (response.ok) {
+        setInPortfolioItem(null);
+        setSuccessMessage('✓ Removed from Portfolio');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        alert('Failed to remove card');
+      }
+    } catch (err) {
+      console.error('Remove failed:', err);
+      alert('Failed to remove card');
     }
   };
 
@@ -346,11 +412,11 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
 
           {/* Add to Portfolio Button - Red */}
           <button
-            onClick={handleAddToPortfolioClick}
+            onClick={inPortfolioItem ? handleRemoveFromPortfolio : handleAddToPortfolioClick}
             style={{
               width: '100%',
               padding: '0.875rem',
-              backgroundColor: '#e63946',
+              backgroundColor: inPortfolioItem ? '#dc2626' : '#e63946',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -360,7 +426,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
               marginTop: '0.75rem'
             }}
           >
-            Add to Portfolio
+            {inPortfolioItem ? 'Remove from Portfolio' : 'Add to Portfolio'}
           </button>
 
           {/* Add to Watchlist Button - Gold Outlined */}
@@ -404,7 +470,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
             })()}
           </p>
 
-          {latestPrice && latestPrice.priceMarket != null ? (
+          {!inPortfolioItem && latestPrice && latestPrice.priceMarket != null ? (
             <div style={{ marginTop: '1.5rem' }}>
               <p style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '0.25rem' }}>Current Market Price</p>
               <p style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0, color: '#ffd700' }}>
@@ -427,7 +493,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
             </div>
           )}
 
-          {latestPrice && latestPrice.priceMarket != null && (
+          {!inPortfolioItem && latestPrice && latestPrice.priceMarket != null && (
             <div style={{ marginTop: '1.5rem' }}>
               <PriceHistoryChart cardId={card.id} currentPrice={latestPrice.priceMarket} />
             </div>
