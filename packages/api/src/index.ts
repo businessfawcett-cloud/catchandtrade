@@ -68,6 +68,60 @@ app.use('/api/admin', adminRouter);
 app.use('/api/webhooks', webhooksRouter);
 app.use('/api/ebay', ebayRouter);
 
+// Public cron endpoint for UptimeRobot - triggers nightly sync
+const CRON_SECRET = process.env.CRON_SECRET;
+
+let cronSyncStatus = { running: false, startedAt: null as string | null };
+
+app.get('/api/cron/sync', async (req: Request, res: Response) => {
+  const token = req.query.token as string;
+  
+  if (!token || token !== CRON_SECRET) {
+    return res.status(401).json({ error: 'Invalid or missing token' });
+  }
+  
+  // Check 24-hour rate limit
+  const lastSync = await prisma.syncLog.findFirst({ orderBy: { runAt: 'desc' } });
+  if (lastSync) {
+    const hoursSince = (Date.now() - lastSync.runAt.getTime()) / (1000 * 60 * 60);
+    if (hoursSince < 24) {
+      return res.status(429).json({
+        error: 'Sync can only run once every 24 hours',
+        nextAvailableAt: new Date(lastSync.runAt.getTime() + 24 * 60 * 60 * 1000).toISOString()
+      });
+    }
+  }
+  
+  // Start sync in background
+  cronSyncStatus = { running: true, startedAt: new Date().toISOString() };
+  console.log('\n⏰ Cron price sync triggered via /api/cron/sync');
+  
+  runNightlySync()
+    .then(() => { cronSyncStatus.running = false; console.log('✅ Cron nightly sync completed'); })
+    .catch(err => { cronSyncStatus.running = false; console.error('❌ Cron nightly sync failed:', err); });
+  
+  res.status(200).json({ success: true, message: 'Sync started', timestamp: new Date().toISOString() });
+});
+
+// Public status endpoint for cron sync
+app.get('/api/cron/status', async (req: Request, res: Response) => {
+  const lastSync = await prisma.syncLog.findFirst({ orderBy: { runAt: 'desc' } });
+  
+  let nextAvailableAt = null;
+  if (lastSync) {
+    const hoursSince = (Date.now() - lastSync.runAt.getTime()) / (1000 * 60 * 60);
+    if (hoursSince < 24) {
+      nextAvailableAt = new Date(lastSync.runAt.getTime() + 24 * 60 * 60 * 1000).toISOString();
+    }
+  }
+  
+  res.json({
+    running: cronSyncStatus.running,
+    lastRunAt: lastSync?.runAt?.toISOString() || null,
+    nextAvailableAt
+  });
+});
+
 // Dev-only: manual sync trigger (async — responds immediately, runs in background)
 if (process.env.NODE_ENV !== 'production') {
   let syncStatus: { running: boolean; startedAt: string | null; result: any; error: string | null } = {
