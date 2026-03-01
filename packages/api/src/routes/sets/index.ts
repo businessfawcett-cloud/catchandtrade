@@ -26,25 +26,27 @@ setsRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const sets = await prisma.pokemonSet.findMany({
-        orderBy: { releaseYear: 'desc' },
-        include: {
-          _count: {
-            select: { cards: true }
-          }
-        }
+        orderBy: { releaseYear: 'desc' }
       });
 
-      res.json({
-        sets: sets.map(set => ({
-          id: set.id,
-          name: set.name,
-          code: set.code,
-          totalCards: set.totalCards,
-          releaseYear: set.releaseYear,
-          imageUrl: set.imageUrl,
-          cardCount: set._count.cards
-        }))
-      });
+      const setsWithCounts = await Promise.all(
+        sets.map(async (set) => {
+          const cardCount = await prisma.card.count({
+            where: { setCode: set.code }
+          });
+          return {
+            id: set.id,
+            name: set.name,
+            code: set.code,
+            totalCards: set.totalCards,
+            releaseYear: set.releaseYear,
+            imageUrl: set.imageUrl,
+            cardCount
+          };
+        })
+      );
+
+      res.json({ sets: setsWithCounts });
     } catch (error) {
       next(error);
     }
@@ -58,17 +60,17 @@ setsRouter.get(
       const { code } = req.params;
 
       const set = await prisma.pokemonSet.findUnique({
-        where: { code },
-        include: {
-          cards: {
-            orderBy: { cardNumber: 'asc' }
-          }
-        }
+        where: { code }
       });
 
       if (!set) {
         return res.status(404).json({ error: 'Set not found' });
       }
+
+      const cards = await prisma.card.findMany({
+        where: { setCode: code },
+        orderBy: { cardNumber: 'asc' }
+      });
 
       res.json({
         set: {
@@ -79,7 +81,7 @@ setsRouter.get(
           releaseYear: set.releaseYear,
           imageUrl: set.imageUrl
         },
-        cards: set.cards.map(card => ({
+        cards: cards.map(card => ({
           id: card.id,
           name: card.name,
           cardNumber: card.cardNumber,
@@ -102,15 +104,16 @@ setsRouter.get(
       const userId = (req as any).userId;
 
       const set = await prisma.pokemonSet.findUnique({
-        where: { code },
-        include: {
-          cards: true
-        }
+        where: { code }
       });
 
       if (!set) {
         return res.status(404).json({ error: 'Set not found' });
       }
+
+      const cards = await prisma.card.findMany({
+        where: { setCode: code }
+      });
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -120,7 +123,7 @@ setsRouter.get(
               items: {
                 where: {
                   card: {
-                    setId: set.id
+                    setCode: code
                   }
                 }
               }
@@ -136,11 +139,11 @@ setsRouter.get(
         }
       }
 
-      const ownedCards = set.cards.filter(card => ownedCardIds.has(card.id));
-      const missingCards = set.cards.filter(card => !ownedCardIds.has(card.id));
+      const ownedCards = cards.filter(card => ownedCardIds.has(card.id));
+      const missingCards = cards.filter(card => !ownedCardIds.has(card.id));
 
-      const progressPercentage = set.cards.length > 0 
-        ? Math.round((ownedCards.length / set.cards.length) * 100) 
+      const progressPercentage = cards.length > 0 
+        ? Math.round((ownedCards.length / cards.length) * 100) 
         : 0;
 
       res.json({
@@ -154,7 +157,7 @@ setsRouter.get(
         },
         progress: {
           owned: ownedCards.length,
-          total: set.cards.length,
+          total: cards.length,
           percentage: progressPercentage
         },
         ownedCards: ownedCards.map(card => ({
