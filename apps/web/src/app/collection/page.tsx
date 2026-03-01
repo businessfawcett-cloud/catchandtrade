@@ -38,6 +38,7 @@ export default function CollectionPage() {
   const [sets, setSets] = useState<PokemonSet[]>([]);
   const [loading, setLoading] = useState(true);
   const [progressMap, setProgressMap] = useState<Record<string, { owned: number; total: number; percentage: number }>>({});
+  const [progressLoading, setProgressLoading] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -69,30 +70,48 @@ export default function CollectionPage() {
     if (!user || sets.length === 0) return;
 
     const fetchProgress = async () => {
+      setProgressLoading(true);
       const token = localStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        setProgressLoading(false);
+        return;
+      }
 
-      const progress: Record<string, { owned: number; total: number; percentage: number }> = {};
-
-      for (const set of sets) {
+      const fetchSetProgress = async (code: string) => {
         try {
-          const response = await fetch(`${API_URL}/api/sets/${set.code}/progress`, {
+          const response = await fetch(`${API_URL}/api/sets/${code}/progress`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (response.ok) {
             const data = await response.json();
-            progress[set.code] = {
+            return {
+              code,
               owned: data.progress.owned,
               total: data.progress.total,
               percentage: data.progress.percentage
             };
           }
         } catch (err) {
-          console.error(`Failed to fetch progress for ${set.code}:`, err);
+          console.error(`Failed to fetch progress for ${code}:`, err);
+        }
+        return null;
+      };
+
+      const results = await Promise.all(sets.map(set => fetchSetProgress(set.code)));
+      const progress: Record<string, { owned: number; total: number; percentage: number }> = {};
+      
+      for (const result of results) {
+        if (result) {
+          progress[result.code] = {
+            owned: result.owned,
+            total: result.total,
+            percentage: result.percentage
+          };
         }
       }
 
       setProgressMap(progress);
+      setProgressLoading(false);
     };
 
     fetchProgress();
