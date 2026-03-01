@@ -410,43 +410,67 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
             </a>
           </div>
 
-          {/* Add to Portfolio Button - Red */}
-          <button
-            onClick={inPortfolioItem ? handleRemoveFromPortfolio : handleAddToPortfolioClick}
-            style={{
-              width: '100%',
-              padding: '0.875rem',
-              backgroundColor: inPortfolioItem ? '#dc2626' : '#e63946',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.95rem',
-              fontWeight: 'bold',
-              marginTop: '0.75rem'
-            }}
-          >
-            {inPortfolioItem ? 'Remove from Portfolio' : 'Add to Portfolio'}
-          </button>
+          {/* Buttons - Show Add buttons when NOT in portfolio, Remove when in portfolio */}
+          {!inPortfolioItem ? (
+            <>
+              {/* Add to Portfolio Button - Red */}
+              <button
+                onClick={handleAddToPortfolioClick}
+                style={{
+                  width: '100%',
+                  padding: '0.875rem',
+                  backgroundColor: '#e63946',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: 'bold',
+                  marginTop: '0.75rem'
+                }}
+              >
+                Add to Portfolio
+              </button>
 
-          {/* Add to Watchlist Button - Gold Outlined */}
-          <button
-            onClick={handleAddToWatchlist}
-            style={{
-              width: '100%',
-              padding: '0.875rem',
-              backgroundColor: 'transparent',
-              color: '#ffd700',
-              border: '2px solid #ffd700',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.95rem',
-              fontWeight: 'bold',
-              marginTop: '0.5rem'
-            }}
-          >
-            Add to Watchlist
-          </button>
+              {/* Add to Watchlist Button - Gold Outlined */}
+              <button
+                onClick={handleAddToWatchlist}
+                style={{
+                  width: '100%',
+                  padding: '0.875rem',
+                  backgroundColor: 'transparent',
+                  color: '#ffd700',
+                  border: '2px solid #ffd700',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: 'bold',
+                  marginTop: '0.5rem'
+                }}
+              >
+                Add to Watchlist
+              </button>
+            </>
+          ) : (
+            /* Remove from Portfolio Button */
+            <button
+              onClick={handleRemoveFromPortfolio}
+              style={{
+                width: '100%',
+                padding: '0.875rem',
+                backgroundColor: '#dc2626',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.95rem',
+                fontWeight: 'bold',
+                marginTop: '0.75rem'
+              }}
+            >
+              Remove from Portfolio
+            </button>
+          )}
         </div>
 
         {/* Right Column - Info & Price */}
