@@ -97,20 +97,26 @@ export default function CollectionPage() {
         return null;
       };
 
-      const results = await Promise.all(sets.map(set => fetchSetProgress(set.code)));
       const progress: Record<string, { owned: number; total: number; percentage: number }> = {};
+      const batchSize = 5;
       
-      for (const result of results) {
-        if (result) {
-          progress[result.code] = {
-            owned: result.owned,
-            total: result.total,
-            percentage: result.percentage
-          };
+      for (let i = 0; i < sets.length; i += batchSize) {
+        const batch = sets.slice(i, i + batchSize);
+        const results = await Promise.all(batch.map(set => fetchSetProgress(set.code)));
+        
+        for (const result of results) {
+          if (result) {
+            progress[result.code] = {
+              owned: result.owned,
+              total: result.total,
+              percentage: result.percentage
+            };
+          }
         }
+        
+        setProgressMap({ ...progress });
       }
 
-      setProgressMap(progress);
       setProgressLoading(false);
     };
 
