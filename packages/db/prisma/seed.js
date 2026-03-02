@@ -22,7 +22,7 @@ async function main() {
   
   // Safety guard - don't reseed if database already has cards
   const existingCardCount = await prisma.card.count();
-  if (existingCardCount > 1000) {
+  if (existingCardCount > 19000) {
     // Still update set logo URLs even if cards exist
     console.log(`Database already has ${existingCardCount} cards. Updating set logos only...`);
     
