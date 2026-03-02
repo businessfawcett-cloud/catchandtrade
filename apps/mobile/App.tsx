@@ -10,7 +10,10 @@ import ScanScreen from './src/screens/ScanScreen';
 import PortfolioScreen from './src/screens/PortfolioScreen';
 import CollectionScreen from './src/screens/CollectionScreen';
 import CollectionDetailScreen from './src/screens/CollectionDetailScreen';
+import CardDetailScreen from './src/screens/CardDetailScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import WatchlistScreen from './src/screens/WatchlistScreen';
+import MarketplaceScreen from './src/screens/MarketplaceScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -20,6 +23,16 @@ function CollectionStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CollectionList" component={CollectionScreen} />
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
+      <Stack.Screen name="CardDetail" component={CardDetailScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function CardDetailStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="CardList" component={MarketplaceScreen} />
+      <Stack.Screen name="CardDetail" component={CardDetailScreen} />
     </Stack.Navigator>
   );
 }
@@ -28,7 +41,9 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   const icons: Record<string, string> = {
     Home: '🏠',
     Scan: '📷',
+    Marketplace: '🔍',
     Portfolio: '📁',
+    Watchlist: '⭐',
     Collection: '🗃️',
     Profile: '👤',
   };
@@ -68,9 +83,19 @@ export default function App() {
           options={{ title: 'Scan' }}
         />
         <Tab.Screen 
+          name="MarketplaceTab" 
+          component={CardDetailStack}
+          options={{ title: 'Market' }}
+        />
+        <Tab.Screen 
           name="PortfolioTab" 
           component={PortfolioScreen}
           options={{ title: 'Portfolio' }}
+        />
+        <Tab.Screen 
+          name="WatchlistTab" 
+          component={WatchlistScreen}
+          options={{ title: 'Watchlist' }}
         />
         <Tab.Screen 
           name="CollectionTab" 
