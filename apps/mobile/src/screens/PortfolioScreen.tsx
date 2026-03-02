@@ -7,8 +7,9 @@ import {
   Image,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from 'react-native';
-import { getPortfolios, PortfolioItem } from '../lib/api';
+import { getPortfolios, getDefaultPortfolio, removeFromPortfolio, PortfolioItem } from '../lib/api';
 
 interface PortfolioScreenProps {
   navigation: any;
@@ -18,11 +19,14 @@ export default function PortfolioScreen({ navigation }: PortfolioScreenProps) {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [portfolioId, setPortfolioId] = useState<string | null>(null);
 
   const loadPortfolio = async () => {
     try {
       const portfolios = await getPortfolios();
       if (portfolios.length > 0) {
+        const defaultPortfolio = await getDefaultPortfolio();
+        setPortfolioId(defaultPortfolio.id);
         const allItems = portfolios.flatMap((p: any) => p.items || []);
         setItems(allItems);
       }
@@ -32,6 +36,30 @@ export default function PortfolioScreen({ navigation }: PortfolioScreenProps) {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  const handleRemoveItem = async (itemId: string, cardName: string) => {
+    if (!portfolioId) return;
+    
+    Alert.alert(
+      'Remove Card',
+      `Remove "${cardName}" from your portfolio?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Remove', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeFromPortfolio(portfolioId, itemId);
+              setItems(items.filter(item => item.id !== itemId));
+            } catch (error) {
+              Alert.alert('Error', 'Failed to remove card');
+            }
+          }
+        }
+      ]
+    );
   };
 
   useEffect(() => {
@@ -88,6 +116,12 @@ export default function PortfolioScreen({ navigation }: PortfolioScreenProps) {
               <Text style={styles.price}>
                 ${((item.card?.currentPrice || 0) * item.quantity).toFixed(2)}
               </Text>
+              <TouchableOpacity 
+                style={styles.removeButton}
+                onPress={() => handleRemoveItem(item.id, item.card?.name)}
+              >
+                <Text style={styles.removeButtonText}>Remove</Text>
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -176,11 +210,24 @@ const styles = StyleSheet.create({
   },
   cardPrice: {
     justifyContent: 'center',
+    alignItems: 'flex-end',
   },
   price: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#28a745',
+  },
+  removeButton: {
+    marginTop: 8,
+    backgroundColor: '#dc3545',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  removeButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,

@@ -2,15 +2,27 @@ import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import { Text, View, StyleSheet } from 'react-native';
 
 import HomeScreen from './src/screens/HomeScreen';
 import ScanScreen from './src/screens/ScanScreen';
 import PortfolioScreen from './src/screens/PortfolioScreen';
 import CollectionScreen from './src/screens/CollectionScreen';
+import CollectionDetailScreen from './src/screens/CollectionDetailScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
+
+function CollectionStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="CollectionList" component={CollectionScreen} />
+      <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
+    </Stack.Navigator>
+  );
+}
 
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   const icons: Record<string, string> = {
@@ -62,7 +74,7 @@ export default function App() {
         />
         <Tab.Screen 
           name="CollectionTab" 
-          component={CollectionScreen}
+          component={CollectionStack}
           options={{ title: 'Collection' }}
         />
         <Tab.Screen 

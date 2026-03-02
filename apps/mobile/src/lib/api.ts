@@ -151,6 +151,15 @@ export async function addToPortfolio(portfolioId: string, cardId: string, condit
   return handleResponse(response);
 }
 
+export async function removeFromPortfolio(portfolioId: string, itemId: string) {
+  const response = await fetch(`${API_URL}/api/portfolios/${portfolioId}/items/${itemId}`, {
+    method: 'DELETE',
+    headers: await getHeaders(),
+  });
+  
+  return handleResponse(response);
+}
+
 export async function getSets(): Promise<PokemonSet[]> {
   const response = await fetch(`${API_URL}/api/sets`, {
     headers: await getHeaders(),
@@ -166,4 +175,52 @@ export async function getSetProgress(setCode: string) {
   });
   
   return handleResponse(response);
+}
+
+export async function getSetDetails(setCode: string): Promise<SetDetails> {
+  const response = await fetch(`${API_URL}/api/sets/${setCode}`, {
+    headers: await getHeaders(),
+  });
+  
+  return handleResponse(response);
+}
+
+export async function getCardDetails(cardId: string) {
+  const response = await fetch(`${API_URL}/api/cards/${cardId}`, {
+    headers: await getHeaders(),
+  });
+  
+  return handleResponse(response);
+}
+
+export async function getWatchlist() {
+  const response = await fetch(`${API_URL}/api/watchlist`, {
+    headers: await getHeaders(),
+  });
+  
+  return handleResponse(response);
+}
+
+export async function addToWatchlist(cardId: string) {
+  const response = await fetch(`${API_URL}/api/watchlist`, {
+    method: 'POST',
+    headers: await getHeaders(),
+    body: JSON.stringify({ cardId }),
+  });
+  
+  return handleResponse(response);
+}
+
+export async function removeFromWatchlist(itemId: string) {
+  const response = await fetch(`${API_URL}/api/watchlist/${itemId}`, {
+    method: 'DELETE',
+    headers: await getHeaders(),
+  });
+  
+  return handleResponse(response);
+}
+
+interface SetDetails {
+  set: PokemonSet;
+  cards: Card[];
 }
