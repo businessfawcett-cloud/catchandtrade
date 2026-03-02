@@ -48,6 +48,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
   const [adding, setAdding] = useState(false);
   const [inPortfolioItem, setInPortfolioItem] = useState<{portfolioId: string, itemId: string} | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
   useEffect(() => {
@@ -191,7 +192,12 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
 
   const handleRemoveFromPortfolio = async () => {
     if (!inPortfolioItem) return;
-    if (!confirm('Remove this card from your portfolio?')) return;
+    setShowRemoveModal(true);
+  };
+
+  const confirmRemoveFromPortfolio = async () => {
+    if (!inPortfolioItem) return;
+    setShowRemoveModal(false);
 
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -690,7 +696,88 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
                   fontWeight: 'bold'
                 }}
               >
-                {adding ? 'Adding...' : 'Add to Portfolio'}
+              {adding ? 'Adding...' : 'Add to Portfolio'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove from Portfolio Confirmation Modal */}
+      {showRemoveModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: '#1a2332',
+            padding: '2rem',
+            borderRadius: '16px',
+            maxWidth: '400px',
+            width: '90%',
+            border: '1px solid rgba(230, 57, 70, 0.3)',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(230, 57, 70, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1rem'
+            }}>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#e63946" strokeWidth="2">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+              </svg>
+            </div>
+            
+            <h3 style={{ color: 'white', marginTop: 0, marginBottom: '0.5rem', fontSize: '1.25rem' }}>
+              Remove from Portfolio?
+            </h3>
+            <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
+              Are you sure you want to remove <strong style={{ color: 'white' }}>{card?.name}</strong> from your portfolio?
+            </p>
+            
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => setShowRemoveModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.875rem',
+                  background: 'rgba(255,255,255,0.05)',
+                  color: 'white',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRemoveFromPortfolio}
+                style={{
+                  flex: 1,
+                  padding: '0.875rem',
+                  background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}
+              >
+                Remove
               </button>
             </div>
           </div>
