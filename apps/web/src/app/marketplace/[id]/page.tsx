@@ -93,16 +93,10 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
           const portfolios = await response.json();
           
           for (const portfolio of portfolios) {
-            const itemsResponse = await fetch(`${API_URL}/api/portfolios/${portfolio.id}/items`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            if (itemsResponse.ok) {
-              const items = await itemsResponse.json();
-              const existingItem = items.find((item: any) => item.card?.id === cardId);
-              if (existingItem) {
-                setInPortfolioItem({ portfolioId: portfolio.id, itemId: existingItem.id });
-                return;
-              }
+            const existingItem = portfolio.items?.find((item: any) => item.cardId === cardId);
+            if (existingItem) {
+              setInPortfolioItem({ portfolioId: portfolio.id, itemId: existingItem.id });
+              return;
             }
           }
         }
