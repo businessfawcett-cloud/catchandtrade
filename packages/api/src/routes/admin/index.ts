@@ -51,3 +51,45 @@ adminRouter.get(
     }
   }
 );
+
+adminRouter.get(
+  '/stats/users',
+  authenticateAdmin,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const now = Date.now();
+      const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+
+      const [
+        totalAccounts,
+        accountsWithUsername,
+        publicProfiles,
+        verifiedSellers,
+        activeLast7Days,
+        activeLast30Days
+      ] = await Promise.all([
+        prisma.user.count(),
+        prisma.user.count({ where: { username: { not: null } } }),
+        prisma.user.count({ where: { isPublic: true } }),
+        prisma.user.count({ where: { isVerifiedSeller: true } }),
+        prisma.user.count({ where: { updatedAt: { gte: sevenDaysAgo } } }),
+        prisma.user.count({ where: { updatedAt: { gte: thirtyDaysAgo } } })
+      ]);
+
+      res.json({
+        users: {
+          totalAccounts,
+          accountsWithUsername,
+          publicProfiles,
+          verifiedSellers,
+          activeLast7Days,
+          activeLast30Days
+        },
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
