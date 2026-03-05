@@ -31,10 +31,20 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
     setIsLoggedIn(!!token);
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        setUsername(user.username || user.displayName || null);
+      } catch (e) {
+        // ignore parse errors
+      }
+    }
   }, []);
 
   const handleLogout = () => {
@@ -77,12 +87,19 @@ export default function Navbar() {
           {/* Auth Buttons */}
           <div className="flex items-center gap-3">
             {isLoggedIn ? (
-              <button
-                onClick={handleLogout}
-                className="text-poke-text-muted hover:text-white text-sm font-medium transition-colors"
-              >
-                Log out
-              </button>
+              <>
+                {username && (
+                  <Link href="/" className="text-poke-gold text-sm font-medium">
+                    @{username}
+                  </Link>
+                )}
+                <button
+                  onClick={handleLogout}
+                  className="text-poke-text-muted hover:text-white text-sm font-medium transition-colors"
+                >
+                  Log out
+                </button>
+              </>
             ) : (
               <>
                 <Link

@@ -688,8 +688,17 @@ export default function HomePage() {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
     
+    console.log('HomePage: token exists:', !!token);
+    console.log('HomePage: userData exists:', !!userData);
+    
     if (token && userData) {
-      setUser(JSON.parse(userData));
+      try {
+        const parsed = JSON.parse(userData);
+        console.log('HomePage: parsed user:', parsed);
+        setUser(parsed);
+      } catch (e) {
+        console.error('HomePage: failed to parse userData:', e);
+      }
     }
     setLoading(false);
   }, []);
