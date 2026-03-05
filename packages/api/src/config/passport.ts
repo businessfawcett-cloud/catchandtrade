@@ -26,6 +26,8 @@ const APPLE_TEAM_ID = process.env.APPLE_TEAM_ID || '';
 const APPLE_KEY_ID = process.env.APPLE_KEY_ID || '';
 const APPLE_PRIVATE_KEY = process.env.APPLE_PRIVATE_KEY || '';
 
+const API_URL = process.env.API_URL || (process.env.NODE_ENV === 'production' ? 'https://api.catchandtrade.com' : 'http://localhost:4000');
+
 passport.serializeUser((user, done) => {
   done(null, user);
 });
@@ -45,7 +47,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
       {
         clientID: GOOGLE_CLIENT_ID,
         clientSecret: GOOGLE_CLIENT_SECRET,
-        callbackURL: `${process.env.API_URL || 'http://localhost:4000'}/api/auth/google/callback`
+        callbackURL: `${API_URL}/api/auth/google/callback`
       },
       async (accessToken: string, refreshToken: string, profile: Profile, done: (err: Error | null, user?: any) => void) => {
         try {
@@ -94,7 +96,7 @@ if (APPLE_CLIENT_ID) {
         teamID: APPLE_TEAM_ID,
         keyID: APPLE_KEY_ID,
         privateKeyLocation: APPLE_PRIVATE_KEY,
-        callbackURL: `${process.env.API_URL || 'http://localhost:4000'}/api/auth/apple/callback`
+        callbackURL: `${API_URL}/api/auth/apple/callback`
       },
       async (accessToken: string, refreshToken: string, idToken: string, profile: AppleProfile, done: (err: Error | null, user?: any) => void) => {
         try {
