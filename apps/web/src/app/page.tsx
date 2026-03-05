@@ -691,16 +691,41 @@ export default function HomePage() {
     console.log('HomePage: token exists:', !!token);
     console.log('HomePage: userData exists:', !!userData);
     
-    if (token && userData) {
-      try {
-        const parsed = JSON.parse(userData);
-        console.log('HomePage: parsed user:', parsed);
-        setUser(parsed);
-      } catch (e) {
-        console.error('HomePage: failed to parse userData:', e);
+    const fetchUser = async () => {
+      if (token) {
+        // Try to fetch fresh user data from API
+        try {
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.catchandtrade.com';
+          const res = await fetch(`${API_URL}/api/users/me`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const freshUser = await res.json();
+            console.log('HomePage: fetched fresh user:', freshUser);
+            localStorage.setItem('user', JSON.stringify(freshUser));
+            setUser(freshUser);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.error('HomePage: failed to fetch user:', e);
+        }
+        
+        // Fallback to localStorage
+        if (userData) {
+          try {
+            const parsed = JSON.parse(userData);
+            console.log('HomePage: parsed user from localStorage:', parsed);
+            setUser(parsed);
+          } catch (e) {
+            console.error('HomePage: failed to parse userData:', e);
+          }
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    
+    fetchUser();
   }, []);
 
   if (loading) {
