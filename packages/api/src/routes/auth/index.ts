@@ -142,7 +142,7 @@ authRouter.get(
       JWT_SECRET,
       { expiresIn: '15m' }
     );
-    res.redirect(`${WEB_URL}/auth/callback?token=${token}`);
+    res.redirect(`${WEB_URL}/callback?token=${token}`);
   }
 );
 
@@ -165,7 +165,7 @@ authRouter.post(
       JWT_SECRET,
       { expiresIn: '15m' }
     );
-    res.redirect(`${WEB_URL}/auth/callback?token=${token}`);
+    res.redirect(`${WEB_URL}/callback?token=${token}`);
   }
 );
 
