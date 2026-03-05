@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import PokeballLoader from '@/components/PokeballLoader';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.catchandtrade.com';
+
 export default function AuthCallback() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +22,17 @@ export default function AuthCallback() {
 
     if (token) {
       localStorage.setItem('token', token);
-      window.location.href = '/';
+      fetch(`${API_URL}/api/users/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(user => {
+          localStorage.setItem('user', JSON.stringify(user));
+          window.location.href = user.username ? '/' : '/onboarding';
+        })
+        .catch(() => {
+          window.location.href = '/';
+        });
     } else {
       setError('No token provided');
     }
