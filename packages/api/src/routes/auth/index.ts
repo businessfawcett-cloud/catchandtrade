@@ -125,11 +125,11 @@ const isAppleConfigured = () => {
 
 authRouter.get(
   '/google',
-  (req: Request, res: Response) => {
+  (req: Request, res: Response, next: NextFunction) => {
     if (!isGoogleConfigured()) {
       return res.status(400).json({ error: 'Google OAuth not configured' });
     }
-    passport.authenticate('google', { scope: ['profile', 'email'] })(req, res);
+    passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
   }
 );
 
@@ -148,11 +148,11 @@ authRouter.get(
 
 authRouter.get(
   '/apple',
-  (req: Request, res: Response) => {
+  (req: Request, res: Response, next: NextFunction) => {
     if (!isAppleConfigured()) {
       return res.status(400).json({ error: 'Apple OAuth not configured' });
     }
-    passport.authenticate('apple', { scope: ['name', 'email'] })(req, res);
+    passport.authenticate('apple', { scope: ['name', 'email'] })(req, res, next);
   }
 );
 
