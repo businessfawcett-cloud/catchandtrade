@@ -14,14 +14,13 @@ describe('ScanPage', () => {
     expect(screen.getByText(/one-tap portfolio/i)).toBeInTheDocument();
   });
 
-  it('shows download buttons', () => {
+  it('shows coming soon message', () => {
     render(<ScanPage />);
-    expect(screen.getByText(/download on the app store/i)).toBeInTheDocument();
-    expect(screen.getByText(/get it on google play/i)).toBeInTheDocument();
+    expect(screen.getByText(/mobile app coming soon/i)).toBeInTheDocument();
   });
 
-  it('shows bottom CTA', () => {
+  it('shows register CTA', () => {
     render(<ScanPage />);
-    expect(screen.getByText(/already have the app/i)).toBeInTheDocument();
+    expect(screen.getByText(/get started free/i)).toBeInTheDocument();
   });
 });

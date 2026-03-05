@@ -11,6 +11,8 @@ export const authRouter = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret';
 
+const WEB_URL = process.env.WEB_URL || (process.env.NODE_ENV === 'production' ? 'https://catchandtrade.com' : 'http://localhost:3002');
+
 const generateTokens = (user: { id: string; email: string }) => {
   const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '15m' });
   const refreshToken = jwt.sign({ userId: user.id }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
@@ -140,7 +142,7 @@ authRouter.get(
       JWT_SECRET,
       { expiresIn: '15m' }
     );
-    res.redirect(`${process.env.WEB_URL || 'http://localhost:3000'}/auth/callback?token=${token}`);
+    res.redirect(`${WEB_URL}/auth/callback?token=${token}`);
   }
 );
 
@@ -163,7 +165,7 @@ authRouter.post(
       JWT_SECRET,
       { expiresIn: '15m' }
     );
-    res.redirect(`${process.env.WEB_URL || 'http://localhost:3000'}/auth/callback?token=${token}`);
+    res.redirect(`${WEB_URL}/auth/callback?token=${token}`);
   }
 );
 
