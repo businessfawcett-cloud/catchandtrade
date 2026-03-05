@@ -28,19 +28,22 @@ export default function AuthCallback() {
         .then(res => {
           if (!res.ok) {
             window.location.href = '/login';
-            return null;
+            return Promise.reject(new Error('User fetch failed'));
           }
           return res.json();
         })
         .then(user => {
-          if (!user || !user.username) {
+          console.log('User fetched:', user);
+          if (!user || typeof user !== 'object' || !user.username) {
             window.location.href = '/onboarding';
             return;
           }
           localStorage.setItem('user', JSON.stringify(user));
+          console.log('Redirecting to dashboard');
           window.location.href = '/';
         })
-        .catch(() => {
+        .catch(err => {
+          console.error('OAuth callback error:', err);
           window.location.href = '/login';
         });
     } else {
