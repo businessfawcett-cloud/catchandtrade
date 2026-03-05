@@ -25,13 +25,23 @@ export default function AuthCallback() {
       fetch(`${API_URL}/api/users/me`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) {
+            window.location.href = '/login';
+            return null;
+          }
+          return res.json();
+        })
         .then(user => {
+          if (!user || !user.username) {
+            window.location.href = '/onboarding';
+            return;
+          }
           localStorage.setItem('user', JSON.stringify(user));
-          window.location.href = user.username ? '/' : '/onboarding';
+          window.location.href = '/';
         })
         .catch(() => {
-          window.location.href = '/';
+          window.location.href = '/login';
         });
     } else {
       setError('No token provided');
