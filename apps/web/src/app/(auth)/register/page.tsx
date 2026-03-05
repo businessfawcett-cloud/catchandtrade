@@ -174,7 +174,7 @@ export default function RegisterPage() {
           </div>
 
           <a 
-            href="/api/auth/google"
+            href={`${process.env.NEXT_PUBLIC_API_URL || 'https://api.catchandtrade.com'}/api/auth/google`}
             className="flex items-center justify-center gap-3 w-full py-3 rounded-lg font-medium transition-all"
             style={{ 
               background: 'rgba(255,255,255,0.05)',
