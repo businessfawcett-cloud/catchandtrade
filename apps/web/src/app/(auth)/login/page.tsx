@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const FloatingPokeball = ({ delay, left, top }: { delay: number; left: string; top: string }) => (
   <div 
@@ -14,18 +15,26 @@ const FloatingPokeball = ({ delay, left, top }: { delay: number; left: string; t
     }}
   >
     <svg width="60" height="60" viewBox="0 0 100 100">
-      <circle cx="50" cy="50" r="48" fill="#e63946" stroke="#0a0f1e" strokeWidth="4" />
-      <rect x="2" y="46" width="96" height="8" fill="#0a0f1e" />
-      <circle cx="50" cy="50" r="14" fill="#ffffff" stroke="#0a0f1e" strokeWidth="4" />
-      <circle cx="50" cy="50" r="6" fill="#0a0f1e" />
+      <circle cx="50" cy="50" r="48" fill="#e63946" stroke="#0f1724" strokeWidth="4" />
+      <rect x="2" y="46" width="96" height="8" fill="#0f1724" />
+      <circle cx="50" cy="50" r="14" fill="#ffffff" stroke="#0f1724" strokeWidth="4" />
+      <circle cx="50" cy="50" r="6" fill="#0f1724" />
     </svg>
   </div>
 );
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      router.push('/');
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
