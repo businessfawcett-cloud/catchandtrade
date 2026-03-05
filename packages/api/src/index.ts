@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import passport from 'passport';
+import './config/passport';
 import { prisma } from '@catchandtrade/db';
 import { authRouter } from './routes/auth';
 import { usersRouter } from './routes/users';
