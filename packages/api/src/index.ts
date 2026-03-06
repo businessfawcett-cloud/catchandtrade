@@ -38,6 +38,14 @@ app.get('/ping', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });
 
+app.get('/debug', (req: Request, res: Response) => {
+  res.json({ 
+    jwtSecret: process.env.JWT_SECRET ? 'set' : 'not set',
+    nodeEnv: process.env.NODE_ENV,
+    apiUrl: process.env.API_URL
+  });
+});
+
 app.get('/health', async (req: Request, res: Response) => {
   let dbStatus = 'disconnected';
   let status = 'ok';
