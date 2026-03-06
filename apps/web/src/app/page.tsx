@@ -748,6 +748,8 @@ export default function HomePage() {
       displayName: 'User',
       avatarId: null
     };
+    // Save to localStorage so onboarding page works
+    localStorage.setItem('user', JSON.stringify(placeholderUser));
     return <Dashboard user={placeholderUser} />;
   }
 
