@@ -683,10 +683,12 @@ function Dashboard({ user }: { user: User }) {
 export default function HomePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasToken, setHasToken] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
+    setHasToken(!!token);
     
     console.log('HomePage: token exists:', !!token);
     console.log('HomePage: userData exists:', !!userData);
@@ -736,11 +738,17 @@ export default function HomePage() {
     );
   }
 
-  console.log('HomePage: user is:', user);
-
-  if (user) {
-    console.log('HomePage: rendering Dashboard');
-    return <Dashboard user={user} />;
+  // Simple check: if there's a token, show dashboard
+  if (hasToken) {
+    console.log('HomePage: has token, showing dashboard');
+    // Create a placeholder user - we'll fetch real data later
+    const placeholderUser: User = {
+      id: 'logged-in',
+      username: 'User',
+      displayName: 'User',
+      avatarId: null
+    };
+    return <Dashboard user={placeholderUser} />;
   }
 
   console.log('HomePage: rendering unauthenticated page');
