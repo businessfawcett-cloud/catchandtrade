@@ -11,9 +11,13 @@ export default function AuthCallback() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('Callback: page loaded');
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     const errorParam = params.get('error');
+
+    console.log('Callback: token:', token ? 'exists' : 'missing');
+    console.log('Callback: error:', errorParam);
 
     if (errorParam) {
       setError(errorParam);
@@ -22,13 +26,15 @@ export default function AuthCallback() {
 
     if (token) {
       localStorage.setItem('token', token);
+      console.log('Callback: token saved, fetching user...');
       fetch(`${API_URL}/api/users/me`, {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => {
+          console.log('Callback: /users/me status:', res.status);
           if (!res.ok) {
             // If API fails, still try to save token and redirect
-            console.log('User fetch failed, but saving token anyway');
+            console.log('Callback: User fetch failed, but saving token anyway');
             window.location.href = '/';
             return null;
           }
