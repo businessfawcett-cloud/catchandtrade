@@ -11,6 +11,7 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
+        value: catchandtrade_super_secret_jwt_key_2025
       - key: NODE_ENV
         value: production
       - key: POKEMON_TCG_API_KEY
