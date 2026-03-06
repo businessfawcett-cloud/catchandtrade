@@ -24,6 +24,28 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
 export const usersRouter = Router();
 
 usersRouter.get(
+  '/me',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req as any).userId;
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const { passwordHash: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+usersRouter.get(
   '/check-username',
   query('u').isString().notEmpty(),
   async (req: Request, res: Response, next: NextFunction) => {
@@ -122,24 +144,4 @@ usersRouter.put(
   }
 );
 
-usersRouter.get(
-  '/me',
-  authenticate,
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const userId = (req as any).userId;
-      const user = await prisma.user.findUnique({
-        where: { id: userId }
-      });
-
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const { passwordHash: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
+export default usersRouter;
