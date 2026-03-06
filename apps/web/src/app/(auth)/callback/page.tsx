@@ -33,9 +33,16 @@ export default function AuthCallback() {
         .then(res => {
           console.log('Callback: /users/me status:', res.status);
           if (!res.ok) {
-            // If API fails, still try to save token and redirect
-            console.log('Callback: User fetch failed, but saving token anyway');
-            window.location.href = '/';
+            // API failed - save placeholder user so app works
+            const placeholderUser = {
+              id: 'oauth-user',
+              username: null,
+              displayName: 'User',
+              avatarId: null
+            };
+            localStorage.setItem('user', JSON.stringify(placeholderUser));
+            console.log('Callback: API failed, saved placeholder user');
+            window.location.href = '/onboarding';
             return null;
           }
           return res.json();
@@ -46,15 +53,23 @@ export default function AuthCallback() {
             localStorage.setItem('user', JSON.stringify(user));
             console.log('Callback: user saved to localStorage');
             window.location.href = '/';
-          } else {
-            console.log('Callback: no username, going to onboarding');
+          } else if (user) {
+            // User exists but no username - go to onboarding
+            localStorage.setItem('user', JSON.stringify(user));
             window.location.href = '/onboarding';
           }
         })
         .catch(err => {
           console.error('OAuth callback error:', err);
-          // Even on error, save token and try home page
-          window.location.href = '/';
+          // Even on error, save token and placeholder user
+          const placeholderUser = {
+            id: 'oauth-user',
+            username: null,
+            displayName: 'User',
+            avatarId: null
+          };
+          localStorage.setItem('user', JSON.stringify(placeholderUser));
+          window.location.href = '/onboarding';
         });
     } else {
       setError('No token provided');
