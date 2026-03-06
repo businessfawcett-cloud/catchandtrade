@@ -365,28 +365,24 @@ function HowItWorks() {
 }
 
 function Dashboard({ user: initialUser }: { user: User }) {
-  const [user, setUser] = useState<User | null>(initialUser);
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
   const [portfolioValue, setPortfolioValue] = useState<{ totalValue: number; cardCount: number; uniqueCards: number } | null>(null);
   const [totalCardsCount, setTotalCardsCount] = useState<number>(0);
 
-  // Get fresh user from localStorage
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    console.log('Dashboard: checking localStorage user:', userData);
+  // Always read fresh user from localStorage - this is the source of truth
+  const userData = localStorage.getItem('user');
+  let user = initialUser;
+  try {
     if (userData) {
-      try {
-        const parsed = JSON.parse(userData);
-        console.log('Dashboard: parsed user from localStorage:', parsed);
-        if (parsed) {
-          setUser(parsed);
-        }
-      } catch (e) {
-        console.error('Dashboard: failed to parse user:', e);
+      const parsed = JSON.parse(userData);
+      if (parsed && parsed.username) {
+        user = parsed;
       }
     }
-  }, []);
+  } catch (e) {
+    // use initialUser as fallback
+  }
 
   useEffect(() => {
     // Fetch total cards in database
@@ -428,22 +424,19 @@ function Dashboard({ user: initialUser }: { user: User }) {
     .sort((a, b) => new Date(b.card?.createdAt || 0).getTime() - new Date(a.card?.createdAt || 0).getTime())
     .slice(0, 6);
 
-  // Use a consistent user object - prefer localStorage version
-  const currentUser = user || initialUser;
-
   const uniquePokemon = new Set(allItems.map(i => i.card.name));
   const totalCards = allItems.reduce((sum, item) => sum + item.quantity, 0);
   const uniqueSets = new Set(allItems.map(i => i.card.setName));
 
   const handleShare = () => {
-    if (currentUser.username) {
-      navigator.clipboard.writeText(`${window.location.origin}/u/${currentUser.username}`);
+    if (user.username) {
+      navigator.clipboard.writeText(`${window.location.origin}/u/${user.username}`);
       alert('Link copied to clipboard!');
     }
   };
 
-  const avatarUrl = currentUser.avatarId ? AVATARS[currentUser.avatarId] : null;
-  const displayName = currentUser.username || currentUser.displayName || 'User';
+  const avatarUrl = user.avatarId ? AVATARS[user.avatarId] : null;
+  const displayName = user.username || user.displayName || 'User';
 
   const StatIcon = ({ type }: { type: 'pokemon' | 'cards' | 'value' | 'sets' }) => {
     const icons: Record<string, React.ReactNode> = {
@@ -547,7 +540,7 @@ function Dashboard({ user: initialUser }: { user: User }) {
                 )}
               </div>
               <div>
-                <h1 className="font-rajdhani text-3xl font-bold text-white">{currentUser.displayName}</h1>
+                <h1 className="font-rajdhani text-3xl font-bold text-white">{user.displayName}</h1>
                 <p className="text-poke-gold">@{displayName}</p>
               </div>
             </div>
