@@ -364,11 +364,25 @@ function HowItWorks() {
   );
 }
 
-function Dashboard({ user }: { user: User }) {
+function Dashboard({ user: initialUser }: { user: User }) {
+  const [user, setUser] = useState<User | null>(initialUser);
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
   const [portfolioValue, setPortfolioValue] = useState<{ totalValue: number; cardCount: number; uniqueCards: number } | null>(null);
   const [totalCardsCount, setTotalCardsCount] = useState<number>(0);
+
+  // Get fresh user from localStorage
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const parsed = JSON.parse(userData);
+        if (parsed && parsed.username) {
+          setUser(parsed);
+        }
+      } catch (e) {}
+    }
+  }, []);
 
   useEffect(() => {
     // Fetch total cards in database
@@ -410,19 +424,22 @@ function Dashboard({ user }: { user: User }) {
     .sort((a, b) => new Date(b.card?.createdAt || 0).getTime() - new Date(a.card?.createdAt || 0).getTime())
     .slice(0, 6);
 
+  // Use a consistent user object - prefer localStorage version
+  const currentUser = user || initialUser;
+
   const uniquePokemon = new Set(allItems.map(i => i.card.name));
   const totalCards = allItems.reduce((sum, item) => sum + item.quantity, 0);
   const uniqueSets = new Set(allItems.map(i => i.card.setName));
 
   const handleShare = () => {
-    if (user.username) {
-      navigator.clipboard.writeText(`${window.location.origin}/u/${user.username}`);
+    if (currentUser.username) {
+      navigator.clipboard.writeText(`${window.location.origin}/u/${currentUser.username}`);
       alert('Link copied to clipboard!');
     }
   };
 
-  const avatarUrl = user.avatarId ? AVATARS[user.avatarId] : null;
-  const displayName = user.username || user.displayName || 'User';
+  const avatarUrl = currentUser.avatarId ? AVATARS[currentUser.avatarId] : null;
+  const displayName = currentUser.username || currentUser.displayName || 'User';
 
   const StatIcon = ({ type }: { type: 'pokemon' | 'cards' | 'value' | 'sets' }) => {
     const icons: Record<string, React.ReactNode> = {
@@ -526,7 +543,7 @@ function Dashboard({ user }: { user: User }) {
                 )}
               </div>
               <div>
-                <h1 className="font-rajdhani text-3xl font-bold text-white">{user.displayName}</h1>
+                <h1 className="font-rajdhani text-3xl font-bold text-white">{currentUser.displayName}</h1>
                 <p className="text-poke-gold">@{displayName}</p>
               </div>
             </div>
