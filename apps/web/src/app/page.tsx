@@ -736,9 +736,14 @@ export default function HomePage() {
     );
   }
 
+  console.log('HomePage: user is:', user);
+
   if (user) {
+    console.log('HomePage: rendering Dashboard');
     return <Dashboard user={user} />;
   }
+
+  console.log('HomePage: rendering unauthenticated page');
 
   return (
     <div className="min-h-screen">
