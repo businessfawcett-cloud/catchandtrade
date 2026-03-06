@@ -3,6 +3,8 @@ import { query, validationResult } from 'express-validator';
 import { prisma } from '@catchandtrade/db';
 import jwt from 'jsonwebtoken';
 
+const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
+
 const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -11,7 +13,7 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as { userId: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
     (req as any).userId = decoded.userId;
     next();
   } catch (err) {
