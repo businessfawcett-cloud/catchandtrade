@@ -374,13 +374,17 @@ function Dashboard({ user: initialUser }: { user: User }) {
   // Get fresh user from localStorage
   useEffect(() => {
     const userData = localStorage.getItem('user');
+    console.log('Dashboard: checking localStorage user:', userData);
     if (userData) {
       try {
         const parsed = JSON.parse(userData);
-        if (parsed && parsed.username) {
+        console.log('Dashboard: parsed user from localStorage:', parsed);
+        if (parsed) {
           setUser(parsed);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('Dashboard: failed to parse user:', e);
+      }
     }
   }, []);
 
