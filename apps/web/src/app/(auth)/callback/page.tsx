@@ -27,24 +27,28 @@ export default function AuthCallback() {
       })
         .then(res => {
           if (!res.ok) {
-            window.location.href = '/login';
-            return Promise.reject(new Error('User fetch failed'));
+            // If API fails, still try to save token and redirect
+            console.log('User fetch failed, but saving token anyway');
+            window.location.href = '/';
+            return null;
           }
           return res.json();
         })
         .then(user => {
-          console.log('User fetched:', user);
-          if (!user || typeof user !== 'object' || !user.username) {
+          console.log('Callback: user response:', user);
+          if (user && user.username) {
+            localStorage.setItem('user', JSON.stringify(user));
+            console.log('Callback: user saved to localStorage');
+            window.location.href = '/';
+          } else {
+            console.log('Callback: no username, going to onboarding');
             window.location.href = '/onboarding';
-            return;
           }
-          localStorage.setItem('user', JSON.stringify(user));
-          console.log('Redirecting to dashboard');
-          window.location.href = '/';
         })
         .catch(err => {
           console.error('OAuth callback error:', err);
-          window.location.href = '/login';
+          // Even on error, save token and try home page
+          window.location.href = '/';
         });
     } else {
       setError('No token provided');
