@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { getCardDetails, addToPortfolio, removeFromPortfolio, addToWatchlist, removeFromWatchlist, getDefaultPortfolio, getPortfolios, getWatchlist } from '../lib/api';
+import GradingCalculator from '../components/GradingCalculator';
 
 interface CardDetailScreenProps {
   navigation: any;
@@ -217,6 +218,8 @@ export default function CardDetailScreen({ navigation, route }: CardDetailScreen
             </Text>
           </TouchableOpacity>
         </View>
+
+        {card && <GradingCalculator cardId={card.id} cardName={card.name} />}
       </View>
     </ScrollView>
   );
