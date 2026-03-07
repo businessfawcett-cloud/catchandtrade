@@ -216,7 +216,7 @@ export default function MarketplacePage() {
               </svg>
               <input
                 type="text"
-                placeholder="Search cards by name..."
+                placeholder="Search cards by name or number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {

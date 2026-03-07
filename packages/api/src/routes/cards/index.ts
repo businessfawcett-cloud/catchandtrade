@@ -106,11 +106,30 @@ cardsRouter.get(
       let where: any = {};
 
       if (searchQuery && searchQuery.trim().length >= 2) {
-        where.OR = [
-          { name: { contains: searchQuery, mode: 'insensitive' } },
-          { setName: { contains: searchQuery, mode: 'insensitive' } },
-          { setCode: { contains: searchQuery, mode: 'insensitive' } }
-        ];
+        const searchTerm = searchQuery.trim();
+        const searchTermLower = searchTerm.toLowerCase();
+        
+        // Check if this is likely a card number search (contains "/" or is purely numeric)
+        const isCardNumberSearch = searchTerm.includes('/') || /^\d+$/.test(searchTerm);
+        
+        if (isCardNumberSearch) {
+          // For card number searches, strip leading zeros from both the search term and database values
+          const normalizedSearchTerm = searchTerm.replace(/^0+/, '');
+          where.OR = [
+            { name: { contains: searchTerm, mode: 'insensitive' } },
+            { setName: { contains: searchTerm, mode: 'insensitive' } },
+            { setCode: { contains: searchTerm, mode: 'insensitive' } },
+            { cardNumber: { contains: normalizedSearchTerm } }
+          ];
+        } else {
+          // For text searches, search name as normal and also check card number just in case
+          where.OR = [
+            { name: { contains: searchTerm, mode: 'insensitive' } },
+            { setName: { contains: searchTerm, mode: 'insensitive' } },
+            { setCode: { contains: searchTerm, mode: 'insensitive' } },
+            { cardNumber: { contains: searchTerm } }
+          ];
+        }
       }
 
       if (gameType) {
@@ -141,8 +160,18 @@ cardsRouter.get(
         
         if (searchQuery && searchQuery.trim().length >= 2) {
           const q = searchQuery.trim();
-          searchCondition = `AND (c."name" ILIKE $1 OR c."setName" ILIKE $1 OR c."setCode" ILIKE $1)`;
-          params.push(`%${q}%`);
+          const isCardNumberSearch = q.includes('/') || /^\d+$/.test(q);
+          
+          if (isCardNumberSearch) {
+            const normalizedQ = q.replace(/^0+/, '');
+            searchCondition = `AND (c."name" ILIKE $1 OR c."setName" ILIKE $1 OR c."setCode" ILIKE $1 OR c."cardNumber" ILIKE $2)`;
+            params.push(`%${q}%`);
+            params.push(`%${normalizedQ}%`);
+          } else {
+            searchCondition = `AND (c."name" ILIKE $1 OR c."setName" ILIKE $1 OR c."setCode" ILIKE $1 OR c."cardNumber" ILIKE $2)`;
+            params.push(`%${q}%`);
+            params.push(`%${q}%`);
+          }
         }
         
         if (gameType) {

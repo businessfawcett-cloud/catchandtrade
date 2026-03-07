@@ -33,6 +33,7 @@ listingsRouter.get(
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }),
     query('cardId').optional().isString(),
+    query('q').optional().isString(),
     query('condition').optional().isIn(['MINT', 'NEAR_MINT', 'LIGHTLY_PLAYED', 'MODERATELY_PLAYED', 'HEAVILY_PLAYED', 'DAMAGED']),
     query('isGraded').optional().isBoolean(),
     query('sort').optional().isIn(['price_asc', 'price_desc', 'created_desc'])
@@ -46,6 +47,33 @@ listingsRouter.get(
       const where: any = { status: 'ACTIVE' };
 
       if (req.query.cardId) where.cardId = req.query.cardId;
+      if (req.query.q) {
+        const searchQuery = (req.query.q as string).trim();
+        if (searchQuery.length >= 2) {
+          const isCardNumberSearch = searchQuery.includes('/') || /^\d+$/.test(searchQuery);
+          
+          if (isCardNumberSearch) {
+            const normalizedSearchTerm = searchQuery.replace(/^0+/, '');
+            where.card = {
+              OR: [
+                { name: { contains: searchQuery, mode: 'insensitive' } },
+                { setName: { contains: searchQuery, mode: 'insensitive' } },
+                { setCode: { contains: searchQuery, mode: 'insensitive' } },
+                { cardNumber: { contains: normalizedSearchTerm } }
+              ]
+            };
+          } else {
+            where.card = {
+              OR: [
+                { name: { contains: searchQuery, mode: 'insensitive' } },
+                { setName: { contains: searchQuery, mode: 'insensitive' } },
+                { setCode: { contains: searchQuery, mode: 'insensitive' } },
+                { cardNumber: { contains: searchQuery } }
+              ]
+            };
+          }
+        }
+      }
       if (req.query.condition) where.condition = req.query.condition;
       if (req.query.isGraded) where.isGraded = req.query.isGraded === 'true';
 
