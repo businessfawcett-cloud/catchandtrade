@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import PriceHistoryChart from '@/components/PriceHistoryChart';
+import GradingCalculator from '@/components/GradingCalculator';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
 
@@ -522,6 +523,8 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
               <PriceHistoryChart cardId={card.id} currentPrice={latestPrice.priceMarket} />
             </div>
           )}
+
+          <GradingCalculator cardId={card.id} cardName={card.name} />
         </div>
       </div>
 
