@@ -76,6 +76,12 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
                   avatarUrl: profile.photos?.[0]?.value
                 }
               });
+              await prisma.portfolio.create({
+                data: {
+                  userId: user.id,
+                  name: 'My Portfolio'
+                }
+              });
             }
           }
 
@@ -119,6 +125,12 @@ if (APPLE_CLIENT_ID) {
                   appleId: profile.id,
                   email,
                   displayName: profile.name?.fullName || 'Apple User'
+                }
+              });
+              await prisma.portfolio.create({
+                data: {
+                  userId: user.id,
+                  name: 'My Portfolio'
                 }
               });
             }
