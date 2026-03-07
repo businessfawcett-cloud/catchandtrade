@@ -135,6 +135,7 @@ model PortfolioItem {
   isGraded      Boolean     @default(false)
   gradeCompany  String?
   gradeValue    Float?
+  valuationOverride Float?
   purchasePrice Float?
   purchaseDate  DateTime?
   notes         String?

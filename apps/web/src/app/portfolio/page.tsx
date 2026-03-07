@@ -60,6 +60,7 @@ interface Card {
   rarity: string | null;
   imageUrl: string | null;
   currentPrice: number | null;
+  prices?: { priceMarket: number | null }[];
 }
 
 interface PortfolioItem {
@@ -69,6 +70,7 @@ interface PortfolioItem {
   isGraded: boolean;
   gradeCompany: string | null;
   gradeValue: number | null;
+  valuationOverride: number | null;
   purchasePrice: number | null;
   card: Card;
 }
@@ -449,6 +451,20 @@ export default function PortfolioPage() {
     return 'bg-gray-600';
   };
 
+  const getRawCardPrice = (item: PortfolioItem): number | null => {
+    if (item.card.currentPrice != null) {
+      return item.card.currentPrice;
+    }
+    return item.card.prices?.[0]?.priceMarket ?? null;
+  };
+
+  const getDisplayUnitValue = (item: PortfolioItem): number | null => {
+    if (item.valuationOverride != null) {
+      return item.valuationOverride;
+    }
+    return getRawCardPrice(item);
+  };
+
   if (loading) {
     return (
       <div style={containerStyle}>
@@ -719,6 +735,7 @@ export default function PortfolioPage() {
             {currentPortfolio.items.map(item => {
               const links = getAffiliateLinks(item.card);
               const normalizedRarity = normalizeRarity(item.card.rarity);
+              const itemUnitValue = getDisplayUnitValue(item);
               return (
                 <div
                   key={item.id}
@@ -743,6 +760,18 @@ export default function PortfolioPage() {
                           x{item.quantity}
                         </span>
                       )}
+                      {item.isGraded && item.gradeCompany && item.gradeValue != null && (
+                        <span
+                          className="absolute bottom-2 left-2 text-xs px-2 py-0.5 rounded font-bold"
+                          style={{
+                            background: 'linear-gradient(135deg, #f59e0b, #fcd34d)',
+                            color: '#1f2937',
+                            border: '1px solid rgba(255,255,255,0.4)'
+                          }}
+                        >
+                          {item.gradeCompany} {item.gradeValue}
+                        </span>
+                      )}
                     </div>
                     <div className="p-3 space-y-2">
                       <h3 className="font-rajdhani font-bold text-white truncate">
@@ -753,9 +782,9 @@ export default function PortfolioPage() {
                       </p>
                       <div className="flex items-center justify-between">
                         <RarityBadge rarity={normalizedRarity} />
-                        {item.card.currentPrice && (
+                        {itemUnitValue != null && (
                           <span className="text-sm font-bold text-poke-gold">
-                            ${item.card.currentPrice.toFixed(2)}
+                            ${itemUnitValue.toFixed(2)}
                           </span>
                         )}
                       </div>

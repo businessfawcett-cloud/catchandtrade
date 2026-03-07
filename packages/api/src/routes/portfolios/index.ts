@@ -2,11 +2,13 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@catchandtrade/db';
-import { Condition } from '@catchandtrade/shared';
+import { Condition, GRADE_MULTIPLIERS } from '@catchandtrade/shared';
+import type { Grade, GradingService } from '@catchandtrade/shared';
 
 export const portfoliosRouter = Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
+const VALID_GRADING_SERVICES = Object.keys(GRADE_MULTIPLIERS) as GradingService[];
 
 const authenticate = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
@@ -67,7 +69,16 @@ portfoliosRouter.get('/', authenticate, async (req: Request, res: Response, next
       where: { userId },
       include: { 
         items: {
-          include: { card: true }
+          include: {
+            card: {
+              include: {
+                prices: {
+                  orderBy: { date: 'desc' },
+                  take: 1
+                }
+              }
+            }
+          }
         }
       }
     });
@@ -118,7 +129,20 @@ portfoliosRouter.get('/:id', authenticate, async (req: Request, res: Response, n
   try {
     const portfolio = await prisma.portfolio.findUnique({
       where: { id: req.params.id },
-      include: { items: { include: { card: true } } }
+      include: {
+        items: {
+          include: {
+            card: {
+              include: {
+                prices: {
+                  orderBy: { date: 'desc' },
+                  take: 1
+                }
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!portfolio) {
@@ -168,8 +192,10 @@ portfoliosRouter.post(
     body('quantity').optional().isInt({ min: 1 }),
     body('condition').optional().isIn(['MINT', 'NEAR_MINT', 'LIGHTLY_PLAYED', 'MODERATELY_PLAYED', 'HEAVILY_PLAYED', 'DAMAGED']),
     body('isGraded').optional().isBoolean(),
-    body('gradeCompany').optional().isString(),
-    body('gradeValue').optional().isFloat({ min: 0, max: 10 }),
+    body('gradingService').optional().isIn(VALID_GRADING_SERVICES),
+    body('gradeCompany').optional().isIn(VALID_GRADING_SERVICES),
+    body('gradeValue').optional().isInt({ min: 6, max: 10 }),
+    body('valuationOverride').optional().isFloat({ min: 0 }),
     body('purchasePrice').optional().isFloat({ min: 0 }),
     body('purchaseDate').optional().isISO8601(),
     body('notes').optional().isString()
@@ -187,15 +213,49 @@ portfoliosRouter.post(
         quantity = 1, 
         condition = 'NEAR_MINT', 
         isGraded = false,
+        gradingService,
         gradeCompany,
         gradeValue,
+        valuationOverride,
         purchasePrice,
         purchaseDate,
         notes 
       } = req.body;
 
-      if (gradeValue !== undefined && (gradeValue < 0 || gradeValue > 10)) {
-        return res.status(400).json({ error: 'Grade value must be between 0 and 10' });
+      const resolvedGradingService = gradingService || gradeCompany || null;
+
+      if (isGraded) {
+        if (!resolvedGradingService || !VALID_GRADING_SERVICES.includes(resolvedGradingService as GradingService)) {
+          return res.status(400).json({ error: 'A valid grading service is required for graded cards' });
+        }
+        if (gradeValue == null || gradeValue < 6 || gradeValue > 10) {
+          return res.status(400).json({ error: 'Grade value must be between 6 and 10 for graded cards' });
+        }
+      }
+
+      let resolvedValuationOverride: number | null = valuationOverride ?? null;
+      if (
+        isGraded &&
+        resolvedValuationOverride == null &&
+        resolvedGradingService &&
+        gradeValue != null
+      ) {
+        const card = await prisma.card.findUnique({
+          where: { id: cardId },
+          include: {
+            prices: {
+              orderBy: { date: 'desc' },
+              take: 1
+            }
+          }
+        });
+
+        const marketPrice = card?.prices[0]?.priceMarket ?? null;
+        if (marketPrice != null) {
+          const service = resolvedGradingService as GradingService;
+          const grade = gradeValue as Grade;
+          resolvedValuationOverride = Math.round(marketPrice * GRADE_MULTIPLIERS[service][grade] * 100) / 100;
+        }
       }
 
       const item = await prisma.portfolioItem.create({
@@ -205,8 +265,9 @@ portfoliosRouter.post(
           quantity,
           condition: condition as Condition,
           isGraded,
-          gradeCompany,
-          gradeValue,
+          gradeCompany: isGraded ? resolvedGradingService : null,
+          gradeValue: isGraded ? gradeValue : null,
+          valuationOverride: resolvedValuationOverride,
           purchasePrice,
           purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
           notes
@@ -299,8 +360,9 @@ portfoliosRouter.get('/:id/summary', authenticate, async (req: Request, res: Res
 
     for (const item of portfolio.items) {
       const currentPrice = item.card.prices[0]?.priceMarket;
-      if (currentPrice != null) {
-        totalCurrentValue += currentPrice * item.quantity;
+      const effectivePrice = item.valuationOverride ?? currentPrice;
+      if (effectivePrice != null) {
+        totalCurrentValue += effectivePrice * item.quantity;
       }
 
       if (item.purchasePrice) {
@@ -355,8 +417,9 @@ portfoliosRouter.get('/:id/value', authenticate, async (req: Request, res: Respo
     for (const item of portfolio.items) {
       uniqueCardIds.add(item.cardId);
       const currentPrice = item.card.prices[0]?.priceMarket;
-      if (currentPrice != null) {
-        totalValue += currentPrice * item.quantity;
+      const effectivePrice = item.valuationOverride ?? currentPrice;
+      if (effectivePrice != null) {
+        totalValue += effectivePrice * item.quantity;
       }
     }
 

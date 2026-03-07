@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import PriceHistoryChart from '@/components/PriceHistoryChart';
 import GradingCalculator from '@/components/GradingCalculator';
+import { GRADE_MULTIPLIERS } from '@catchandtrade/shared';
+import type { Grade, GradingService } from '@catchandtrade/shared';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
 
@@ -46,6 +48,9 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
   const [condition, setCondition] = useState('NEAR_MINT');
   const [quantity, setQuantity] = useState(1);
   const [purchasePrice, setPurchasePrice] = useState('');
+  const [cardFormat, setCardFormat] = useState<'RAW' | 'GRADED'>('RAW');
+  const [gradingService, setGradingService] = useState<GradingService>('PSA');
+  const [gradeValue, setGradeValue] = useState<Grade>(10);
   const [adding, setAdding] = useState(false);
   const [inPortfolioItem, setInPortfolioItem] = useState<{portfolioId: string, itemId: string} | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
@@ -158,6 +163,13 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
 
     setAdding(true);
     try {
+      const isGraded = cardFormat === 'GRADED';
+      const liveValuationOverride = isGraded
+        ? gradedValuePreview != null
+          ? Math.round(gradedValuePreview * 100) / 100
+          : undefined
+        : undefined;
+
       const response = await fetch(`${API_URL}/api/portfolios/${selectedPortfolio}/items`, {
         method: 'POST',
         headers: {
@@ -168,7 +180,11 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
           cardId: card.id,
           condition,
           quantity,
-          purchasePrice: purchasePrice ? parseFloat(purchasePrice) : undefined
+          purchasePrice: purchasePrice ? parseFloat(purchasePrice) : undefined,
+          isGraded,
+          gradingService: isGraded ? gradingService : undefined,
+          gradeValue: isGraded ? gradeValue : undefined,
+          valuationOverride: liveValuationOverride
         })
       });
 
@@ -179,6 +195,9 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
         setCondition('NEAR_MINT');
         setQuantity(1);
         setPurchasePrice('');
+        setCardFormat('RAW');
+        setGradingService('PSA');
+        setGradeValue(10);
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
         alert('Failed to add card');
@@ -322,6 +341,15 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
   const priceHistory = getPriceHistory();
   const maxPrice = Math.max(...priceHistory.map(p => p.priceMarket ?? 0), 1);
   const minPrice = Math.min(...priceHistory.map(p => p.priceMarket ?? 0), 0);
+  const rawMarketPrice = latestPrice?.priceMarket ?? null;
+  const gradedValuePreview = useMemo(() => {
+    if (cardFormat !== 'GRADED' || rawMarketPrice == null) {
+      return null;
+    }
+    return rawMarketPrice * GRADE_MULTIPLIERS[gradingService][gradeValue];
+  }, [cardFormat, rawMarketPrice, gradingService, gradeValue]);
+  const unitValuePreview = cardFormat === 'GRADED' && gradedValuePreview != null ? gradedValuePreview : rawMarketPrice;
+  const totalValuePreview = unitValuePreview != null ? unitValuePreview * quantity : null;
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem', background: '#0a0f1e', minHeight: '100vh' }}>
@@ -606,6 +634,89 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Card Type</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setCardFormat('RAW')}
+                  style={{
+                    padding: '0.6rem',
+                    background: cardFormat === 'RAW' ? '#e63946' : 'rgba(255,255,255,0.05)',
+                    color: cardFormat === 'RAW' ? 'white' : '#94a3b8',
+                    border: cardFormat === 'RAW' ? '1px solid #e63946' : '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 700
+                  }}
+                >
+                  Raw
+                </button>
+                <button
+                  onClick={() => setCardFormat('GRADED')}
+                  style={{
+                    padding: '0.6rem',
+                    background: cardFormat === 'GRADED' ? '#e63946' : 'rgba(255,255,255,0.05)',
+                    color: cardFormat === 'GRADED' ? 'white' : '#94a3b8',
+                    border: cardFormat === 'GRADED' ? '1px solid #e63946' : '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 700
+                  }}
+                >
+                  Graded
+                </button>
+              </div>
+            </div>
+
+            {cardFormat === 'GRADED' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Service</label>
+                  <select
+                    value={gradingService}
+                    onChange={(e) => setGradingService(e.target.value as GradingService)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      background: '#0a0f1e',
+                      color: 'white',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {Object.keys(GRADE_MULTIPLIERS).map((service) => (
+                      <option key={service} value={service} style={{ background: '#0a0f1e' }}>
+                        {service}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Grade</label>
+                  <select
+                    value={gradeValue}
+                    onChange={(e) => setGradeValue(Number(e.target.value) as Grade)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      background: '#0a0f1e',
+                      color: 'white',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {[10, 9, 8, 7, 6].map((grade) => (
+                      <option key={grade} value={grade} style={{ background: '#0a0f1e' }}>
+                        {grade}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Condition</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 {['MINT', 'NEAR_MINT', 'LIGHTLY_PLAYED', 'MODERATELY_PLAYED', 'HEAVILY_PLAYED', 'DAMAGED'].map((cond) => (
@@ -626,6 +737,31 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
                     {cond.replace('_', ' ')}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginBottom: '1rem',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,215,0,0.3)',
+                background: 'linear-gradient(135deg, rgba(255,215,0,0.1), rgba(245,158,11,0.08))'
+              }}
+            >
+              <div style={{ color: '#fcd34d', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
+                Live Value Preview
+              </div>
+              <div style={{ color: 'white', fontSize: '0.9rem' }}>
+                {unitValuePreview == null ? (
+                  'No market price available yet'
+                ) : (
+                  <>
+                    ${unitValuePreview.toFixed(2)} each
+                    {totalValuePreview != null && quantity > 1 ? ` • $${totalValuePreview.toFixed(2)} total` : ''}
+                    {cardFormat === 'GRADED' ? ` (${gradingService} ${gradeValue})` : ''}
+                  </>
+                )}
               </div>
             </div>
 
