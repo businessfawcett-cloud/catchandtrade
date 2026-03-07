@@ -376,7 +376,7 @@ function Dashboard({ user: initialUser }: { user: User }) {
   try {
     if (userData) {
       const parsed = JSON.parse(userData);
-      if (parsed && parsed.username) {
+      if (parsed && parsed.username && parsed.username !== 'User') {
         user = parsed;
       }
     }
@@ -436,7 +436,7 @@ function Dashboard({ user: initialUser }: { user: User }) {
   };
 
   const avatarUrl = user.avatarId ? AVATARS[user.avatarId] : null;
-  const displayName = user.username || user.displayName || 'User';
+  const displayName = user.displayName || user.username || 'Trainer';
 
   const StatIcon = ({ type }: { type: 'pokemon' | 'cards' | 'value' | 'sets' }) => {
     const icons: Record<string, React.ReactNode> = {
@@ -540,8 +540,10 @@ function Dashboard({ user: initialUser }: { user: User }) {
                 )}
               </div>
               <div>
-                <h1 className="font-rajdhani text-3xl font-bold text-white">{user.displayName}</h1>
-                <p className="text-poke-gold">@{displayName}</p>
+                <h1 className="font-rajdhani text-3xl font-bold text-white">{user.displayName || user.username || 'Trainer'}</h1>
+                {user.username && (
+                  <p className="text-poke-gold">@{user.username}</p>
+                )}
               </div>
             </div>
 
@@ -755,15 +757,12 @@ export default function HomePage() {
   // Simple check: if there's a token, show dashboard
   if (hasToken) {
     console.log('HomePage: has token, showing dashboard');
-    // Create a placeholder user - we'll fetch real data later
     const placeholderUser: User = {
       id: 'logged-in',
-      username: 'User',
-      displayName: 'User',
+      username: null,
+      displayName: 'Trainer',
       avatarId: null
     };
-    // Save to localStorage so onboarding page works
-    localStorage.setItem('user', JSON.stringify(placeholderUser));
     return <Dashboard user={placeholderUser} />;
   }
 
