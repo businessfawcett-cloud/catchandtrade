@@ -34,7 +34,25 @@ if (process.env.WEB_URL) {
 export const app: Express = express();
 
 app.use(express.json());
-app.use(cors({ origin: CORS_ORIGINS }));
+
+// Debug middleware to log incoming requests
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log('Headers:', {
+    'origin': req.headers.origin,
+    'authorization': req.headers.authorization ? `Bearer ${req.headers.authorization.substring(0, 10)}...` : 'MISSING',
+    'content-type': req.headers['content-type'],
+    'user-agent': req.headers['user-agent']
+  });
+  next();
+});
+
+app.use(cors({ 
+  origin: CORS_ORIGINS,
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+}));
 
 app.get('/ping', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date() });
