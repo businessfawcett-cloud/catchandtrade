@@ -796,6 +796,22 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <footer className="py-8 border-t border-poke-border">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-poke-text-muted text-sm">
+            © {new Date().getFullYear()} Catch & Trade. All rights reserved.
+          </p>
+          <div className="flex justify-center gap-6 mt-4">
+            <Link href="/legal/terms" className="text-poke-text-muted hover:text-poke-gold text-sm transition-colors">
+              Terms of Service
+            </Link>
+            <Link href="/legal/privacy" className="text-poke-text-muted hover:text-poke-gold text-sm transition-colors">
+              Privacy Policy
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
