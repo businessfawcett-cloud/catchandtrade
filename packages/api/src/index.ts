@@ -14,7 +14,6 @@ import { cardsRouter } from './routes/cards';
 import { watchlistRouter } from './routes/watchlist';
 import { setsRouter } from './routes/sets';
 import { adminRouter } from './routes/admin';
-import gradingRouter from './routes/grading';
 import { webhooksRouter } from './routes/webhooks/stripe';
 import ebayRouter from './routes/ebay';
 import { startNightlySync, runNightlySync, syncPrices } from './cron/nightlySync';
@@ -77,7 +76,6 @@ app.use('/api/sets', setsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/webhooks', webhooksRouter);
 app.use('/api/ebay', ebayRouter);
-app.use('/api/grading', gradingRouter);
 
 // Public cron endpoint for UptimeRobot - triggers nightly sync
 const CRON_SECRET = process.env.CRON_SECRET;
