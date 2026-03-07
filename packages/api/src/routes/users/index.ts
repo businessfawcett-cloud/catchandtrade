@@ -1,25 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { query, validationResult } from 'express-validator';
 import { prisma } from '@catchandtrade/db';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
-
-const authenticate = async (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    (req as any).userId = decoded.userId;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
+import { authenticate } from '../../middleware/auth';
 
 export const usersRouter = Router();
 

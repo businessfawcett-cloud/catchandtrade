@@ -1,9 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { body, query, validationResult } from 'express-validator';
-import jwt from 'jsonwebtoken';
 import { prisma } from '@catchandtrade/db';
 import { Condition, ListingStatus } from '@prisma/client';
 import Stripe from 'stripe';
+import { authenticate } from '../../middleware/auth';
 
 export const listingsRouter = Router();
 
@@ -11,21 +11,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
   apiVersion: '2023-10-16'
 });
-
-const authenticate = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    (req as any).userId = decoded.userId;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
 
 listingsRouter.get(
   '/',
