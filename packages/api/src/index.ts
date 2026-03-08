@@ -55,7 +55,7 @@ app.use(cors({
 }));
 
 app.get('/ping', (req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date(), version: '2.0.0' });
+  res.json({ status: 'ok', timestamp: new Date(), version: '2.0.1' });
 });
 
 app.get('/debug', (req: Request, res: Response) => {
