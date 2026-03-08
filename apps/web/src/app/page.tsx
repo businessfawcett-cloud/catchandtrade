@@ -396,16 +396,26 @@ function Dashboard({ user: initialUser }: { user: User }) {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
     fetch(`${API_URL}/api/portfolios`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Failed to fetch portfolios');
+        }
+        return res.json();
+      })
       .then(data => {
-        setPortfolios(Array.isArray(data) ? data : []);
-        if (data.length > 0) {
-          return fetch(`${API_URL}/api/portfolios/${data[0].id}/value`, {
+        const portfolioData = Array.isArray(data) ? data : [];
+        setPortfolios(portfolioData);
+        
+        if (portfolioData.length > 0 && portfolioData[0].id) {
+          return fetch(`${API_URL}/api/portfolios/${portfolioData[0].id}/value`, {
             headers: { Authorization: `Bearer ${token}` }
           });
         }
@@ -414,9 +424,13 @@ function Dashboard({ user: initialUser }: { user: User }) {
       .then(res => res?.ok ? res.json() : null)
       .then(data => {
         if (data) setPortfolioValue(data);
-        setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        // Silently handle errors - user just won't see portfolio data
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   const allItems = (portfolios || []).flatMap(p => p.items || []);
