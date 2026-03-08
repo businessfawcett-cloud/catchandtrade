@@ -5,8 +5,6 @@ import { authenticate } from '../../middleware/auth';
 
 export const watchlistRouter = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
-
 watchlistRouter.get(
   '/',
   authenticate,

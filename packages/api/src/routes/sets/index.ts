@@ -5,8 +5,6 @@ import { authenticate } from '../../middleware/auth';
 
 export const setsRouter = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
-
 setsRouter.get(
   '/',
   async (req: Request, res: Response, next: NextFunction) => {

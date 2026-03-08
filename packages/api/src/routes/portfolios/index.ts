@@ -7,7 +7,6 @@ import { authenticate } from '../../middleware/auth';
 
 export const portfoliosRouter = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 const VALID_GRADING_SERVICES = Object.keys(GRADE_MULTIPLIERS) as GradingService[];
 
 portfoliosRouter.post(

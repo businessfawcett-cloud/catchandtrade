@@ -7,7 +7,6 @@ import { authenticate } from '../../middleware/auth';
 
 export const listingsRouter = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
   apiVersion: '2023-10-16'
 });
