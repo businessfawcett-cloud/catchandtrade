@@ -736,6 +736,7 @@ export default function HomePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasToken, setHasToken] = useState(false);
+  const [buildVersion] = useState('2.0.3');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
