@@ -1,0 +1,8 @@
+-- Add missing PortfolioItem columns (safe: IF NOT EXISTS)
+ALTER TABLE "PortfolioItem" ADD COLUMN IF NOT EXISTS "isGraded" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "PortfolioItem" ADD COLUMN IF NOT EXISTS "gradeCompany" TEXT;
+ALTER TABLE "PortfolioItem" ADD COLUMN IF NOT EXISTS "gradeValue" DOUBLE PRECISION;
+ALTER TABLE "PortfolioItem" ADD COLUMN IF NOT EXISTS "valuationOverride" DOUBLE PRECISION;
+ALTER TABLE "PortfolioItem" ADD COLUMN IF NOT EXISTS "purchasePrice" DOUBLE PRECISION;
+ALTER TABLE "PortfolioItem" ADD COLUMN IF NOT EXISTS "purchaseDate" TIMESTAMP(3);
+ALTER TABLE "PortfolioItem" ADD COLUMN IF NOT EXISTS "notes" TEXT;

@@ -40,7 +40,7 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   console.log('Headers:', {
     'origin': req.headers.origin,
-    'authorization': req.headers.authorization ? `Bearer ${req.headers.authorization.substring(0, 10)}...` : 'MISSING',
+    'authorization': req.headers.authorization ? `${req.headers.authorization.substring(0, 15)}...` : 'MISSING',
     'content-type': req.headers['content-type'],
     'user-agent': req.headers['user-agent']
   });
