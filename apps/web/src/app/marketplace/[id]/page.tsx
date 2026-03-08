@@ -189,7 +189,8 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
       });
 
       if (response.ok) {
-        const priceMsg = latestPrice?.priceMarket ? ` +$${latestPrice.priceMarket.toFixed(2)}` : '';
+        const effectivePrice = liveValuationOverride ?? latestPrice?.priceMarket;
+        const priceMsg = effectivePrice ? ` +$${effectivePrice.toFixed(2)}` : '';
         setSuccessMessage(`✓ Added to Portfolio${priceMsg}`);
         setShowModal(false);
         setCondition('NEAR_MINT');
@@ -715,29 +716,31 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
               </div>
             )}
 
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Condition</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {['MINT', 'NEAR_MINT', 'LIGHTLY_PLAYED', 'MODERATELY_PLAYED', 'HEAVILY_PLAYED', 'DAMAGED'].map((cond) => (
-                  <button
-                    key={cond}
-                    onClick={() => setCondition(cond)}
-                    style={{
-                      padding: '0.5rem 0.75rem',
-                      background: condition === cond ? '#e63946' : 'rgba(255,255,255,0.05)',
-                      color: condition === cond ? 'white' : '#94a3b8',
-                      border: condition === cond ? '1px solid #e63946' : '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '20px',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    {cond.replace('_', ' ')}
-                  </button>
-                ))}
+            {cardFormat === 'RAW' && (
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Condition</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {['MINT', 'NEAR_MINT', 'LIGHTLY_PLAYED', 'MODERATELY_PLAYED', 'HEAVILY_PLAYED', 'DAMAGED'].map((cond) => (
+                    <button
+                      key={cond}
+                      onClick={() => setCondition(cond)}
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        background: condition === cond ? '#e63946' : 'rgba(255,255,255,0.05)',
+                        color: condition === cond ? 'white' : '#94a3b8',
+                        border: condition === cond ? '1px solid #e63946' : '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {cond.replace('_', ' ')}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div
               style={{
