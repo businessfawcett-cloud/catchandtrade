@@ -51,7 +51,21 @@ portfoliosRouter.get('/', authenticate, async (req: Request, res: Response, next
     const userId = (req as any).userId;
     console.log('Fetching portfolios for user:', userId);
     const portfolios = await prisma.portfolio.findMany({
-      where: { userId }
+      where: { userId },
+      include: { 
+        items: {
+          include: {
+            card: {
+              include: {
+                prices: {
+                  orderBy: { date: 'desc' },
+                  take: 1
+                }
+              }
+            }
+          }
+        }
+      }
     });
     console.log('Portfolios fetched successfully:', portfolios.length);
     res.json(portfolios);

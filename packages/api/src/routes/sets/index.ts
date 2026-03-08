@@ -1,5 +1,4 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import { prisma } from '@catchandtrade/db';
 import { authenticate } from '../../middleware/auth';
 
@@ -119,27 +118,28 @@ setsRouter.get(
 
       const cardCountMap = new Map(cardsBySet.map(c => [c.setCode, c._count.id]));
 
-      const cards = await prisma.card.findMany({
-        where: { setCode: { in: sets.map(s => s.code) } }
+      const ownedCardsInSets = await prisma.card.findMany({
+        where: {
+          id: { in: Array.from(ownedCardIds) },
+          setCode: { in: sets.map(s => s.code) }
+        },
+        select: { id: true, setCode: true }
       });
 
-      const cardsBySetCode = new Map<string, typeof cards>();
-      for (const card of cards) {
-        const existing = cardsBySetCode.get(card.setCode) || [];
-        existing.push(card);
-        cardsBySetCode.set(card.setCode, existing);
+      const ownedBySetCode = new Map<string, number>();
+      for (const card of ownedCardsInSets) {
+        ownedBySetCode.set(card.setCode, (ownedBySetCode.get(card.setCode) || 0) + 1);
       }
 
       const progressBySet: Record<string, { owned: number; total: number; percentage: number }> = {};
 
       for (const set of sets) {
-        const setCards = cardsBySetCode.get(set.code) || [];
-        const ownedCards = setCards.filter(card => ownedCardIds.has(card.id));
-        const totalCards = cardCountMap.get(set.code) || setCards.length;
-        const percentage = totalCards > 0 ? Math.round((ownedCards.length / totalCards) * 100) : 0;
+        const owned = ownedBySetCode.get(set.code) || 0;
+        const totalCards = cardCountMap.get(set.code) || set.totalCards || 0;
+        const percentage = totalCards > 0 ? Math.round((owned / totalCards) * 100) : 0;
 
         progressBySet[set.code] = {
-          owned: ownedCards.length,
+          owned,
           total: totalCards,
           percentage
         };
@@ -147,6 +147,7 @@ setsRouter.get(
 
       res.json({ progress: progressBySet });
     } catch (error) {
+      console.error('Error in /progress:', error);
       next(error);
     }
   }
@@ -169,8 +170,29 @@ setsRouter.get(
       }
 
       const cards = await prisma.card.findMany({
-        where: { setCode: code }
+        where: { setCode: code },
+        orderBy: { cardNumber: 'asc' }
       });
+
+      if (!cards || cards.length === 0) {
+        return res.json({
+          set: {
+            id: set.id,
+            name: set.name,
+            code: set.code,
+            totalCards: set.totalCards,
+            releaseYear: set.releaseYear,
+            imageUrl: set.imageUrl
+          },
+          progress: {
+            owned: 0,
+            total: 0,
+            percentage: 0
+          },
+          ownedCards: [],
+          missingCards: []
+        });
+      }
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -233,6 +255,7 @@ setsRouter.get(
         }))
       });
     } catch (error) {
+      console.error('Error in /:code/progress:', error);
       next(error);
     }
   }

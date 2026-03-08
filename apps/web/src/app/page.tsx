@@ -369,20 +369,21 @@ function Dashboard({ user: initialUser }: { user: User }) {
   const [loading, setLoading] = useState(true);
   const [portfolioValue, setPortfolioValue] = useState<{ totalValue: number; cardCount: number; uniqueCards: number } | null>(null);
   const [totalCardsCount, setTotalCardsCount] = useState<number>(0);
+  const [user, setUser] = useState<User>(initialUser);
 
-  // Always read fresh user from localStorage - this is the source of truth
-  const userData = localStorage.getItem('user');
-  let user = initialUser;
-  try {
-    if (userData) {
-      const parsed = JSON.parse(userData);
-      if (parsed && parsed.username && parsed.username !== 'User') {
-        user = parsed;
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    try {
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        if (parsed && parsed.username && parsed.username !== 'User') {
+          setUser(parsed);
+        }
       }
+    } catch (e) {
+      // use initialUser as fallback
     }
-  } catch (e) {
-    // use initialUser as fallback
-  }
+  }, [initialUser]);
 
   useEffect(() => {
     // Fetch total cards in database
@@ -754,26 +755,26 @@ export default function HomePage() {
     );
   }
 
-  // Simple check: if there's a token, show dashboard
-  if (hasToken) {
-    console.log('HomePage: has token, showing dashboard');
-    const placeholderUser: User = {
-      id: 'logged-in',
-      username: null,
-      displayName: 'Trainer',
-      avatarId: null
-    };
-    return <Dashboard user={placeholderUser} />;
-  }
-
-  console.log('HomePage: rendering unauthenticated page');
+  console.log('HomePage: rendering page');
+  console.log('HomePage: has token:', hasToken);
 
   return (
     <div className="min-h-screen">
-      <HeroSection />
-      <StatsBar />
-      <FeaturedCards />
-      <HowItWorks />
+      {hasToken ? (
+        <Dashboard user={user || {
+          id: 'logged-in',
+          username: null,
+          displayName: 'Trainer',
+          avatarId: null
+        }} />
+      ) : (
+        <>
+          <HeroSection />
+          <StatsBar />
+          <FeaturedCards />
+          <HowItWorks />
+        </>
+      )}
       
       {/* CTA Section */}
       <section className="py-20">
