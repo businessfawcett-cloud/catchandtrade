@@ -46,7 +46,8 @@ setsRouter.get(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).userId;
+      const userId = (req as any).userId as string | undefined;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
       const sets = await prisma.pokemonSet.findMany({
         orderBy: { releaseYear: 'desc' }
@@ -161,7 +162,8 @@ setsRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { code } = req.params;
-      const userId = (req as any).userId;
+      const userId = (req as any).userId as string | undefined;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
       const set = await prisma.pokemonSet.findUnique({
         where: { code }

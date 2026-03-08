@@ -130,7 +130,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
   useEffect(() => {
     const fetchSetData = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/sets/${params.code}`);
+        const response = await fetch(`${API_URL}/api/sets/${encodeURIComponent(params.code)}`);
         if (response.ok) {
           const data = await response.json();
           setSet(data.set);
@@ -182,9 +182,12 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
     fetchProgress();
   }, [user, params.code]);
 
-  // If progress API didn't return data, fall back to set cards as missing
-  const effectiveMissing = missingCards.length > 0 ? missingCards : (ownedCards.length === 0 ? cards : missingCards);
-  const displayCards = user ? (showMissing ? effectiveMissing : ownedCards) : cards;
+  // If progress API returned data, use it; otherwise fall back to all set cards as missing
+  const effectiveMissing = progress ? missingCards : cards;
+  const displayCards = useMemo(
+    () => user ? (showMissing ? effectiveMissing : ownedCards) : cards,
+    [user, showMissing, effectiveMissing, ownedCards, cards]
+  );
 
   const sortedCards = useMemo(() =>
     [...displayCards].sort((a, b) => {
@@ -266,7 +269,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <span style={{ color: 'white', fontSize: '14px' }}>Progress</span>
                     <span style={{ color: '#ffd700', fontWeight: 'bold' }}>
-                      {progress?.owned || 0} / {progress?.total || set.totalCards} cards
+                      {progress?.owned ?? 0} / {progress?.total ?? set.totalCards} cards
                     </span>
                   </div>
                   <div style={{
@@ -277,7 +280,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                   }}>
                     <div style={{
                       height: '100%',
-                      width: `${progress?.percentage || 0}%`,
+                      width: `${progress?.percentage ?? 0}%`,
                       background: 'linear-gradient(to right, #e63946, #c1121f)',
                       borderRadius: '4px',
                       transition: 'width 0.3s ease'
@@ -310,7 +313,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                     alignItems: 'center',
                     gap: '0.5rem'
                   }}>
-                    <span style={{ color: '#10b981', fontWeight: 'bold' }}>{progress?.owned || 0}</span>
+                    <span style={{ color: '#10b981', fontWeight: 'bold' }}>{progress?.owned ?? 0}</span>
                     <span style={{ color: '#94a3b8', fontSize: '14px' }}>owned</span>
                   </div>
                   <div style={{
@@ -322,7 +325,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                     alignItems: 'center',
                     gap: '0.5rem'
                   }}>
-                    <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{(progress?.total || set.totalCards) - (progress?.owned || 0)}</span>
+                    <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{(progress?.total ?? set.totalCards) - (progress?.owned ?? 0)}</span>
                     <span style={{ color: '#94a3b8', fontSize: '14px' }}>missing</span>
                   </div>
                 </div>
