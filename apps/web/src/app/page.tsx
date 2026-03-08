@@ -369,7 +369,6 @@ function Dashboard({ user: initialUser }: { user: User }) {
   const [loading, setLoading] = useState(true);
   const [portfolioValue, setPortfolioValue] = useState<{ totalValue: number; cardCount: number; uniqueCards: number } | null>(null);
   const [totalCardsCount, setTotalCardsCount] = useState<number>(0);
-  const [error, setError] = useState<string | null>(null);
 
   // Always read fresh user from localStorage - this is the source of truth
   const userData = localStorage.getItem('user');
@@ -397,26 +396,16 @@ function Dashboard({ user: initialUser }: { user: User }) {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    if (!token) return;
 
     fetch(`${API_URL}/api/portfolios`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => {
-        if (!res.ok) {
-          throw new Error('Failed to fetch portfolios');
-        }
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        const portfolioData = Array.isArray(data) ? data : [];
-        setPortfolios(portfolioData);
-        
-        if (portfolioData.length > 0 && portfolioData[0].id) {
-          return fetch(`${API_URL}/api/portfolios/${portfolioData[0].id}/value`, {
+        setPortfolios(Array.isArray(data) ? data : []);
+        if (data.length > 0) {
+          return fetch(`${API_URL}/api/portfolios/${data[0].id}/value`, {
             headers: { Authorization: `Bearer ${token}` }
           });
         }
@@ -425,14 +414,9 @@ function Dashboard({ user: initialUser }: { user: User }) {
       .then(res => res?.ok ? res.json() : null)
       .then(data => {
         if (data) setPortfolioValue(data);
-      })
-      .catch(err => {
-        console.error('Error fetching portfolios:', err);
-        setError('Failed to load portfolio');
-      })
-      .finally(() => {
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   const allItems = (portfolios || []).flatMap(p => p.items || []);
@@ -499,30 +483,10 @@ function Dashboard({ user: initialUser }: { user: User }) {
     </Link>
   );
 
-  // Show loading state inline instead of conditional return
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1529 50%, #0f1a2e 100%)' }}>
         <PokeballLoader size="lg" />
-      </div>
-    );
-  }
-
-  // Show error state inline if there's an error
-  if (error) {
-    return (
-      <div className="min-h-screen relative" style={{ background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1529 50%, #0f1a2e 100%)' }}>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <p className="text-red-400 mb-4">{error}</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-poke-red text-white rounded-lg"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
       </div>
     );
   }
@@ -736,7 +700,6 @@ export default function HomePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasToken, setHasToken] = useState(false);
-  const [buildVersion] = useState('2.0.3');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
