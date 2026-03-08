@@ -13,13 +13,13 @@ setsRouter.get(
       });
 
       const allSetCodes = sets.map(s => s.code);
-      
+
       const cardCounts = await prisma.card.groupBy({
         by: ['setCode'],
         _count: { setCode: true },
         where: { setCode: { in: allSetCodes } }
       });
-      
+
       const countMap = new Map(cardCounts.map(c => [c.setCode, c._count.setCode]));
 
       const result = sets.map(set => ({
@@ -39,48 +39,8 @@ setsRouter.get(
   }
 );
 
-setsRouter.get(
-  '/:code',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { code } = req.params;
-
-      const set = await prisma.pokemonSet.findUnique({
-        where: { code }
-      });
-
-      if (!set) {
-        return res.status(404).json({ error: 'Set not found' });
-      }
-
-      const cards = await prisma.card.findMany({
-        where: { setCode: code },
-        orderBy: { cardNumber: 'asc' }
-      });
-
-      res.json({
-        set: {
-          id: set.id,
-          name: set.name,
-          code: set.code,
-          totalCards: set.totalCards,
-          releaseYear: set.releaseYear,
-          imageUrl: set.imageUrl
-        },
-        cards: cards.map(card => ({
-          id: card.id,
-          name: card.name,
-          cardNumber: card.cardNumber,
-          rarity: card.rarity,
-          imageUrl: card.imageUrl
-        }))
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
+// Static routes MUST be registered before parameterized routes
+// otherwise /:code catches "progress" as a code value
 setsRouter.get(
   '/progress',
   authenticate,
@@ -148,6 +108,48 @@ setsRouter.get(
       res.json({ progress: progressBySet });
     } catch (error) {
       console.error('Error in /progress:', error);
+      next(error);
+    }
+  }
+);
+
+setsRouter.get(
+  '/:code',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { code } = req.params;
+
+      const set = await prisma.pokemonSet.findUnique({
+        where: { code }
+      });
+
+      if (!set) {
+        return res.status(404).json({ error: 'Set not found' });
+      }
+
+      const cards = await prisma.card.findMany({
+        where: { setCode: code },
+        orderBy: { cardNumber: 'asc' }
+      });
+
+      res.json({
+        set: {
+          id: set.id,
+          name: set.name,
+          code: set.code,
+          totalCards: set.totalCards,
+          releaseYear: set.releaseYear,
+          imageUrl: set.imageUrl
+        },
+        cards: cards.map(card => ({
+          id: card.id,
+          name: card.name,
+          cardNumber: card.cardNumber,
+          rarity: card.rarity,
+          imageUrl: card.imageUrl
+        }))
+      });
+    } catch (error) {
       next(error);
     }
   }

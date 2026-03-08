@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
 
@@ -35,6 +35,12 @@ interface ProgressData {
   percentage: number;
 }
 
+interface User {
+  id: string;
+  username: string;
+  email: string;
+}
+
 const getRarityColor = (rarity: string | null): string => {
   if (!rarity) return '#94a3b8';
   const r = rarity.toLowerCase();
@@ -45,14 +51,19 @@ const getRarityColor = (rarity: string | null): string => {
   return '#94a3b8';
 };
 
+const RARITY_NAMES: Record<string, string> = {
+  'MEGA_ATTACK_RARE': 'Mega Rare',
+};
+
 const formatRarity = (rarity: string | null): string => {
   if (!rarity) return 'Unknown';
-  return rarity.replace(/_/g, ' ').replace(/MEGA_ATTACK_RARE/g, 'Mega Rare');
+  if (RARITY_NAMES[rarity]) return RARITY_NAMES[rarity];
+  return rarity.replace(/_/g, ' ');
 };
 
 const SetBadge = ({ imageUrl, name }: { imageUrl: string | null; name: string }) => {
   const initial = name.charAt(0).toUpperCase();
-  
+
   if (!imageUrl) {
     return (
       <div style={{
@@ -71,10 +82,10 @@ const SetBadge = ({ imageUrl, name }: { imageUrl: string | null; name: string })
       </div>
     );
   }
-  
+
   return (
     <>
-      <img 
+      <img
         src={imageUrl}
         alt={name}
         style={{ width: '150px', height: '75px', objectFit: 'contain' }}
@@ -92,24 +103,27 @@ const SetBadge = ({ imageUrl, name }: { imageUrl: string | null; name: string })
 };
 
 export default function CollectionDetailPage({ params }: { params: { code: string } }) {
-  const router = useRouter();
-  
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [set, setSet] = useState<SetData | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [ownedCards, setOwnedCards] = useState<Card[]>([]);
   const [missingCards, setMissingCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
+  const [progressLoaded, setProgressLoaded] = useState(false);
   const [showMissing, setShowMissing] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    
+
     if (token && userData) {
-      setUser(JSON.parse(userData));
+      try {
+        setUser(JSON.parse(userData));
+      } catch {
+        localStorage.removeItem('user');
+      }
     }
   }, []);
 
@@ -135,17 +149,23 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
   }, [params.code]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setProgressLoaded(true);
+      return;
+    }
 
     const fetchProgress = async () => {
       const token = localStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        setProgressLoaded(true);
+        return;
+      }
 
       try {
         const response = await fetch(`${API_URL}/api/sets/${params.code}/progress`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           setProgress(data.progress);
@@ -154,26 +174,39 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
         }
       } catch (err) {
         // Silently fail - user will see public data
+      } finally {
+        setProgressLoaded(true);
       }
     };
 
     fetchProgress();
   }, [user, params.code]);
 
-  const handleCardClick = (cardId: string) => {
-    router.push(`/marketplace/${cardId}`);
-  };
+  // If progress API didn't return data, fall back to set cards as missing
+  const effectiveMissing = missingCards.length > 0 ? missingCards : (ownedCards.length === 0 ? cards : missingCards);
+  const displayCards = user ? (showMissing ? effectiveMissing : ownedCards) : cards;
+
+  const sortedCards = useMemo(() =>
+    [...displayCards].sort((a, b) => {
+      const numA = parseInt(a.cardNumber, 10) || 0;
+      const numB = parseInt(b.cardNumber, 10) || 0;
+      return numA - numB;
+    }),
+    [displayCards]
+  );
+
+  const ownedSet = useMemo(() => new Set(ownedCards.map(c => c.id)), [ownedCards]);
 
   if (loading) {
     return (
       <div style={containerStyle}>
-        <div style={{ 
-          background: 'rgba(255,255,255,0.05)', 
-          borderRadius: '16px', 
-          padding: '3rem', 
+        <div style={{
+          background: 'rgba(255,255,255,0.05)',
+          borderRadius: '16px',
+          padding: '3rem',
           textAlign: 'center',
           color: 'white'
-        }}>
+        }} role="status" aria-live="polite">
           Loading...
         </div>
       </div>
@@ -186,51 +219,39 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
         <Link href="/collection" style={{ color: '#ffd700', textDecoration: 'none', display: 'inline-block', marginBottom: '1rem' }}>
           ← Back to Collection
         </Link>
-        <div style={{ 
-          background: 'rgba(255,255,255,0.05)', 
-          borderRadius: '16px', 
-          padding: '3rem', 
+        <div style={{
+          background: 'rgba(255,255,255,0.05)',
+          borderRadius: '16px',
+          padding: '3rem',
           textAlign: 'center'
         }}>
           <h1 style={{ color: 'white' }}>Set Not Found</h1>
-          <p style={{ color: '#94a3b8', marginTop: '1rem' }}>{error || 'Loading...'}</p>
+          <p style={{ color: '#94a3b8', marginTop: '1rem' }}>{error || 'An unexpected error occurred'}</p>
         </div>
       </div>
     );
   }
 
-  // If progress API didn't return data, fall back to set cards as missing
-  const effectiveMissing = missingCards.length > 0 ? missingCards : (ownedCards.length === 0 ? cards : missingCards);
-  const displayCards = user ? (showMissing ? effectiveMissing : ownedCards) : cards;
-  
-  const sortedCards = [...displayCards].sort((a, b) => {
-    const numA = parseInt(a.cardNumber, 10) || 0;
-    const numB = parseInt(b.cardNumber, 10) || 0;
-    return numA - numB;
-  });
-  
-  const ownedSet = new Set(ownedCards.map(c => c.id));
-
   return (
     <div style={containerStyle}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        
+
         {/* Header */}
         <Link href="/collection" style={{ color: '#ffd700', textDecoration: 'none', display: 'inline-block', marginBottom: '1.5rem' }}>
           ← Collection
         </Link>
 
-        <div style={{ 
-          background: 'rgba(255,255,255,0.05)', 
+        <div style={{
+          background: 'rgba(255,255,255,0.05)',
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '16px', 
+          borderRadius: '16px',
           padding: '2rem',
           marginBottom: '2rem'
         }}>
           <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <SetBadge imageUrl={set.imageUrl} name={set.name} />
-            
+
             <div style={{ flex: 1, minWidth: '200px' }}>
               <h1 style={{ color: 'white', fontSize: '32px', fontWeight: 'bold', margin: 0 }}>
                 {set.name}
@@ -238,7 +259,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
               <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>
                 {set.releaseYear} • {set.totalCards} cards
               </p>
-              
+
               {/* Progress Bar - only show for logged in users */}
               {user ? (
                 <div style={{ marginTop: '1.5rem' }}>
@@ -248,14 +269,14 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                       {progress?.owned || 0} / {progress?.total || set.totalCards} cards
                     </span>
                   </div>
-                  <div style={{ 
-                    height: '8px', 
-                    backgroundColor: '#1a2332', 
+                  <div style={{
+                    height: '8px',
+                    backgroundColor: '#1a2332',
                     borderRadius: '4px',
                     overflow: 'hidden'
                   }}>
-                    <div style={{ 
-                      height: '100%', 
+                    <div style={{
+                      height: '100%',
                       width: `${progress?.percentage || 0}%`,
                       background: 'linear-gradient(to right, #e63946, #c1121f)',
                       borderRadius: '4px',
@@ -264,7 +285,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                   </div>
                 </div>
               ) : (
-                <div style={{ 
+                <div style={{
                   marginTop: '1.5rem',
                   padding: '1rem',
                   background: 'rgba(0,0,0,0.2)',
@@ -276,14 +297,14 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                   </p>
                 </div>
               )}
-              
+
               {/* Stat Pills - only show for logged in users */}
               {user && (
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                  <div style={{ 
-                    background: 'rgba(16, 185, 129, 0.1)', 
+                  <div style={{
+                    background: 'rgba(16, 185, 129, 0.1)',
                     border: '1px solid rgba(16, 185, 129, 0.3)',
-                    borderRadius: '20px', 
+                    borderRadius: '20px',
                     padding: '0.5rem 1rem',
                     display: 'flex',
                     alignItems: 'center',
@@ -292,10 +313,10 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                     <span style={{ color: '#10b981', fontWeight: 'bold' }}>{progress?.owned || 0}</span>
                     <span style={{ color: '#94a3b8', fontSize: '14px' }}>owned</span>
                   </div>
-                  <div style={{ 
-                    background: 'rgba(239, 68, 68, 0.1)', 
+                  <div style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
                     border: '1px solid rgba(239, 68, 68, 0.3)',
-                    borderRadius: '20px', 
+                    borderRadius: '20px',
                     padding: '0.5rem 1rem',
                     display: 'flex',
                     alignItems: 'center',
@@ -312,9 +333,11 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
 
         {/* Tabs - only show for logged in users */}
         {user && (
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }} role="tablist">
             <button
               onClick={() => setShowMissing(true)}
+              role="tab"
+              aria-selected={showMissing}
               style={{
                 padding: '0.75rem 1.5rem',
                 background: showMissing ? 'linear-gradient(135deg, #e63946, #c1121f)' : 'rgba(255,255,255,0.05)',
@@ -330,6 +353,8 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
             </button>
             <button
               onClick={() => setShowMissing(false)}
+              role="tab"
+              aria-selected={!showMissing}
               style={{
                 padding: '0.75rem 1.5rem',
                 background: !showMissing ? 'linear-gradient(135deg, #e63946, #c1121f)' : 'rgba(255,255,255,0.05)',
@@ -348,10 +373,10 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
 
         {/* Card Grid */}
         {!user && (
-          <div style={{ 
-            background: 'rgba(255,255,255,0.05)', 
-            borderRadius: '16px', 
-            padding: '1rem', 
+          <div style={{
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '16px',
+            padding: '1rem',
             marginBottom: '1.5rem',
             textAlign: 'center'
           }}>
@@ -361,20 +386,29 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
           </div>
         )}
 
-        {displayCards.length === 0 ? (
-          <div style={{ 
-            background: 'rgba(255,255,255,0.05)', 
-            borderRadius: '16px', 
-            padding: '3rem', 
+        {!progressLoaded && user ? (
+          <div style={{
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '16px',
+            padding: '3rem',
+            textAlign: 'center'
+          }} role="status" aria-live="polite">
+            <p style={{ color: '#94a3b8', fontSize: '18px' }}>Loading collection data...</p>
+          </div>
+        ) : displayCards.length === 0 ? (
+          <div style={{
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '16px',
+            padding: '3rem',
             textAlign: 'center'
           }}>
             <p style={{ color: '#94a3b8', fontSize: '18px' }}>
-              {!user 
+              {!user
                 ? 'Sign in to track your collection'
-                : showMissing 
-                  ? (ownedCards.length === 0 && cards.length > 0 
+                : showMissing
+                  ? (ownedCards.length === 0 && cards.length > 0
                       ? `You don't own any cards in this set yet`
-                      : '🎉 No missing cards! You have the complete set!')
+                      : 'No missing cards! You have the complete set!')
                   : 'No owned cards in this set yet.'
               }
             </p>
@@ -384,19 +418,21 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
             {sortedCards.map(card => {
               const isOwned = user && ownedSet.has(card.id);
               const rarityColor = getRarityColor(card.rarity);
-              
+
               return (
-                <div 
+                <Link
                   key={card.id}
-                  onClick={() => handleCardClick(card.id)}
-                  style={{ 
-                    background: '#111827', 
-                    borderRadius: '12px', 
+                  href={`/marketplace/${card.id}`}
+                  style={{
+                    background: '#111827',
+                    borderRadius: '12px',
                     overflow: 'hidden',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                     position: 'relative',
-                    border: `1px solid ${rarityColor}40`
+                    border: `1px solid ${rarityColor}40`,
+                    textDecoration: 'none',
+                    display: 'block'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'scale(1.02) translateY(-4px)';
@@ -407,41 +443,45 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                     e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
-                  {/* Owned indicator - only show for logged in users */}
+                  {/* Owned indicator */}
                   {isOwned && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '8px',
-                      right: '8px',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      background: '#10b981',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      zIndex: 10,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-                    }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                    <div
+                      aria-label="Owned"
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        background: '#10b981',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 10,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" aria-hidden="true">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     </div>
                   )}
-                  
+
                   {/* Card Image */}
                   <div style={{ height: '140px', background: '#1a2332', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem' }}>
                     {card.imageUrl ? (
-                      <img 
-                        src={card.imageUrl} 
+                      <img
+                        src={card.imageUrl}
                         alt={card.name}
+                        loading="lazy"
                         style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
                       />
                     ) : (
                       <span style={{ color: '#94a3b8' }}>No Image</span>
                     )}
                   </div>
-                  
+
                   {/* Card Info */}
                   <div style={{ padding: '0.75rem' }}>
                     <h4 style={{ color: 'white', margin: 0, fontSize: '14px', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -451,7 +491,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                       #{card.cardNumber}
                     </p>
                     {card.rarity && (
-                      <span style={{ 
+                      <span style={{
                         display: 'inline-block',
                         marginTop: '0.5rem',
                         padding: '0.125rem 0.5rem',
@@ -466,7 +506,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                       </span>
                     )}
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
