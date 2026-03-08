@@ -276,7 +276,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
     if (!card?.prices) return [];
     const now = new Date();
     let cutoffDate: Date;
-    
+
     switch (priceRange) {
       case '30d':
         cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -288,17 +288,31 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
         cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
         break;
     }
-    
+
     return card.prices
       .filter(p => new Date(p.date) >= cutoffDate)
       .reverse();
   };
 
+  // All hooks MUST be called before any conditional returns (React rules of hooks)
+  const links = getAffiliateLinks();
+  const latestPrice = card?.prices?.[0] ?? null;
+  const priceHistory = getPriceHistory();
+  const rawMarketPrice = latestPrice?.priceMarket ?? null;
+  const gradedValuePreview = useMemo(() => {
+    if (cardFormat !== 'GRADED' || rawMarketPrice == null) {
+      return null;
+    }
+    return rawMarketPrice * GRADE_MULTIPLIERS[gradingService][gradeValue];
+  }, [cardFormat, rawMarketPrice, gradingService, gradeValue]);
+  const unitValuePreview = cardFormat === 'GRADED' && gradedValuePreview != null ? gradedValuePreview : rawMarketPrice;
+  const totalValuePreview = unitValuePreview != null ? unitValuePreview * quantity : null;
+
   if (loading) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: '#0a0f1e', 
+      <div style={{
+        minHeight: '100vh',
+        background: '#0a0f1e',
         padding: '2rem',
         color: 'white'
       }}>
@@ -309,9 +323,9 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
 
   if (error) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: '#0a0f1e', 
+      <div style={{
+        minHeight: '100vh',
+        background: '#0a0f1e',
         padding: '2rem',
         color: 'white'
       }}>
@@ -324,9 +338,9 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
 
   if (!card) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: '#0a0f1e', 
+      <div style={{
+        minHeight: '100vh',
+        background: '#0a0f1e',
         padding: '2rem',
         color: 'white'
       }}>
@@ -335,21 +349,6 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
       </div>
     );
   }
-
-  const links = getAffiliateLinks();
-  const latestPrice = card.prices?.[0];
-  const priceHistory = getPriceHistory();
-  const maxPrice = Math.max(...priceHistory.map(p => p.priceMarket ?? 0), 1);
-  const minPrice = Math.min(...priceHistory.map(p => p.priceMarket ?? 0), 0);
-  const rawMarketPrice = latestPrice?.priceMarket ?? null;
-  const gradedValuePreview = useMemo(() => {
-    if (cardFormat !== 'GRADED' || rawMarketPrice == null) {
-      return null;
-    }
-    return rawMarketPrice * GRADE_MULTIPLIERS[gradingService][gradeValue];
-  }, [cardFormat, rawMarketPrice, gradingService, gradeValue]);
-  const unitValuePreview = cardFormat === 'GRADED' && gradedValuePreview != null ? gradedValuePreview : rawMarketPrice;
-  const totalValuePreview = unitValuePreview != null ? unitValuePreview * quantity : null;
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem', background: '#0a0f1e', minHeight: '100vh' }}>
