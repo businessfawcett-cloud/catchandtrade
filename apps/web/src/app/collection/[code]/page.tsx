@@ -199,7 +199,9 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
     );
   }
 
-  const displayCards = user ? (showMissing ? missingCards : ownedCards) : cards;
+  // If progress API didn't return data, fall back to set cards as missing
+  const effectiveMissing = missingCards.length > 0 ? missingCards : (ownedCards.length === 0 ? cards : missingCards);
+  const displayCards = user ? (showMissing ? effectiveMissing : ownedCards) : cards;
   
   const sortedCards = [...displayCards].sort((a, b) => {
     const numA = parseInt(a.cardNumber, 10) || 0;
@@ -324,7 +326,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
                 transition: 'all 0.2s'
               }}
             >
-              Missing Cards ({missingCards.length})
+              Missing Cards ({effectiveMissing.length})
             </button>
             <button
               onClick={() => setShowMissing(false)}
