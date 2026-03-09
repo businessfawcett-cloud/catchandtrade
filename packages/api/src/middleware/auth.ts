@@ -7,13 +7,11 @@ if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
 }
 const SECRET = JWT_SECRET || 'test-jwt-secret';
 
-const isDev = process.env.NODE_ENV !== 'production';
-
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    if (isDev) console.log('Authentication failed: Missing or malformed Authorization header');
+    console.log('[AUTH] Missing or malformed Authorization header');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -21,20 +19,30 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
 
   try {
     const decoded = jwt.verify(token, SECRET);
-    if (!decoded || typeof decoded !== 'object' || typeof (decoded as any).userId !== 'string') {
+    console.log('[AUTH] Token decoded successfully:', decoded);
+    
+    if (!decoded || typeof decoded !== 'object') {
+      console.log('[AUTH] Invalid token payload - not an object');
       return res.status(401).json({ error: 'Invalid token payload' });
     }
-    (req as any).userId = (decoded as { userId: string }).userId;
+    
+    const tokenData = decoded as Record<string, unknown>;
+    if (typeof tokenData.userId !== 'string') {
+      console.log('[AUTH] Invalid token payload - userId not a string:', tokenData);
+      return res.status(401).json({ error: 'Invalid token payload' });
+    }
+    
+    (req as any).userId = tokenData.userId;
     next();
   } catch (err) {
     const error = err as Error;
-    if (isDev) console.log('JWT verification failed:', error.message);
+    console.log('[AUTH] JWT verification failed:', error.message);
 
     let errorType = 'Invalid token';
     if (error.name === 'TokenExpiredError') {
       errorType = 'Token expired';
     } else if (error.name === 'JsonWebTokenError') {
-      errorType = 'Invalid token';
+      errorType = 'Invalid token signature';
     } else if (error.name === 'NotBeforeError') {
       errorType = 'Token not active yet';
     }
