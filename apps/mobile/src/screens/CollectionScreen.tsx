@@ -1,16 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  SectionList,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { getSets, getSetProgress, PokemonSet } from '../lib/api';
+import * as Storage from '../lib/storage';
 
 interface CollectionScreenProps {
   navigation: any;
+}
+
+interface YearSection {
+  title: string;
+  data: PokemonSet[];
 }
 
 export default function CollectionScreen({ navigation }: CollectionScreenProps) {
@@ -18,9 +25,12 @@ export default function CollectionScreen({ navigation }: CollectionScreenProps) 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [progressMap, setProgressMap] = useState<Record<string, any>>({});
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const loadSets = async () => {
     try {
+      const token = await Storage.getToken();
+      setIsLoggedIn(!!token);
       const data = await getSets();
       setSets(data);
     } catch (error) {
@@ -32,6 +42,9 @@ export default function CollectionScreen({ navigation }: CollectionScreenProps) 
   };
 
   const loadProgress = async () => {
+    const token = await Storage.getToken();
+    if (!token) return;
+
     const progress: Record<string, any> = {};
     for (const set of sets) {
       try {
@@ -59,43 +72,89 @@ export default function CollectionScreen({ navigation }: CollectionScreenProps) 
     loadSets();
   };
 
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 75) return '#28a745';
-    if (percentage >= 25) return '#ffc107';
-    return '#6c757d';
+  const sections: YearSection[] = useMemo(() => {
+    const grouped: Record<number, PokemonSet[]> = {};
+    for (const set of sets) {
+      const year = set.releaseYear;
+      if (!grouped[year]) grouped[year] = [];
+      grouped[year].push(set);
+    }
+    return Object.keys(grouped)
+      .map(Number)
+      .sort((a, b) => b - a)
+      .map((year) => ({
+        title: String(year),
+        data: grouped[year],
+      }));
+  }, [sets]);
+
+  const getEraColor = (year: number): string => {
+    if (year >= 2020) return '#e63946';
+    if (year >= 2010) return '#ffd700';
+    return '#9b59b6';
   };
+
+  const getProgressColor = (percentage: number): string => {
+    if (percentage === 0) return '#e63946';
+    if (percentage >= 100) return '#28a745';
+    return '#ffd700';
+  };
+
+  const renderSectionHeader = ({ section }: { section: YearSection }) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{section.title}</Text>
+      <View style={styles.sectionLine} />
+    </View>
+  );
 
   const renderSet = ({ item }: { item: PokemonSet }) => {
     const progress = progressMap[item.code];
     const percentage = progress?.percentage || 0;
+    const year = item.releaseYear;
 
     return (
       <TouchableOpacity
         style={styles.setCard}
-        onPress={() => navigation.navigate('CollectionDetail', { code: item.code, name: item.name })}
+        activeOpacity={0.7}
+        onPress={() =>
+          navigation.navigate('CollectionDetail', {
+            setCode: item.code,
+            setName: item.name,
+          })
+        }
       >
-        <View style={styles.setHeader}>
-          <View style={styles.setInfo}>
-            <Text style={styles.setName}>{item.name}</Text>
-            <Text style={styles.setYear}>{item.releaseYear}</Text>
+        <View style={[styles.accentBar, { backgroundColor: getEraColor(year) }]} />
+        <View style={styles.setContent}>
+          <View style={styles.setHeader}>
+            <Text style={styles.setName} numberOfLines={2}>
+              {item.name}
+            </Text>
+            <Text style={styles.cardCount}>
+              {item.cardCount ?? item.totalCards} cards
+            </Text>
           </View>
-          <View style={styles.setCode}>
-            <Text style={styles.setCodeText}>{item.code}</Text>
-          </View>
-        </View>
 
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${percentage}%`, backgroundColor: getProgressColor(percentage) },
-              ]}
-            />
-          </View>
-          <Text style={styles.progressText}>
-            {progress ? `${progress.owned}/${progress.total}` : `0/${item.totalCards}`} ({percentage}%)
-          </Text>
+          {isLoggedIn && (
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${percentage}%`,
+                      backgroundColor: getProgressColor(percentage),
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.progressText}>
+                {progress
+                  ? `${progress.owned}/${progress.total}`
+                  : `0/${item.totalCards}`}{' '}
+                ({percentage}%)
+              </Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -103,24 +162,34 @@ export default function CollectionScreen({ navigation }: CollectionScreenProps) 
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <Text>Loading...</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#e63946" />
+        <Text style={styles.loadingText}>Loading sets...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>My Collection</Text>
+      <View style={styles.headerContainer}>
+        <Text style={styles.title}>Pokemon Card Sets</Text>
+      </View>
 
-      <FlatList
-        data={sets}
+      <SectionList
+        sections={sections}
         keyExtractor={(item) => item.id}
         renderItem={renderSet}
+        renderSectionHeader={renderSectionHeader}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#e63946"
+            colors={['#e63946']}
+          />
         }
         contentContainerStyle={styles.list}
+        stickySectionHeadersEnabled={false}
       />
     </View>
   );
@@ -129,72 +198,103 @@ export default function CollectionScreen({ navigation }: CollectionScreenProps) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#0d1117',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#0d1117',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#8b949e',
+    fontSize: 16,
+    marginTop: 12,
+  },
+  headerContainer: {
+    backgroundColor: '#161b22',
+    paddingTop: 56,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#21262d',
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
-    padding: 20,
-    backgroundColor: '#fff',
+    color: '#ffffff',
   },
   list: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffd700',
+    marginRight: 12,
+  },
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#30363d',
   },
   setCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#161b22',
     borderRadius: 12,
+    marginBottom: 10,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#21262d',
+  },
+  accentBar: {
+    width: 4,
+  },
+  setContent: {
+    flex: 1,
     padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   setHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  setInfo: {
-    flex: 1,
+    marginBottom: 8,
   },
   setName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 4,
+    color: '#ffffff',
+    flex: 1,
+    marginRight: 12,
   },
-  setYear: {
-    fontSize: 14,
-    color: '#666',
-  },
-  setCode: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  setCodeText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#666',
+  cardCount: {
+    fontSize: 13,
+    color: '#8b949e',
+    fontWeight: '600',
   },
   progressContainer: {
-    gap: 8,
+    gap: 6,
   },
   progressBar: {
-    height: 8,
-    backgroundColor: '#e9ecef',
-    borderRadius: 4,
+    height: 6,
+    backgroundColor: '#21262d',
+    borderRadius: 3,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 3,
   },
   progressText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 12,
+    color: '#8b949e',
   },
 });

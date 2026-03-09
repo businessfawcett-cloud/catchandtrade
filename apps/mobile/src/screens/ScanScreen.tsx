@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,50 +6,50 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  Alert,
   Linking,
   Dimensions,
 } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { searchCards, getDefaultPortfolio, addToPortfolio, Card } from '../lib/api';
-import CardResult from '../components/CardResult';
+import { Card } from '../lib/api';
 import SearchModal from '../components/SearchModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH * 0.85;
 const CARD_HEIGHT = CARD_WIDTH * 1.4;
 
-type ScanState = 'CAMERA' | 'PROCESSING' | 'RESULT' | 'FAILED';
+type ScanState = 'CAMERA' | 'PROCESSING' | 'FAILED';
 
-export default function ScanScreen() {
+export default function ScanScreen({ navigation }: { navigation: any }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [state, setState] = useState<ScanState>('CAMERA');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [scannedCard, setScannedCard] = useState<Card | null>(null);
-  const [condition, setCondition] = useState('NEAR_MINT');
-  const [quantity, setQuantity] = useState(1);
-  const [adding, setAdding] = useState(false);
-  const [added, setAdded] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
+  const [scanHint, setScanHint] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
+  const isFocused = useIsFocused();
 
-  const resetToCamera = () => {
+  const resetToCamera = useCallback(() => {
     setState('CAMERA');
     setCapturedImage(null);
-    setScannedCard(null);
-    setCondition('NEAR_MINT');
-    setQuantity(1);
-    setAdded(false);
-  };
+    setScanHint(null);
+  }, []);
+
+  // Reset to camera whenever the tab comes into focus
+  useEffect(() => {
+    if (isFocused) {
+      resetToCamera();
+    }
+  }, [isFocused, resetToCamera]);
 
   const processImage = async (uri: string) => {
     setCapturedImage(uri);
     setState('PROCESSING');
 
     try {
-      // Try to send to backend scan endpoint
+      // Resize full image
       const manipulated = await ImageManipulator.manipulateAsync(
         uri,
         [{ resize: { width: 800 } }],
@@ -61,25 +61,76 @@ export default function ScanScreen() {
         throw new Error('Failed to process image');
       }
 
+      const fullWidth = manipulated.width;
+      const fullHeight = manipulated.height;
+
+      // Crop the TOP 15% — the card name is the biggest, boldest text on the card
+      // Much more reliable for Tesseract than the tiny bottom number
+      let topBase64: string | undefined;
+      try {
+        const topCropHeight = Math.round(fullHeight * 0.15);
+        const topCrop = await ImageManipulator.manipulateAsync(
+          uri,
+          [
+            { crop: { originX: 0, originY: 0, width: fullWidth, height: topCropHeight } },
+            { resize: { width: 1200 } }, // upscale for better OCR on the name
+          ],
+          { format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+        topBase64 = topCrop.base64 || undefined;
+      } catch {
+        // Crop failed, continue without
+      }
+
+      // Crop the BOTTOM 20% — card number zone (045/198)
+      // Small text but clean digits, worth trying
+      let bottomBase64: string | undefined;
+      try {
+        const bottomCropHeight = Math.round(fullHeight * 0.20);
+        const bottomCrop = await ImageManipulator.manipulateAsync(
+          uri,
+          [
+            { crop: { originX: 0, originY: fullHeight - bottomCropHeight, width: fullWidth, height: bottomCropHeight } },
+            { resize: { width: 1200 } }, // upscale small digits
+          ],
+          { format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+        bottomBase64 = bottomCrop.base64 || undefined;
+      } catch {
+        // Crop failed, continue without
+      }
+
       const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3003';
       const response = await fetch(`${API_URL}/api/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64 }),
+        body: JSON.stringify({ imageBase64: base64, topBase64, bottomBase64 }),
       });
 
       if (response.ok) {
         const result = await response.json();
-        setScannedCard(result.card);
-        setState('RESULT');
+        navigation.navigate('CardDetail', { cardId: result.card.id, cardName: result.card.name });
+        resetToCamera();
         return;
       }
+
+      // Extract hint info from the failed response
+      try {
+        const errorData = await response.json();
+        if (errorData.candidates?.[0]) {
+          setScanHint(errorData.candidates[0]);
+        } else if (errorData.ocrText) {
+          // Use first meaningful line from OCR text as hint
+          const firstLine = errorData.ocrText.split('\n').find((l: string) => l.trim().length > 2);
+          if (firstLine) setScanHint(firstLine.trim());
+        }
+      } catch {
+        // ignore parse errors
+      }
     } catch (error) {
-      // Backend scan not available — fall through to manual search
       console.log('Auto-scan unavailable, opening manual search');
     }
 
-    // Fall back to manual search with the captured image as reference
     setState('FAILED');
   };
 
@@ -111,25 +162,10 @@ export default function ScanScreen() {
     }
   };
 
-  const handleAddToPortfolio = async () => {
-    if (!scannedCard) return;
-
-    setAdding(true);
-    try {
-      const portfolio = await getDefaultPortfolio();
-      await addToPortfolio(portfolio.id, scannedCard.id, condition, quantity);
-      setAdded(true);
-
-      setTimeout(() => {
-        resetToCamera();
-      }, 2000);
-    } catch (error) {
-      console.error('Failed to add to portfolio:', error);
-      Alert.alert('Error', 'Failed to add card to portfolio');
-    } finally {
-      setAdding(false);
-    }
-  };
+  const navigateToCard = useCallback((card: Card) => {
+    navigation.navigate('CardDetail', { cardId: card.id, cardName: card.name });
+    resetToCamera();
+  }, [navigation, resetToCamera]);
 
   const openSettings = () => {
     Linking.openSettings();
@@ -208,26 +244,6 @@ export default function ScanScreen() {
         </View>
       )}
 
-      {state === 'RESULT' && scannedCard && (
-        <View style={styles.resultContainer}>
-          {capturedImage && (
-            <Image source={{ uri: capturedImage }} style={styles.resultBackground} blurRadius={20} />
-          )}
-          <View style={styles.resultBackgroundOverlay} />
-          <CardResult
-            card={scannedCard}
-            condition={condition}
-            quantity={quantity}
-            onConditionChange={setCondition}
-            onQuantityChange={setQuantity}
-            onAddToPortfolio={handleAddToPortfolio}
-            onScanAnother={resetToCamera}
-            adding={adding}
-            added={added}
-          />
-        </View>
-      )}
-
       {state === 'FAILED' && (
         <View style={styles.failedContainer}>
           {capturedImage && (
@@ -236,7 +252,11 @@ export default function ScanScreen() {
           <View style={styles.failedContent}>
             <Text style={styles.failedIcon}>?</Text>
             <Text style={styles.failedTitle}>Couldn't auto-identify</Text>
-            <Text style={styles.failedText}>Search for the card by name instead</Text>
+            <Text style={styles.failedText}>
+              {scanHint
+                ? `We detected: "${scanHint}" — try searching below`
+                : 'Search for the card by name instead'}
+            </Text>
             <TouchableOpacity
               style={styles.searchButton}
               onPress={() => setSearchVisible(true)}
@@ -254,10 +274,10 @@ export default function ScanScreen() {
         visible={searchVisible}
         onClose={() => setSearchVisible(false)}
         onSelectCard={(card) => {
-          setScannedCard(card);
-          setState('RESULT');
           setSearchVisible(false);
+          navigateToCard(card);
         }}
+        initialQuery={scanHint || undefined}
       />
     </View>
   );
@@ -424,17 +444,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     textDecorationLine: 'underline',
-  },
-  resultContainer: {
-    flex: 1,
-  },
-  resultBackground: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.3,
-  },
-  resultBackgroundOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   failedContainer: {
     flex: 1,

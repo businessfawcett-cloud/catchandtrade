@@ -28,10 +28,37 @@ function CollectionStack() {
   );
 }
 
+function ScanStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ScanCamera" component={ScanScreen} />
+      <Stack.Screen name="CardDetail" component={CardDetailScreen} />
+    </Stack.Navigator>
+  );
+}
+
 function CardDetailStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CardList" component={MarketplaceScreen} />
+      <Stack.Screen name="CardDetail" component={CardDetailScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function PortfolioStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="PortfolioMain" component={PortfolioScreen} />
+      <Stack.Screen name="CardDetail" component={CardDetailScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function WatchlistStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="WatchlistMain" component={WatchlistScreen} />
       <Stack.Screen name="CardDetail" component={CardDetailScreen} />
     </Stack.Navigator>
   );
@@ -66,8 +93,8 @@ export default function App() {
           tabBarIcon: ({ focused }) => (
             <TabIcon name={route.name.replace('Tab', '')} focused={focused} />
           ),
-          tabBarActiveTintColor: '#0066cc',
-          tabBarInactiveTintColor: '#999',
+          tabBarActiveTintColor: '#e63946',
+          tabBarInactiveTintColor: '#8b949e',
           tabBarStyle: styles.tabBar,
           tabBarLabelStyle: styles.tabLabel,
         })}
@@ -77,9 +104,9 @@ export default function App() {
           component={HomeScreen}
           options={{ title: 'Home' }}
         />
-        <Tab.Screen 
-          name="ScanTab" 
-          component={ScanScreen}
+        <Tab.Screen
+          name="ScanTab"
+          component={ScanStack}
           options={{ title: 'Scan' }}
         />
         <Tab.Screen 
@@ -87,14 +114,14 @@ export default function App() {
           component={CardDetailStack}
           options={{ title: 'Market' }}
         />
-        <Tab.Screen 
-          name="PortfolioTab" 
-          component={PortfolioScreen}
+        <Tab.Screen
+          name="PortfolioTab"
+          component={PortfolioStack}
           options={{ title: 'Portfolio' }}
         />
-        <Tab.Screen 
-          name="WatchlistTab" 
-          component={WatchlistScreen}
+        <Tab.Screen
+          name="WatchlistTab"
+          component={WatchlistStack}
           options={{ title: 'Watchlist' }}
         />
         <Tab.Screen 
@@ -108,7 +135,7 @@ export default function App() {
           options={{ title: 'Profile' }}
         />
       </Tab.Navigator>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
     </NavigationContainer>
   );
 }
@@ -118,28 +145,28 @@ const styles = StyleSheet.create({
     height: 85,
     paddingBottom: 20,
     paddingTop: 10,
-    backgroundColor: '#fff',
+    backgroundColor: '#0d1117',
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: 'rgba(255,255,255,0.08)',
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   iconContainer: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 18,
   },
   iconContainerFocused: {
-    backgroundColor: '#e6f0ff',
-    borderRadius: 20,
+    backgroundColor: 'rgba(230,57,70,0.15)',
   },
   icon: {
-    fontSize: 22,
+    fontSize: 20,
   },
   iconFocused: {
-    transform: [{ scale: 1.1 }],
+    transform: [{ scale: 1.15 }],
   },
 });

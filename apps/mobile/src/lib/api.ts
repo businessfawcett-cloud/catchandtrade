@@ -81,6 +81,18 @@ export async function register(email: string, password: string, displayName: str
   return data;
 }
 
+export async function loginWithGoogle(googleAccessToken: string) {
+  const response = await fetch(`${API_URL}/api/auth/google/mobile`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessToken: googleAccessToken }),
+  });
+
+  const data = await handleResponse<{ token: string; user: any }>(response);
+  await Storage.saveToken(data.token);
+  return data;
+}
+
 export async function logout() {
   await Storage.clearToken();
 }
@@ -141,13 +153,33 @@ export async function getDefaultPortfolio() {
   return handleResponse(response);
 }
 
-export async function addToPortfolio(portfolioId: string, cardId: string, condition: string, quantity: number) {
+export async function addToPortfolio(
+  portfolioId: string,
+  cardId: string,
+  condition: string,
+  quantity: number,
+  options?: {
+    isGraded?: boolean;
+    gradingService?: string;
+    gradeValue?: number;
+    valuationOverride?: number;
+  }
+) {
+  const body: any = { cardId, condition, quantity };
+  if (options?.isGraded) {
+    body.isGraded = true;
+    body.gradingService = options.gradingService;
+    body.gradeValue = options.gradeValue;
+    if (options.valuationOverride != null) {
+      body.valuationOverride = options.valuationOverride;
+    }
+  }
   const response = await fetch(`${API_URL}/api/portfolios/${portfolioId}/items`, {
     method: 'POST',
     headers: await getHeaders(),
-    body: JSON.stringify({ cardId, condition, quantity }),
+    body: JSON.stringify(body),
   });
-  
+
   return handleResponse(response);
 }
 

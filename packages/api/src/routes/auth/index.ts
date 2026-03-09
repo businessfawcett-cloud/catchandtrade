@@ -169,4 +169,70 @@ authRouter.post(
   }
 );
 
+// Mobile Google Sign-In: accepts Google access token, verifies with Google, returns JWT
+authRouter.post(
+  '/google/mobile',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { accessToken } = req.body;
+      if (!accessToken) {
+        return res.status(400).json({ error: 'Missing accessToken' });
+      }
+
+      // Verify the access token with Google's userinfo endpoint
+      const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!googleRes.ok) {
+        return res.status(401).json({ error: 'Invalid Google access token' });
+      }
+
+      const profile = await googleRes.json();
+      const googleId = profile.sub;
+      const email = profile.email;
+      const displayName = profile.name || 'Google User';
+      const avatarUrl = profile.picture || null;
+
+      if (!googleId) {
+        return res.status(401).json({ error: 'Could not verify Google identity' });
+      }
+
+      // Find or create user (same logic as passport strategy)
+      let user = await prisma.user.findUnique({ where: { googleId } });
+
+      if (!user && email) {
+        user = await prisma.user.findUnique({ where: { email } });
+        if (user) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { googleId },
+          });
+        }
+      }
+
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            googleId,
+            email: email || `google_${googleId}@noemail.local`,
+            displayName,
+            avatarUrl,
+          },
+        });
+        await prisma.portfolio.create({
+          data: { userId: user.id, name: 'My Portfolio' },
+        });
+      }
+
+      const { token, refreshToken } = generateTokens(user);
+      const { passwordHash: _, ...userWithoutPassword } = user;
+
+      res.json({ token, refreshToken, user: userWithoutPassword });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default authRouter;

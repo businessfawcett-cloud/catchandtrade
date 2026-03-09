@@ -9,6 +9,9 @@ import {
   StyleSheet,
   Modal,
   ActivityIndicator,
+  SafeAreaView,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { searchCards, Card } from '../lib/api';
 
@@ -16,10 +19,11 @@ interface SearchModalProps {
   visible: boolean;
   onClose: () => void;
   onSelectCard: (card: Card) => void;
+  initialQuery?: string;
 }
 
-export default function SearchModal({ visible, onClose, onSelectCard }: SearchModalProps) {
-  const [query, setQuery] = useState('');
+export default function SearchModal({ visible, onClose, onSelectCard, initialQuery }: SearchModalProps) {
+  const [query, setQuery] = useState(initialQuery || '');
   const [results, setResults] = useState<Card[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -42,6 +46,12 @@ export default function SearchModal({ visible, onClose, onSelectCard }: SearchMo
   }, []);
 
   useEffect(() => {
+    if (initialQuery && visible) {
+      setQuery(initialQuery);
+    }
+  }, [initialQuery, visible]);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       doSearch(query);
     }, 300);
@@ -57,8 +67,8 @@ export default function SearchModal({ visible, onClose, onSelectCard }: SearchMo
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <View style={styles.container}>
+    <Modal visible={visible} animationType="slide" presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'fullScreen'}>
+      <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.backButton}>
             <Text style={styles.backButtonText}>← Back</Text>
@@ -70,7 +80,7 @@ export default function SearchModal({ visible, onClose, onSelectCard }: SearchMo
           <TextInput
             style={styles.searchInput}
             placeholder="Search for a card..."
-            placeholderTextColor="#999"
+            placeholderTextColor="#8b949e"
             value={query}
             onChangeText={setQuery}
             autoFocus
@@ -80,7 +90,7 @@ export default function SearchModal({ visible, onClose, onSelectCard }: SearchMo
 
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0066cc" />
+            <ActivityIndicator size="large" color="#e63946" />
           </View>
         ) : (
           <FlatList
@@ -110,7 +120,7 @@ export default function SearchModal({ visible, onClose, onSelectCard }: SearchMo
                   <Text style={styles.resultSet}>
                     {item.setName} #{item.cardNumber}
                   </Text>
-                  {item.currentPrice && (
+                  {item.currentPrice != null && (
                     <Text style={styles.resultPrice}>${item.currentPrice.toFixed(2)}</Text>
                   )}
                 </View>
@@ -125,7 +135,7 @@ export default function SearchModal({ visible, onClose, onSelectCard }: SearchMo
             }
           />
         )}
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -133,38 +143,44 @@ export default function SearchModal({ visible, onClose, onSelectCard }: SearchMo
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#0d1117',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   backButton: {
     padding: 8,
   },
   backButtonText: {
     fontSize: 16,
-    color: '#0066cc',
+    color: '#e63946',
+    fontWeight: '600',
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
     marginLeft: 16,
+    color: '#fff',
   },
   searchContainer: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   searchInput: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#1a2332',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     fontSize: 16,
+    color: '#fff',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   loadingContainer: {
     flex: 1,
@@ -177,9 +193,11 @@ const styles = StyleSheet.create({
   resultItem: {
     flexDirection: 'row',
     padding: 12,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#161b22',
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   resultImageContainer: {
     width: 60,
@@ -189,7 +207,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 84,
     borderRadius: 8,
-    backgroundColor: '#eee',
+    backgroundColor: '#1a2332',
   },
   resultImagePlaceholder: {
     justifyContent: 'center',
@@ -204,10 +222,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 4,
+    color: '#fff',
   },
   resultSet: {
     fontSize: 14,
-    color: '#666',
+    color: '#8b949e',
     marginBottom: 4,
   },
   resultPrice: {
@@ -217,7 +236,8 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
-    color: '#999',
+    color: '#8b949e',
     marginTop: 40,
+    fontSize: 15,
   },
 });
