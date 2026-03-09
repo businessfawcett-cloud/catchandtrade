@@ -59,7 +59,7 @@ const containerStyle: React.CSSProperties = {
 
 export default function PokemonDetailPage() {
   const params = useParams();
-  const pokemonId = params.id as string;
+  const pokemonId = params?.id as string || '';
   const [data, setData] = useState<PokemonDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pokedex' | 'expansions' | 'folders' | 'search'>('pokedex');
@@ -78,6 +78,11 @@ export default function PokemonDetailPage() {
       try {
         setUser(JSON.parse(userData));
       } catch (e) {}
+    }
+
+    if (!pokemonId) {
+      setLoading(false);
+      return;
     }
 
     fetch(`${API_URL}/api/pokedex/${pokemonId}`, {
