@@ -3,7 +3,7 @@ services:
     name: catchandtrade-api
     env: node
     region: oregon
-    buildCommand: npm ci && cd packages/db && npx prisma generate && cd ../.. && npx turbo run build --filter=@catchandtrade/api
+    buildCommand: npm install && cd packages/db && npx prisma generate && cd ../.. && npx turbo run build --filter=@catchandtrade/api
     startCommand: cd packages/api && node dist/index.js
     healthCheckPath: /ping
     envVars:
@@ -25,7 +25,7 @@ services:
     name: catchandtrade-web
     env: node
     region: oregon
-    buildCommand: npm ci && npm run build --filter=@catchandtrade/web
+    buildCommand: npm install && npm run build --filter=@catchandtrade/web
     startCommand: npm run start --filter=@catchandtrade/web
     envVars:
       - key: NEXT_PUBLIC_API_URL
