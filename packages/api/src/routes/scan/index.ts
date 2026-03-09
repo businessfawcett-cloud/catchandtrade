@@ -9,10 +9,25 @@ let workerPromise: Promise<Tesseract.Worker> | null = null;
 
 function getWorker(): Promise<Tesseract.Worker> {
   if (!workerPromise) {
-    workerPromise = Tesseract.createWorker('eng');
+    workerPromise = Tesseract.createWorker('eng').catch((err) => {
+      workerPromise = null; // Reset so next call retries
+      throw err;
+    });
   }
   return workerPromise;
 }
+
+// Catch unhandled Tesseract worker errors that escape try/catch
+process.on('uncaughtException', (err) => {
+  if (err.message?.includes('read image') || err.message?.includes('truncated')) {
+    console.error('[Scan] Caught Tesseract crash (non-fatal):', err.message);
+    // Reset worker so it can be re-created
+    workerPromise = null;
+  } else {
+    console.error('Uncaught exception:', err);
+    process.exit(1);
+  }
+});
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -301,8 +316,14 @@ scanRouter.post(
       // Helper to OCR a base64 image
       const ocrImage = async (b64: string, label: string, ms: number): Promise<string> => {
         try {
+          const buf = Buffer.from(b64, 'base64');
+          // Validate it's actually an image (check for common magic bytes)
+          if (buf.length < 8) {
+            console.log(`[Scan] ${label}: buffer too small (${buf.length} bytes), skipping`);
+            return '';
+          }
           const result = await withTimeout(
-            worker.recognize(Buffer.from(b64, 'base64')),
+            worker.recognize(buf),
             ms
           );
           const text = (result as Tesseract.RecognizeResult).data.text;
