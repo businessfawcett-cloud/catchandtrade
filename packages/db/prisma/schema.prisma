@@ -57,6 +57,7 @@ model Card {
   rarity          String?
   imageUrl        String?
   pokemonTcgId    String?        @unique
+  pokemonId       Int?           // Pokemon species ID (1-1025)
   language        String         @default("EN")
   createdAt       DateTime       @default(now())
   setId           String?

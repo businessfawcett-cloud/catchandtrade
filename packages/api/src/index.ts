@@ -19,6 +19,7 @@ import gradingRouter from './routes/grading';
 import ebayRouter from './routes/ebay';
 import { debugRouter } from './routes/debug';
 import { scanRouter } from './routes/scan';
+import { pokedexRouter } from './routes/pokedex';
 import { startNightlySync, runNightlySync, syncPrices } from './cron/nightlySync';
 
 const PORT = process.env.PORT || 3003;
@@ -100,6 +101,7 @@ app.use('/api/ebay', ebayRouter);
 app.use('/api/grading', gradingRouter);
 app.use('/api/debug', debugRouter);
 app.use('/api/scan', scanRouter);
+app.use('/api/pokedex', pokedexRouter);
 
 // Public cron endpoint for UptimeRobot - triggers nightly sync
 const CRON_SECRET = process.env.CRON_SECRET;
