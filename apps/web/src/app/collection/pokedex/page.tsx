@@ -53,8 +53,14 @@ export default function PokedexPage() {
     fetch(`${API_URL}/api/pokedex/overview`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`API error: ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
+        console.log('Pokédex data:', data);
         setPokemonList(data.pokemon || []);
         setOverview(data.overview || null);
         setLoading(false);
@@ -426,7 +432,9 @@ export default function PokedexPage() {
           padding: '3rem',
           color: '#94a3b8'
         }}>
-          No Pokémon found matching your filters.
+          {overview && overview.totalOwned === 0 
+            ? "You haven't added any cards to your portfolio yet. Add cards from the Marketplace to see them here!" 
+            : "No Pokémon found matching your filters."}
         </div>
       )}
     </div>
