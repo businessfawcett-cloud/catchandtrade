@@ -18,6 +18,7 @@ import { webhooksRouter } from './routes/webhooks/stripe';
 import gradingRouter from './routes/grading';
 import ebayRouter from './routes/ebay';
 import { debugRouter } from './routes/debug';
+import { scanRouter } from './routes/scan';
 import { startNightlySync, runNightlySync, syncPrices } from './cron/nightlySync';
 
 const PORT = process.env.PORT || 3003;
@@ -33,7 +34,7 @@ if (process.env.WEB_URL) {
 
 export const app: Express = express();
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Debug middleware to log incoming requests
 app.use((req, res, next) => {
@@ -98,6 +99,7 @@ app.use('/api/webhooks', webhooksRouter);
 app.use('/api/ebay', ebayRouter);
 app.use('/api/grading', gradingRouter);
 app.use('/api/debug', debugRouter);
+app.use('/api/scan', scanRouter);
 
 // Public cron endpoint for UptimeRobot - triggers nightly sync
 const CRON_SECRET = process.env.CRON_SECRET;

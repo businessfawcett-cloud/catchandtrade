@@ -13,7 +13,7 @@ import {
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { scanCard, getDefaultPortfolio, addToPortfolio, Card } from '../lib/api';
+import { searchCards, getDefaultPortfolio, addToPortfolio, Card } from '../lib/api';
 import CardResult from '../components/CardResult';
 import SearchModal from '../components/SearchModal';
 
@@ -49,6 +49,7 @@ export default function ScanScreen() {
     setState('PROCESSING');
 
     try {
+      // Try to send to backend scan endpoint
       const manipulated = await ImageManipulator.manipulateAsync(
         uri,
         [{ resize: { width: 800 } }],
@@ -60,13 +61,26 @@ export default function ScanScreen() {
         throw new Error('Failed to process image');
       }
 
-      const result = await scanCard(base64);
-      setScannedCard(result.card);
-      setState('RESULT');
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3003';
+      const response = await fetch(`${API_URL}/api/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64 }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setScannedCard(result.card);
+        setState('RESULT');
+        return;
+      }
     } catch (error) {
-      console.error('Scan failed:', error);
-      setState('FAILED');
+      // Backend scan not available — fall through to manual search
+      console.log('Auto-scan unavailable, opening manual search');
     }
+
+    // Fall back to manual search with the captured image as reference
+    setState('FAILED');
   };
 
   const takePicture = async () => {
@@ -105,7 +119,7 @@ export default function ScanScreen() {
       const portfolio = await getDefaultPortfolio();
       await addToPortfolio(portfolio.id, scannedCard.id, condition, quantity);
       setAdded(true);
-      
+
       setTimeout(() => {
         resetToCamera();
       }, 2000);
@@ -174,8 +188,8 @@ export default function ScanScreen() {
             <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
               <View style={styles.captureButtonInner} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.controlButton}>
-              <Text style={styles.controlButtonText}>⚡</Text>
+            <TouchableOpacity style={styles.controlButton} onPress={() => setSearchVisible(true)}>
+              <Text style={styles.controlButtonText}>🔍</Text>
             </TouchableOpacity>
           </View>
         </CameraView>
@@ -221,16 +235,16 @@ export default function ScanScreen() {
           )}
           <View style={styles.failedContent}>
             <Text style={styles.failedIcon}>?</Text>
-            <Text style={styles.failedTitle}>Couldn't identify this card</Text>
-            <Text style={styles.failedText}>Try better lighting or search manually</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={resetToCamera}>
-              <Text style={styles.retryButtonText}>Try Again</Text>
-            </TouchableOpacity>
+            <Text style={styles.failedTitle}>Couldn't auto-identify</Text>
+            <Text style={styles.failedText}>Search for the card by name instead</Text>
             <TouchableOpacity
               style={styles.searchButton}
               onPress={() => setSearchVisible(true)}
             >
-              <Text style={styles.searchButtonText}>Search Manually</Text>
+              <Text style={styles.searchButtonText}>Search for Card</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.retryButton} onPress={resetToCamera}>
+              <Text style={styles.retryButtonText}>Try Again</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -428,11 +442,12 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   failedImage: {
-    width: 120,
-    height: 168,
+    width: 200,
+    height: 280,
     alignSelf: 'center',
     borderRadius: 8,
-    opacity: 0.5,
+    opacity: 0.7,
+    marginTop: 40,
     marginBottom: 20,
   },
   failedContent: {
@@ -464,26 +479,24 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   retryButton: {
-    backgroundColor: '#fff',
     paddingHorizontal: 48,
     paddingVertical: 16,
     borderRadius: 12,
-    marginBottom: 16,
+    marginTop: 12,
   },
   retryButtonText: {
-    color: '#000',
+    color: '#999',
     fontSize: 16,
-    fontWeight: 'bold',
   },
   searchButton: {
-    borderWidth: 2,
-    borderColor: '#fff',
+    backgroundColor: '#fff',
     paddingHorizontal: 48,
     paddingVertical: 16,
     borderRadius: 12,
   },
   searchButtonText: {
-    color: '#fff',
+    color: '#000',
     fontSize: 16,
+    fontWeight: 'bold',
   },
 });

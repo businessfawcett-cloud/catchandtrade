@@ -3,7 +3,7 @@
     "name": "Catch and Trade",
     "slug": "catchandtrade",
     "version": "1.0.0",
-    "sdkVersion": "53.0.0",
+    "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "updates": {
@@ -12,9 +12,7 @@
       "fallbackToCacheTimeout": 0,
       "url": ""
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "plugins": [
       [
         "expo-camera",

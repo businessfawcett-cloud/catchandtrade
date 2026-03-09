@@ -92,9 +92,19 @@ export default function SearchModal({ visible, onClose, onSelectCard }: SearchMo
                 style={styles.resultItem}
                 onPress={() => handleSelect(item)}
               >
-                {item.imageUrl && (
-                  <Image source={{ uri: item.imageUrl }} style={styles.resultImage} />
-                )}
+                <View style={styles.resultImageContainer}>
+                  {item.imageUrl ? (
+                    <Image
+                      source={{ uri: item.imageUrl }}
+                      style={styles.resultImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={[styles.resultImage, styles.resultImagePlaceholder]}>
+                      <Text style={{ fontSize: 24 }}>🃏</Text>
+                    </View>
+                  )}
+                </View>
                 <View style={styles.resultInfo}>
                   <Text style={styles.resultName}>{item.name}</Text>
                   <Text style={styles.resultSet}>
@@ -171,11 +181,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
   },
+  resultImageContainer: {
+    width: 60,
+    height: 84,
+  },
   resultImage: {
     width: 60,
     height: 84,
     borderRadius: 8,
     backgroundColor: '#eee',
+  },
+  resultImagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   resultInfo: {
     flex: 1,
