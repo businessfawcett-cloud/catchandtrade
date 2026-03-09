@@ -45,28 +45,40 @@ export default function PokedexPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    console.log('Pokédex: Token exists:', !!token);
+    console.log('Pokédex: Token value:', token ? token.substring(0, 20) + '...' : 'none');
+    
     if (!token) {
+      console.log('Pokédex: No token, redirecting to login');
       window.location.href = '/login';
       return;
     }
 
+    console.log('Pokédex: Making API call to /api/pokedex/overview');
     fetch(`${API_URL}/api/pokedex/overview`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     })
       .then(res => {
+        console.log('Pokédex: API response status:', res.status);
         if (!res.ok) {
-          throw new Error(`API error: ${res.status}`);
+          return res.text().then(text => {
+            console.log('Pokédex: API error response:', text);
+            throw new Error(`API error: ${res.status} - ${text}`);
+          });
         }
         return res.json();
       })
       .then(data => {
-        console.log('Pokédex data:', data);
+        console.log('Pokédex: Received data:', data);
         setPokemonList(data.pokemon || []);
         setOverview(data.overview || null);
         setLoading(false);
       })
       .catch(err => {
-        console.error('Failed to fetch pokedex:', err);
+        console.error('Pokédex: Failed to fetch:', err);
         setLoading(false);
       });
   }, []);
