@@ -8,10 +8,13 @@ export const pokedexRouter = Router();
 // GET /api/pokedex/overview
 // Returns all Pokemon with owned status for current user
 pokedexRouter.get('/overview', authenticate, async (req: Request, res: Response, next: NextFunction) => {
+  console.log('[POKEDEX] Overview endpoint called');
   try {
     const userId = (req as any).userId;
+    console.log('[POKEDEX] User ID:', userId);
 
     // Get all cards the user owns with their portfolio items
+    console.log('[POKEDEX] Fetching portfolio items...');
     const portfolioItems = await prisma.portfolioItem.findMany({
       where: {
         portfolio: { userId }
@@ -27,6 +30,7 @@ pokedexRouter.get('/overview', authenticate, async (req: Request, res: Response,
         }
       }
     });
+    console.log('[POKEDEX] Found portfolio items:', portfolioItems.length);
 
     // Group cards by Pokemon species
     const ownedPokemon = new Map<number, {
@@ -123,8 +127,13 @@ pokedexRouter.get('/overview', authenticate, async (req: Request, res: Response,
       pokemon: pokemonList
     });
   } catch (error) {
-    console.error('Error in pokedex overview:', error);
-    next(error);
+    console.error('[POKEDEX] Error in pokedex overview:', error);
+    console.error('[POKEDEX] Error stack:', error instanceof Error ? error.stack : 'No stack');
+    return res.status(500).json({ 
+      error: 'Internal Server Error', 
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: process.env.NODE_ENV !== 'production' ? (error instanceof Error ? error.stack : undefined) : undefined
+    });
   }
 });
 
