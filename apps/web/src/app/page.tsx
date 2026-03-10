@@ -371,6 +371,18 @@ function Dashboard({ user: initialUser }: { user: User }) {
   const [totalCardsCount, setTotalCardsCount] = useState<number>(0);
   const [user, setUser] = useState<User>(initialUser);
 
+  // Fallback recent sets in case API fails (2025-2026 sets)
+  const fallbackSets = [
+    { id: 'me2pt5', name: 'Ascended Heroes', total: 295, releaseDate: '2026-01-30', images: { logo: 'https://images.scrydex.com/pokemon/me2pt5-logo/logo', symbol: 'https://images.scrydex.com/pokemon/me2pt5-symbol/symbol' }},
+    { id: 'me2', name: 'Phantasmal Flames', total: 130, releaseDate: '2025-11-14', images: { logo: 'https://images.pokemontcg.io/me2/logo.png', symbol: 'https://images.pokemontcg.io/me2/symbol.png' }},
+    { id: 'me1', name: 'Mega Evolution', total: 188, releaseDate: '2025-09-26', images: { logo: 'https://images.pokemontcg.io/me1/logo.png', symbol: 'https://images.pokemontcg.io/me1/symbol.png' }},
+    { id: 'zsv10pt5', name: 'Black Bolt', total: 172, releaseDate: '2025-07-18', images: { logo: 'https://images.pokemontcg.io/zsv10pt5/logo.png', symbol: 'https://images.pokemontcg.io/zsv10pt5/symbol.png' }},
+    { id: 'rsv10pt5', name: 'White Flare', total: 173, releaseDate: '2025-07-18', images: { logo: 'https://images.pokemontcg.io/rsv10pt5/logo.png', symbol: 'https://images.pokemontcg.io/rsv10pt5/symbol.png' }},
+    { id: 'sv10', name: 'Destined Rivals', total: 244, releaseDate: '2025-05-30', images: { logo: 'https://images.pokemontcg.io/sv10/logo.png', symbol: 'https://images.pokemontcg.io/sv10/symbol.png' }},
+  ];
+
+  const [recentSets, setRecentSets] = useState<any[]>(fallbackSets);
+
   useEffect(() => {
     const userData = localStorage.getItem('user');
     try {
@@ -393,6 +405,22 @@ function Dashboard({ user: initialUser }: { user: User }) {
         setTotalCardsCount(data.total || 0);
       })
       .catch(() => {});
+
+    // Fetch recent TCG sets from Pokemon TCG API
+    fetch('https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate&pageSize=6')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.data && data.data.length > 0) {
+          setRecentSets(data.data.slice(0, 6));
+        } else {
+          // Use fallback data if API returns empty
+          setRecentSets(fallbackSets);
+        }
+      })
+      .catch(() => {
+        // Use fallback data if API fails
+        setRecentSets(fallbackSets);
+      });
   }, []);
 
   useEffect(() => {
@@ -439,223 +467,296 @@ function Dashboard({ user: initialUser }: { user: User }) {
   const avatarUrl = user.avatarId ? AVATARS[user.avatarId] : null;
   const displayName = user.displayName || user.username || 'Trainer';
 
-  const StatIcon = ({ type }: { type: 'pokemon' | 'cards' | 'value' | 'sets' }) => {
-    const icons: Record<string, React.ReactNode> = {
-      pokemon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#e63946" strokeWidth="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M12 2a7 7 0 0 1 7 7c0 5-7 11-7 11S5 14 5 9a7 7 0 0 1 7-7z"/>
-        </svg>
-      ),
-      cards: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#6890f0" strokeWidth="2">
-          <rect x="2" y="4" width="20" height="16" rx="2"/>
-          <path d="M12 8v8M8 12h8"/>
-        </svg>
-      ),
-      value: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#ffd700" strokeWidth="2">
-          <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-        </svg>
-      ),
-      sets: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-        </svg>
-      )
-    };
-    return icons[type];
-  };
+  // Stat card icons - larger 24px
+  const StackedCardsIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+      <rect x="2" y="4" width="20" height="14" rx="2" />
+      <rect x="4" y="2" width="20" height="14" rx="2" opacity="0.5" />
+    </svg>
+  );
 
-  const ActionCard = ({ icon, title, subtitle, href }: { icon: React.ReactNode; title: string; subtitle: string; href: string }) => (
-    <Link 
-      href={href}
-      className="flex-1 min-w-[200px] p-6 rounded-xl transition-all hover:scale-105"
-      style={{ 
-        background: 'rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255,255,255,0.1)'
-      }}
-    >
-      <div className="text-poke-red mb-3">{icon}</div>
-      <h3 className="font-rajdhani font-bold text-lg text-white mb-1">{title}</h3>
-      <p className="text-sm text-poke-text-muted">{subtitle}</p>
-    </Link>
+  const StarIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2">
+      <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
+    </svg>
+  );
+
+  const DollarCircleIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v12M9 9h4.5a1.5 1.5 0 0 1 0 3H9M9 15h4.5a1.5 1.5 0 0 0 0-3H9" />
+    </svg>
+  );
+
+  const GridIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+    </svg>
+  );
+
+  // Action tile icons - 28px
+  const SearchIcon = () => (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2">
+      <circle cx="11" cy="11" r="8" />
+      <path d="M21 21l-4.35-4.35" />
+    </svg>
+  );
+
+  const ChartIcon = () => (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2">
+      <path d="M3 3v18h18" />
+      <path d="M7 16l4-8 4 6 5-10" />
+    </svg>
+  );
+
+  const CameraIcon = () => (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  );
+
+  const TrendIcon = () => (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2">
+      <path d="M3 3v18h18" />
+      <path d="M7 16l4-8 4 6 5-10" />
+    </svg>
+  );
+
+  const EmptyPokeballIcon = () => (
+    <svg width="48" height="48" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
+      <line x1="5" y1="50" x2="95" y2="50" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
+      <circle cx="50" cy="50" r="12" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
+    </svg>
   );
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1529 50%, #0f1a2e 100%)' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#07070f' }}>
         <PokeballLoader size="lg" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative" style={{ background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1529 50%, #0f1a2e 100%)' }}>
-      {/* Floating Pokeballs Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute opacity-10 animate-float" style={{ left: '5%', top: '10%' }}>
-          <svg width="40" height="40" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="45" fill="#e63946" stroke="#0a0f1e" strokeWidth="4" />
-            <rect x="2" y="46" width="96" height="8" fill="#0a0f1e" />
-            <circle cx="50" cy="50" r="14" fill="#ffffff" stroke="#0a0f1e" strokeWidth="4" />
-            <circle cx="50" cy="50" r="6" fill="#0a0f1e" />
-          </svg>
-        </div>
-        <div className="absolute opacity-10 animate-float" style={{ left: '85%', top: '60%', animationDelay: '2s' }}>
-          <svg width="50" height="50" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="45" fill="#e63946" stroke="#0a0f1e" strokeWidth="4" />
-            <rect x="2" y="46" width="96" height="8" fill="#0a0f1e" />
-            <circle cx="50" cy="50" r="14" fill="#ffffff" stroke="#0a0f1e" strokeWidth="4" />
-            <circle cx="50" cy="50" r="6" fill="#0a0f1e" />
-          </svg>
-        </div>
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Trainer Card */}
-        <div 
-          className="rounded-2xl p-6 md:p-8 mb-8"
-          style={{ 
-            background: 'rgba(255,255,255,0.05)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.1)'
-          }}
-        >
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            {/* Left: Avatar & Name */}
-            <div className="flex items-center gap-6">
-              <div className="relative">
+    <div className="min-h-screen" style={{ background: '#07070f', fontFamily: 'DM Sans, sans-serif' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 36px' }}>
+        
+        {/* SECTION 1 - Profile Hero - Full width gradient banner */}
+        <div style={{
+          background: 'linear-gradient(135deg, #0d0d18 0%, #1a1035 50%, #0d0d18 100%)',
+          borderRadius: '20px',
+          padding: '32px 36px',
+          marginBottom: '32px',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Top row: avatar + name + buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
+            {/* Avatar + Name */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+              {/* Avatar - 64px with purple glow */}
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                border: '3px solid #8b5cf6',
+                boxShadow: '0 0 20px rgba(139,92,246,0.4)',
+                overflow: 'hidden'
+              }}>
                 {avatarUrl ? (
-                  <img 
-                    src={avatarUrl} 
-                    alt={displayName} 
-                    className="w-20 h-20 rounded-full object-contain bg-poke-bg-light border-4 border-poke-red"
-                  />
+                  <img src={avatarUrl} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-poke-red to-poke-gold flex items-center justify-center text-3xl font-bold text-white border-4 border-poke-red">
-                    {displayName.charAt(0).toUpperCase()}
+                  <div style={{ width: '100%', height: '100%', background: '#1a1035', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ color: 'white', fontSize: '24px', fontWeight: 'bold' }}>{displayName.charAt(0).toUpperCase()}</span>
                   </div>
                 )}
               </div>
+
+              {/* Name - Bebas Neue */}
               <div>
-                <h1 className="font-rajdhani text-3xl font-bold text-white">{user.displayName || user.username || 'Trainer'}</h1>
+                <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '36px', color: 'white', letterSpacing: '1px', lineHeight: 1 }}>{displayName}</h2>
                 {user.username && (
-                  <p className="text-poke-gold">@{user.username}</p>
+                  <span style={{ color: '#6b7280', fontSize: '14px' }}>@{user.username}</span>
                 )}
               </div>
             </div>
 
-            {/* Right: Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1 lg:ml-12">
-              <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(230,57,70,0.1)', border: '1px solid rgba(230,57,70,0.2)' }}>
-                <div className="flex justify-center mb-2"><StatIcon type="pokemon" /></div>
-                <div className="font-rajdhani text-2xl font-bold text-poke-red">{uniquePokemon.size}</div>
-                <div className="text-xs text-poke-text-muted">{totalCardsCount.toLocaleString()} cards available</div>
-              </div>
-              <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(104,144,240,0.1)', border: '1px solid rgba(104,144,240,0.2)' }}>
-                <div className="flex justify-center mb-2"><StatIcon type="cards" /></div>
-                <div className="font-rajdhani text-2xl font-bold text-blue-400">{totalCards}</div>
-                <div className="text-xs text-poke-text-muted">Cards Owned</div>
-              </div>
-              <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.2)' }}>
-                <div className="flex justify-center mb-2"><StatIcon type="value" /></div>
-                <div className="font-rajdhani text-2xl font-bold text-poke-gold">${portfolioValue ? portfolioValue.totalValue.toFixed(2) : '0.00'}</div>
-                <div className="text-xs text-poke-text-muted">Market Value</div>
-              </div>
-              <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)' }}>
-                <div className="flex justify-center mb-2"><StatIcon type="sets" /></div>
-                <div className="font-rajdhani text-2xl font-bold text-purple-400">{uniqueSets.size}</div>
-                <div className="text-xs text-poke-text-muted">Sets</div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 lg:ml-6">
+            {/* Buttons - refined */}
+            <div style={{ display: 'flex', gap: '8px' }}>
               <Link 
-                href="/onboarding" 
-                className="px-4 py-2 rounded-lg font-medium transition-all"
-                style={{ 
-                  background: 'rgba(255,255,255,0.05)',
+                href="/onboarding"
+                style={{
                   border: '1px solid rgba(255,255,255,0.1)',
-                  color: '#94a3b8'
+                  background: 'transparent',
+                  color: '#9ca3af',
+                  fontSize: '11px',
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  textDecoration: 'none',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#8b5cf6';
+                  e.currentTarget.style.color = '#8b5cf6';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.color = '#9ca3af';
                 }}
               >
                 Edit Profile
               </Link>
               <button 
-                onClick={handleShare} 
-                className="px-4 py-2 rounded-lg font-medium transition-all hover:scale-105"
-                style={{ 
-                  background: 'linear-gradient(to right, #e63946, #c1121f)',
-                  boxShadow: '0 4px 15px rgba(230,57,70,0.3)'
+                onClick={handleShare}
+                style={{
+                  border: 'none',
+                  background: 'rgba(239,68,68,0.15)',
+                  color: '#ef4444',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#ef4444'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.15)'}
+                onMouseOver={(e) => e.currentTarget.style.color = 'white'}
+                onMouseOut={(e) => e.currentTarget.style.color = '#ef4444'}
               >
                 Share
               </button>
             </div>
           </div>
+
+          {/* Stats row - borderless with dividers */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
+            {/* Stat 1 - Total Cards */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 20px' }}>
+              <StackedCardsIcon />
+              <div style={{ color: 'white', fontSize: '40px', fontWeight: '800', lineHeight: 1.1, marginTop: '8px' }}>
+                {totalCardsCount.toLocaleString()}
+              </div>
+              <div style={{ color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>Total Cards</div>
+            </div>
+
+            {/* Divider */}
+            <div style={{ width: '1px', height: '60px', background: 'rgba(255,255,255,0.08)' }} />
+
+            {/* Stat 2 - Cards Owned */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 20px' }}>
+              <StarIcon />
+              <div style={{ color: 'white', fontSize: '40px', fontWeight: '800', lineHeight: 1.1, marginTop: '8px' }}>{totalCards}</div>
+              <div style={{ color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>Owned</div>
+            </div>
+
+            {/* Divider */}
+            <div style={{ width: '1px', height: '60px', background: 'rgba(255,255,255,0.08)' }} />
+
+            {/* Stat 3 - Market Value */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 20px' }}>
+              <DollarCircleIcon />
+              <div style={{ color: '#f0c040', fontSize: '40px', fontWeight: '800', lineHeight: 1.1, marginTop: '8px' }}>
+                ${portfolioValue ? portfolioValue.totalValue.toFixed(2) : '0.00'}
+              </div>
+              <div style={{ color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>Value</div>
+            </div>
+
+            {/* Divider */}
+            <div style={{ width: '1px', height: '60px', background: 'rgba(255,255,255,0.08)' }} />
+
+            {/* Stat 4 - Sets */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 20px' }}>
+              <GridIcon />
+              <div style={{ color: 'white', fontSize: '40px', fontWeight: '800', lineHeight: 1.1, marginTop: '8px' }}>{uniqueSets.size}</div>
+              <div style={{ color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>Sets</div>
+            </div>
+          </div>
         </div>
 
-        {/* Recent Collection */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="font-rajdhani text-2xl font-bold text-white">Recent Collection</h2>
-            <Link href="/portfolio" className="text-poke-gold hover:text-white transition-colors text-sm font-medium">
+        {/* SECTION 2 - Recent Collection */}
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '20px', letterSpacing: '3px', color: '#f0c040' }}>Recent Collection</h2>
+            <Link href="/portfolio" style={{ color: '#f0c040', fontSize: '13px', textDecoration: 'none' }}>
               View Full Portfolio →
             </Link>
           </div>
-          
+
           {recentItems.length === 0 ? (
-            <div 
-              className="p-12 rounded-xl text-center"
-              style={{ 
-                background: 'rgba(255,255,255,0.05)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,255,255,0.1)'
-              }}
-            >
-              <div className="flex justify-center mb-6">
-                <svg width="80" height="80" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="45" fill="#e63946" stroke="#0a0f1e" strokeWidth="4" />
-                  <rect x="2" y="46" width="96" height="8" fill="#0a0f1e" />
-                  <circle cx="50" cy="50" r="14" fill="#ffffff" stroke="#0a0f1e" strokeWidth="4" />
-                  <circle cx="50" cy="50" r="6" fill="#0a0f1e" />
-                </svg>
+            /* Compact empty state */
+            <div style={{
+              background: '#11111e',
+              border: '1px solid rgba(255,255,255,0.055)',
+              borderRadius: '12px',
+              padding: '20px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px'
+            }}>
+              <EmptyPokeballIcon />
+              <div style={{ flex: 1 }}>
+                <h3 style={{ color: 'white', fontSize: '14px', fontWeight: '600' }}>Your collection is empty</h3>
+                <p style={{ color: '#6b7280', fontSize: '12px' }}>Start adding cards to your portfolio!</p>
               </div>
-              <h3 className="font-rajdhani text-xl font-bold text-white mb-2">Your collection is empty</h3>
-              <p className="text-poke-text-muted mb-6">Start adding cards to your portfolio!</p>
               <Link 
-                href="/marketplace" 
-                className="inline-block px-8 py-3 rounded-full font-bold text-white transition-all hover:scale-105"
-                style={{ 
-                  background: 'linear-gradient(to right, #e63946, #c1121f)',
-                  boxShadow: '0 4px 15px rgba(230,57,70,0.3)'
+                href="/marketplace"
+                style={{
+                  background: '#ef4444',
+                  color: 'white',
+                  fontWeight: '600',
+                  fontSize: '12px',
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap'
                 }}
               >
                 Browse Marketplace
               </Link>
             </div>
           ) : (
-            <div className="flex gap-4 overflow-x-auto pb-4 snap-x scrollbar-hide">
+            /* Cards with purple glow on hover */
+            <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingBottom: '8px' }}>
               {recentItems.map((item) => (
                 <Link 
                   key={item.id}
                   href={`/marketplace/${item.card.id}`}
-                  className="flex-shrink-0 snap-center"
+                  style={{ flexShrink: 0 }}
                 >
-                  <div className="w-48 bg-[#111827] rounded-xl overflow-hidden border border-gray-700 hover:border-poke-red transition-all hover:scale-105 holo-effect">
-                    <div className="aspect-[3/4] flex items-center justify-center p-2">
+                  <div style={{
+                    background: '#11111e',
+                    border: '1px solid rgba(255,255,255,0.055)',
+                    borderRadius: '14px',
+                    overflow: 'hidden',
+                    width: '140px',
+                    transition: 'all 0.25s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(139,92,246,0.5)';
+                    e.currentTarget.style.boxShadow = '0 0 20px rgba(139,92,246,0.35)';
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.055)';
+                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                  >
+                    <div style={{ aspectRatio: '3/4', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px' }}>
                       {item.card.imageUrl ? (
-                        <img src={item.card.imageUrl} alt={item.card.name} className="max-w-full max-h-full object-contain" />
+                        <img src={item.card.imageUrl} alt={item.card.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                       ) : (
-                        <span className="text-poke-text-muted">No Image</span>
+                        <span style={{ color: '#6b7280', fontSize: '11px' }}>No Image</span>
                       )}
                     </div>
-                    <div className="p-3">
-                      <h4 className="font-rajdhani font-bold text-white text-sm truncate">{item.card.name}</h4>
+                    <div style={{ padding: '10px' }}>
+                      <h4 style={{ color: 'white', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.card.name}</h4>
                     </div>
                   </div>
                 </Link>
@@ -664,34 +765,228 @@ function Dashboard({ user: initialUser }: { user: User }) {
           )}
         </div>
 
-        {/* Quick Actions */}
-        <div className="mb-8">
-          <h2 className="font-rajdhani text-2xl font-bold text-white mb-6">Quick Actions</h2>
-          <div className="flex flex-wrap gap-4">
-            <ActionCard 
-              href="/marketplace"
-              icon={
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="M21 21l-4.35-4.35" />
-                </svg>
-              }
-              title="Search Cards"
-              subtitle="Find cards in our 20,000+ database"
-            />
-            <ActionCard 
-              href="/collection"
-              icon={
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M3 3v18h18" />
-                  <path d="M7 16l4-8 4 6 5-10" />
-                </svg>
-              }
-              title="View Collection"
-              subtitle="Track your progress"
-            />
+        {/* SECTION 3 - Quick Actions - 4 column row */}
+        <div>
+          <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '20px', letterSpacing: '3px', color: '#f0c040', marginBottom: '16px' }}>Quick Actions</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+            {/* Action 1 - Search Cards */}
+            <Link href="/marketplace" style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: '#11111e',
+                border: '1px solid rgba(139,92,246,0.1)',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(139,92,246,0.4)';
+                e.currentTarget.style.background = 'rgba(139,92,246,0.08)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(139,92,246,0.1)';
+                e.currentTarget.style.background = '#11111e';
+              }}
+              >
+                <SearchIcon />
+                <div>
+                  <h4 style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '1px' }}>Search Cards</h4>
+                  <p style={{ color: '#6b7280', fontSize: '10px' }}>Find any of 20,000+ cards</p>
+                </div>
+              </div>
+            </Link>
+
+            {/* Action 2 - View Collection */}
+            <Link href="/collection" style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: '#11111e',
+                border: '1px solid rgba(139,92,246,0.1)',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(139,92,246,0.4)';
+                e.currentTarget.style.background = 'rgba(139,92,246,0.08)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(139,92,246,0.1)';
+                e.currentTarget.style.background = '#11111e';
+              }}
+              >
+                <ChartIcon />
+                <div>
+                  <h4 style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '1px' }}>Collection</h4>
+                  <p style={{ color: '#6b7280', fontSize: '10px' }}>Track your progress</p>
+                </div>
+              </div>
+            </Link>
+
+            {/* Action 3 - Scan a Card */}
+            <Link href="/scan" style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: '#11111e',
+                border: '1px solid rgba(139,92,246,0.1)',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(139,92,246,0.4)';
+                e.currentTarget.style.background = 'rgba(139,92,246,0.08)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(139,92,246,0.1)';
+                e.currentTarget.style.background = '#11111e';
+              }}
+              >
+                <CameraIcon />
+                <div>
+                  <h4 style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '1px' }}>Scan Card</h4>
+                  <p style={{ color: '#6b7280', fontSize: '10px' }}>Identify instantly</p>
+                </div>
+              </div>
+            </Link>
+
+            {/* Action 4 - Grading ROI */}
+            <Link href="/grading" style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: '#11111e',
+                border: '1px solid rgba(139,92,246,0.1)',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(139,92,246,0.4)';
+                e.currentTarget.style.background = 'rgba(139,92,246,0.08)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(139,92,246,0.1)';
+                e.currentTarget.style.background = '#11111e';
+              }}
+              >
+                <TrendIcon />
+                <div>
+                  <h4 style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '1px' }}>Grading ROI</h4>
+                  <p style={{ color: '#6b7280', fontSize: '10px' }}>Is it worth grading?</p>
+                </div>
+              </div>
+            </Link>
           </div>
         </div>
+
+        {/* SECTION 4 - Recent Drops - New TCG Sets */}
+        <div style={{ marginBottom: '32px' }}>
+          <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '20px', letterSpacing: '3px', color: '#f0c040', marginBottom: '16px' }}>Recent Drops</h2>
+          
+          {recentSets.length === 0 ? (
+            <div style={{
+              background: '#11111e',
+              border: '1px solid rgba(255,255,255,0.055)',
+              borderRadius: '12px',
+              padding: '20px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px'
+            }}>
+              <EmptyPokeballIcon />
+              <div style={{ flex: 1 }}>
+                <h3 style={{ color: 'white', fontSize: '14px', fontWeight: '600' }}>Loading new sets...</h3>
+                <p style={{ color: '#6b7280', fontSize: '12px' }}>Fetching latest TCG releases</p>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingBottom: '8px' }}>
+              {recentSets.map((set) => (
+                <Link 
+                  key={set.id}
+                  href={`/collection/${set.id}`}
+                  style={{ textDecoration: 'none', flexShrink: 0 }}
+                >
+                  <div 
+                    style={{
+                      background: '#11111e',
+                      border: '1px solid rgba(255,255,255,0.055)',
+                      borderRadius: '14px',
+                      overflow: 'hidden',
+                      width: '160px',
+                      transition: 'all 0.25s',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(139,92,246,0.5)';
+                      e.currentTarget.style.boxShadow = '0 0 20px rgba(139,92,246,0.35)';
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.055)';
+                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    {/* Set logo image */}
+                    <div style={{ 
+                      aspectRatio: '1/1', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      padding: '12px',
+                      background: 'linear-gradient(135deg, rgba(139,92,246,0.1), rgba(30,16,64,0.3))'
+                    }}>
+                      {set.images?.logo ? (
+                        <img 
+                          src={set.images.logo} 
+                          alt={set.name} 
+                          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+                        />
+                      ) : set.images?.symbol ? (
+                        <img 
+                          src={set.images.symbol} 
+                          alt={set.name} 
+                          style={{ maxWidth: '60%', maxHeight: '60%', objectFit: 'contain' }} 
+                        />
+                      ) : (
+                        <div style={{ color: '#6b7280', fontSize: '11px' }}>No Image</div>
+                      )}
+                    </div>
+                    
+                    {/* Set info */}
+                    <div style={{ padding: '12px' }}>
+                      <h4 style={{ color: 'white', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '4px' }}>
+                        {set.name}
+                      </h4>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#6b7280', fontSize: '10px' }}>{set.total} cards</span>
+                        {set.releaseDate && (
+                          <span style={{ color: '#f0c040', fontSize: '9px', background: 'rgba(240,192,64,0.15)', padding: '2px 6px', borderRadius: '4px' }}>
+                            {new Date(set.releaseDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
@@ -776,8 +1071,10 @@ export default function HomePage() {
         </>
       )}
       
-      {/* CTA Section */}
-      <section className="py-20">
+      {/* CTA Section - only show when not logged in */}
+      {!hasToken && (
+        <>
+        <section className="py-20">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <div className="card-dark p-12">
             <h2 className="text-3xl font-bold text-white mb-4">
@@ -813,6 +1110,8 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+        </>
+      )}
     </div>
   );
 }
