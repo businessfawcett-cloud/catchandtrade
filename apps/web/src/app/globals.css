@@ -390,3 +390,8 @@ body {
 .pagination-btn.active {
   @apply bg-poke-red border-poke-red text-white;
 }
+
+/* Hide navbar on auth pages */
+.hide-nav nav {
+  display: none !important;
+}
