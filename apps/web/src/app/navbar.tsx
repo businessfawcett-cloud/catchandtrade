@@ -22,7 +22,14 @@ const PokeballLogo = () => (
 
 const PokeballIcon = () => (
   <svg width="18" height="18" viewBox="0 0 100 100">
-    <circle cx="50" cy="50" r="45" fill="#e63946" />
+    <defs>
+      <linearGradient id="pokeballIconGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#ff6b6b" />
+        <stop offset="50%" stopColor="#e63946" />
+        <stop offset="100%" stopColor="#c1121f" />
+      </linearGradient>
+    </defs>
+    <circle cx="50" cy="50" r="45" fill="url(#pokeballIconGrad)" />
     <rect x="2" y="46" width="96" height="8" fill="#1a2332" />
     <circle cx="50" cy="50" r="14" fill="#ffffff" />
     <circle cx="50" cy="50" r="6" fill="#1a2332" />
@@ -30,7 +37,7 @@ const PokeballIcon = () => (
 );
 
 const BookIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
   </svg>
