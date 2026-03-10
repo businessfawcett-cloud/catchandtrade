@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import express, { Express, Request, Response } from 'express';
+import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import passport from 'passport';
 import './config/passport';
@@ -199,6 +199,16 @@ if (process.env.NODE_ENV !== 'production') {
     res.json(syncStatus);
   });
 }
+
+// Global error handler - catch unhandled errors
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error('[GLOBAL ERROR]', err.message);
+  console.error('[GLOBAL ERROR] Stack:', err.stack);
+  res.status(500).json({ 
+    error: 'Internal Server Error', 
+    message: process.env.NODE_ENV !== 'production' ? err.message : 'An unexpected error occurred'
+  });
+});
 
 if (require.main === module) {
   app.listen(PORT, () => {
