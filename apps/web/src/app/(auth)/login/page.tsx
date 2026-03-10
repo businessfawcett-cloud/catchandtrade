@@ -55,6 +55,7 @@ export default function LoginPage() {
 
       const data = await response.json();
       localStorage.setItem('token', data.token);
+      localStorage.setItem('refreshToken', data.refreshToken);
       localStorage.setItem('user', JSON.stringify(data.user));
       window.location.href = data.user.username ? '/' : '/onboarding';
     } catch (err) {

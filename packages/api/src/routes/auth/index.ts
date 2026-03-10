@@ -235,4 +235,43 @@ authRouter.post(
   }
 );
 
+// POST /api/auth/refresh - Refresh access token using refresh token
+authRouter.post(
+  '/refresh',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { refreshToken } = req.body;
+
+      if (!refreshToken) {
+        return res.status(400).json({ error: 'Refresh token is required' });
+      }
+
+      // Verify refresh token
+      let decoded: { userId: string };
+      try {
+        decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as { userId: string };
+      } catch {
+        return res.status(401).json({ error: 'Invalid or expired refresh token' });
+      }
+
+      // Get user
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId }
+      });
+
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+
+      // Generate new tokens
+      const { token: newToken, refreshToken: newRefreshToken } = generateTokens(user);
+      const { passwordHash: _, ...userWithoutPassword } = user;
+
+      res.json({ token: newToken, refreshToken: newRefreshToken, user: userWithoutPassword });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default authRouter;

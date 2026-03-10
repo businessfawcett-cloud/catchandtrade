@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Navbar from './navbar';
+import TokenRefreshProvider from './TokenRefreshProvider';
 
 export const metadata: Metadata = {
   title: 'Catch and Trade - Trading Card Portfolio & Marketplace',
@@ -21,6 +22,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className="bg-[#0a0f1e] text-white min-h-screen marketplace-bg">
+        <TokenRefreshProvider />
         <Navbar />
         <main className="min-h-screen">
           {children}

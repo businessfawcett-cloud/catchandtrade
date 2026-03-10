@@ -77,6 +77,7 @@ export default function RegisterPage() {
 
       const data = await response.json();
       localStorage.setItem('token', data.token);
+      localStorage.setItem('refreshToken', data.refreshToken);
       localStorage.setItem('user', JSON.stringify(data.user));
       window.location.href = '/onboarding';
     } catch (err) {
