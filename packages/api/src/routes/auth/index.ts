@@ -188,7 +188,8 @@ authRouter.post(
         return res.status(401).json({ error: 'Invalid Google access token' });
       }
 
-      const profile = await googleRes.json() as any;
+      const profileData = await googleRes.json();
+      const profile = profileData as { sub: string; email: string; name?: string; picture?: string };
       const googleId = profile.sub;
       const email = profile.email;
       const displayName = profile.name || 'Google User';
