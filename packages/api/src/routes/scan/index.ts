@@ -1,108 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '@catchandtrade/db';
-import Tesseract from 'tesseract.js';
 
 export const scanRouter = Router();
-
-// Lazy-initialized OCR worker
-let workerPromise: Promise<Tesseract.Worker> | null = null;
-
-function getWorker(): Promise<Tesseract.Worker> {
-  if (!workerPromise) {
-    workerPromise = Tesseract.createWorker('eng').catch((err) => {
-      workerPromise = null; // Reset so next call retries
-      throw err;
-    });
-  }
-  return workerPromise;
-}
-
-// Catch unhandled Tesseract worker errors that escape try/catch
-process.on('uncaughtException', (err) => {
-  if (err.message?.includes('read image') || err.message?.includes('truncated')) {
-    console.error('[Scan] Caught Tesseract crash (non-fatal):', err.message);
-    // Reset worker so it can be re-created
-    workerPromise = null;
-  } else {
-    console.error('Uncaught exception:', err);
-    process.exit(1);
-  }
-});
-
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    p,
-    new Promise<never>((_, rej) => setTimeout(() => rej(new Error('OCR timed out')), ms)),
-  ]);
-}
-
-// ── OCR character substitution ──────────────────────────────────────────
-// Tesseract commonly confuses these characters in small text / digits
-const CHAR_SUBS: Record<string, string> = {
-  'O': '0', 'o': '0',
-  'I': '1', 'l': '1', '|': '1',
-  'S': '5', 's': '5',
-  'B': '8',
-  'Z': '2', 'z': '2',
-  'G': '6',
-  'T': '7',
-  'q': '9',
-};
-
-/**
- * Fix common OCR digit misreads: O→0, I→1, S→5, etc.
- * Only applies to strings that are *mostly* digits already.
- */
-function fixDigits(raw: string): string {
-  return raw.split('').map(ch => CHAR_SUBS[ch] ?? ch).join('');
-}
-
-// ── Card number extraction ──────────────────────────────────────────────
-
-interface CardNumberInfo {
-  number: string;       // e.g. "45"
-  total: number | null; // e.g. 198
-  raw: string;          // original OCR text matched
-}
-
-/**
- * Extract card number patterns (###/###) from OCR text.
- * Applies character substitution and returns multiple candidates.
- */
-function extractCardNumbers(text: string): CardNumberInfo[] {
-  const results: CardNumberInfo[] = [];
-
-  // Match patterns like "045/198", "45 / 198", "O45/I98", etc.
-  // Allow letters that commonly get confused with digits
-  const pattern = /([0-9OoIlBSZGTq|]{1,4})\s*[\/\\]\s*([0-9OoIlBSZGTq|]{1,4})/g;
-  let match;
-
-  while ((match = pattern.exec(text)) !== null) {
-    const rawLeft = match[1];
-    const rawRight = match[2];
-
-    const left = fixDigits(rawLeft);
-    const right = fixDigits(rawRight);
-
-    const leftNum = parseInt(left, 10);
-    const rightNum = parseInt(right, 10);
-
-    // Basic sanity checks
-    if (isNaN(leftNum) || isNaN(rightNum)) continue;
-    if (leftNum === 0) continue;         // card number can't be 0
-    if (rightNum === 0) continue;         // total can't be 0
-    if (rightNum > 500) continue;         // no set has 500+ cards (catches OCR noise)
-    // Note: left CAN be > right (secret rares like 201/198)
-
-    results.push({
-      number: leftNum.toString(),
-      total: rightNum,
-      raw: match[0],
-    });
-  }
-
-  return results;
-}
 
 // ── Name extraction ─────────────────────────────────────────────────────
 
@@ -179,65 +78,20 @@ const CARD_INCLUDE = {
   prices: { orderBy: { date: 'desc' as const }, take: 1 },
 };
 
+// Include set info for disambiguation scoring
+const CARD_INCLUDE_WITH_SET = {
+  prices: { orderBy: { date: 'desc' as const }, take: 1 },
+  set: { select: { releaseYear: true } },
+};
+
 /**
- * Given card number info, find the card by matching against sets with that totalCards count.
+ * Generate card number variants for matching (e.g., "45", "045", "0045")
  */
-async function findByCardNumber(cnInfo: CardNumberInfo): Promise<any | null> {
-  const { number: cardNum, total } = cnInfo;
-
-  // Normalize: try "45", "045", etc.
-  const variants = new Set<string>();
-  variants.add(cardNum);
-  variants.add(cardNum.replace(/^0+/, '') || cardNum); // strip leading zeros
-  if (cardNum.length < 3) variants.add(cardNum.padStart(3, '0'));
-  if (cardNum.length < 2) variants.add(cardNum.padStart(2, '0'));
-
-  // If we have a set total, use it to narrow down the set
-  if (total) {
-    let matchingSets = await prisma.pokemonSet.findMany({
-      where: { printedTotal: total },
-      orderBy: { releaseYear: 'desc' },
-    });
-    if (matchingSets.length === 0) {
-      matchingSets = await prisma.pokemonSet.findMany({
-        where: { totalCards: { gte: total, lte: total + 50 } },
-        orderBy: { releaseYear: 'desc' },
-      });
-    }
-
-    console.log(`[Scan] Sets matching total=${total}:`, matchingSets.map((s: any) => `${s.code} (${s.name}, printed=${s.printedTotal})`));
-
-    if (matchingSets.length > 0) {
-      const setCodes = matchingSets.map(s => s.code);
-
-      for (const num of variants) {
-        const cards = await prisma.card.findMany({
-          where: {
-            cardNumber: num,
-            setCode: { in: setCodes },
-          },
-          include: CARD_INCLUDE,
-          take: 5,
-        });
-        if (cards.length > 0) {
-          console.log(`[Scan] Found ${cards.length} cards: number=${num}, sets=${setCodes.join(',')}`);
-          return cards;
-        }
-      }
-    }
-  }
-
-  // Fallback: search by card number alone
-  for (const num of variants) {
-    const cards = await prisma.card.findMany({
-      where: { cardNumber: num },
-      include: CARD_INCLUDE,
-      take: 10,
-    });
-    if (cards.length > 0) return cards;
-  }
-
-  return null;
+function cardNumberVariants(cardNumber: string): string[] {
+  const variants = [cardNumber, cardNumber.replace(/^0+/, '') || cardNumber];
+  if (cardNumber.length < 3) variants.push(cardNumber.padStart(3, '0'));
+  if (cardNumber.length < 2) variants.push(cardNumber.padStart(2, '0'));
+  return Array.from(new Set(variants));
 }
 
 /**
@@ -271,38 +125,73 @@ async function findByName(candidateNames: string[]): Promise<any[]> {
     if (cards.length > 0) return cards;
   }
 
-  // Strategy 3: Individual word scoring
-  const wordScores = new Map<string, { card: any; score: number }>();
-  const allWords = new Set<string>();
+  // Strategy 3: Single OR query for all words, then score in memory
+  const allWords: string[] = [];
   for (const name of candidateNames.slice(0, 5)) {
     for (const word of name.split(/\s+/)) {
       if (word.length >= 3 && !NOISE_WORDS.has(word.toLowerCase())) {
-        allWords.add(word);
+        allWords.push(word);
       }
     }
   }
+  const uniqueWords = Array.from(new Set(allWords)).slice(0, 8);
 
-  for (const word of Array.from(allWords).slice(0, 8)) {
+  if (uniqueWords.length > 0) {
     const cards = await prisma.card.findMany({
-      where: { name: { contains: word, mode: 'insensitive' } },
-      take: 5,
+      where: {
+        OR: uniqueWords.map(word => ({
+          name: { contains: word, mode: 'insensitive' as const },
+        })),
+      },
+      take: 20,
       include: CARD_INCLUDE,
     });
-    for (const card of cards) {
-      const existing = wordScores.get(card.id);
-      if (existing) existing.score += 1;
-      else wordScores.set(card.id, { card, score: 1 });
+
+    if (cards.length > 0) {
+      const scored = cards.map(card => {
+        const nameLower = card.name.toLowerCase();
+        const matchCount = uniqueWords.filter(w => nameLower.includes(w.toLowerCase())).length;
+        return { card, score: matchCount };
+      });
+      return scored
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map(s => s.card);
     }
   }
 
-  if (wordScores.size > 0) {
-    return Array.from(wordScores.values())
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5)
-      .map(s => s.card);
-  }
-
   return [];
+}
+
+/**
+ * Score cards against rawText for disambiguation.
+ * Uses word-level partial matching + recency boost.
+ */
+function disambiguateByRawText(cards: any[], rawText: string): any[] {
+  const rawLower = rawText.toLowerCase();
+  const scored = cards.map((card: any) => {
+    const nameLower = card.name.toLowerCase();
+    const nameWords = nameLower.split(/\s+/);
+
+    let score = 0;
+    // Full name match
+    if (rawLower.includes(nameLower)) score += 10;
+    // Partial: count how many name words appear in raw text
+    score += nameWords.filter(w => w.length > 2 && rawLower.includes(w)).length * 3;
+    // Boost newer sets (more likely to be scanned)
+    const releaseYear = card.set?.releaseYear;
+    if (releaseYear && releaseYear >= 2020) score += 1;
+
+    return { card, score };
+  });
+
+  scored.sort((a: any, b: any) => b.score - a.score);
+  console.log(`[Scan/match] Disambiguation scores:`, scored.map((s: any) => `${s.card.name}=${s.score}`));
+
+  if (scored[0].score > 0) {
+    return scored.map((s: any) => s.card);
+  }
+  return cards;
 }
 
 // ── Text-based match endpoint (on-device OCR) ──────────────────────────
@@ -319,13 +208,7 @@ scanRouter.post(
 
       // Priority 1: cardNumber + setCode (exact match)
       if (cardNumber && setCode) {
-        const variants = new Set<string>();
-        variants.add(cardNumber);
-        variants.add(cardNumber.replace(/^0+/, '') || cardNumber);
-        if (cardNumber.length < 3) variants.add(cardNumber.padStart(3, '0'));
-        if (cardNumber.length < 2) variants.add(cardNumber.padStart(2, '0'));
-
-        for (const num of variants) {
+        for (const num of cardNumberVariants(cardNumber)) {
           const found = await prisma.card.findMany({
             where: { cardNumber: num, setCode: setCode },
             include: CARD_INCLUDE,
@@ -341,8 +224,7 @@ scanRouter.post(
 
       // Priority 2: cardNumber + name
       if ((!cards || cards.length === 0) && cardNumber && name) {
-        const variants = [cardNumber, cardNumber.replace(/^0+/, '') || cardNumber, cardNumber.padStart(3, '0')];
-        for (const v of variants) {
+        for (const v of cardNumberVariants(cardNumber)) {
           const found = await prisma.card.findMany({
             where: {
               cardNumber: v,
@@ -361,52 +243,58 @@ scanRouter.post(
 
       // Priority 3: cardNumber + setTotal (using printedTotal for exact match)
       if ((!cards || cards.length === 0) && cardNumber && setTotal) {
-        // First try exact match on printedTotal (the number printed on the card)
-        let matchingSets = await prisma.pokemonSet.findMany({
-          where: { printedTotal: setTotal },
-          orderBy: { releaseYear: 'desc' },
-        });
-        // Fallback to range on totalCards if printedTotal not populated yet
-        if (matchingSets.length === 0) {
-          matchingSets = await prisma.pokemonSet.findMany({
-            where: { totalCards: { gte: setTotal, lte: setTotal + 50 } },
-            orderBy: { releaseYear: 'desc' },
-          });
-        }
-        console.log(`[Scan/match] Sets matching total=${setTotal}:`, matchingSets.map((s: any) => `${s.code} (${s.name}, printed=${s.printedTotal}, total=${s.totalCards})`));
+        const isSecretRare = parseInt(cardNumber, 10) > setTotal;
 
-        if (matchingSets.length > 0) {
-          const setCodes = matchingSets.map((s: any) => s.code);
-          const variants = [cardNumber, cardNumber.replace(/^0+/, '') || cardNumber];
-          if (cardNumber.length < 3) variants.push(cardNumber.padStart(3, '0'));
-
-          for (const num of variants) {
+        if (isSecretRare) {
+          // Secret rares (e.g., 201/198): skip printedTotal, search by card number alone
+          for (const num of cardNumberVariants(cardNumber)) {
             const found = await prisma.card.findMany({
-              where: { cardNumber: num, setCode: { in: setCodes } },
-              include: CARD_INCLUDE,
+              where: { cardNumber: num },
+              include: CARD_INCLUDE_WITH_SET,
               take: 20,
             });
             if (found.length > 0) {
               cards = found;
-              console.log(`[Scan/match] Found ${found.length} cards for #${num} across ${setCodes.length} sets: ${found.map((c: any) => `${c.name} (${c.setCode})`).join(', ')}`);
+              console.log(`[Scan/match] Secret rare: found ${found.length} cards for #${num}`);
               break;
             }
           }
-
-          // Disambiguate using rawText if multiple cards found
-          if (cards && cards.length > 1 && rawText) {
-            const rawLower = rawText.toLowerCase();
-            const scored = cards.map((card: any) => {
-              const nameLower = card.name.toLowerCase();
-              const inRaw = rawLower.includes(nameLower) ? 10 : 0;
-              return { card, score: inRaw };
+        } else {
+          // Normal cards: match via printedTotal
+          let matchingSets = await prisma.pokemonSet.findMany({
+            where: { printedTotal: setTotal },
+            orderBy: { releaseYear: 'desc' },
+          });
+          // Fallback to narrow range on totalCards
+          if (matchingSets.length === 0) {
+            matchingSets = await prisma.pokemonSet.findMany({
+              where: { totalCards: { gte: setTotal, lte: setTotal + 10 } },
+              orderBy: { releaseYear: 'desc' },
             });
-            scored.sort((a: any, b: any) => b.score - a.score);
-            console.log(`[Scan/match] Disambiguation scores:`, scored.map((s: any) => `${s.card.name}=${s.score}`));
-            if (scored[0].score > 0) {
-              cards = scored.map((s: any) => s.card);
+          }
+          console.log(`[Scan/match] Sets matching total=${setTotal}:`, matchingSets.map((s: any) => `${s.code} (${s.name}, printed=${s.printedTotal}, total=${s.totalCards})`));
+
+          if (matchingSets.length > 0) {
+            const setCodes = matchingSets.map((s: any) => s.code);
+
+            for (const num of cardNumberVariants(cardNumber)) {
+              const found = await prisma.card.findMany({
+                where: { cardNumber: num, setCode: { in: setCodes } },
+                include: CARD_INCLUDE_WITH_SET,
+                take: 20,
+              });
+              if (found.length > 0) {
+                cards = found;
+                console.log(`[Scan/match] Found ${found.length} cards for #${num} across ${setCodes.length} sets: ${found.map((c: any) => `${c.name} (${c.setCode})`).join(', ')}`);
+                break;
+              }
             }
           }
+        }
+
+        // Disambiguate using rawText if multiple cards found
+        if (cards && cards.length > 1 && rawText) {
+          cards = disambiguateByRawText(cards, rawText);
         }
 
         if (cards && cards.length > 0) {
@@ -436,161 +324,6 @@ scanRouter.post(
         return res.status(404).json({
           error: 'No matching card found',
           candidates: name ? [name] : [],
-        });
-      }
-
-      const bestMatch = cards[0];
-
-      let setName: string | null = null;
-      if (bestMatch.setCode) {
-        const set = await prisma.pokemonSet.findUnique({
-          where: { code: bestMatch.setCode },
-        });
-        if (set) setName = set.name;
-      }
-
-      const currentPrice = bestMatch.prices?.[0]?.priceMarket ?? null;
-
-      return res.json({
-        card: {
-          id: bestMatch.id,
-          name: bestMatch.name,
-          setName,
-          setCode: bestMatch.setCode,
-          cardNumber: bestMatch.cardNumber,
-          rarity: bestMatch.rarity,
-          imageUrl: bestMatch.imageUrl,
-          currentPrice,
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// ── Legacy image-based endpoint ─────────────────────────────────────────
-
-scanRouter.post(
-  '/',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { imageBase64, topBase64, bottomBase64 } = req.body;
-
-      if (!imageBase64 || typeof imageBase64 !== 'string') {
-        return res.status(400).json({ error: 'imageBase64 is required and must be a string' });
-      }
-
-      const worker = await getWorker();
-
-      // Helper to OCR a base64 image
-      const ocrImage = async (b64: string, label: string, ms: number): Promise<string> => {
-        try {
-          const buf = Buffer.from(b64, 'base64');
-          // Validate it's actually an image (check for common magic bytes)
-          if (buf.length < 8) {
-            console.log(`[Scan] ${label}: buffer too small (${buf.length} bytes), skipping`);
-            return '';
-          }
-          const result = await withTimeout(
-            worker.recognize(buf),
-            ms
-          );
-          const text = (result as Tesseract.RecognizeResult).data.text;
-          console.log(`[Scan] ${label} OCR:`, JSON.stringify(text.slice(0, 300)));
-          return text;
-        } catch (e) {
-          console.log(`[Scan] ${label} OCR failed:`, (e as Error).message);
-          return '';
-        }
-      };
-
-      // OCR all three crops: top (name), full, bottom (number)
-      // Run full image first, then targeted crops
-      const ocrText = await ocrImage(imageBase64, 'Full', 20000);
-
-      let topText = '';
-      if (topBase64 && typeof topBase64 === 'string') {
-        topText = await ocrImage(topBase64, 'Top (name zone)', 10000);
-      }
-
-      let bottomText = '';
-      if (bottomBase64 && typeof bottomBase64 === 'string') {
-        bottomText = await ocrImage(bottomBase64, 'Bottom (number zone)', 10000);
-      }
-
-      // Combine all OCR text for card number extraction
-      const allText = [ocrText, topText, bottomText].filter(Boolean).join('\n');
-
-      // ── Step 1: Extract card numbers with character substitution ──
-      const cardNumbers = extractCardNumbers(allText);
-      console.log('[Scan] Card numbers found:', cardNumbers.map(cn => `${cn.number}/${cn.total} (raw: ${cn.raw})`));
-
-      // ── Step 2: Try card number matching (highest confidence path) ──
-      let cards: any[] | null = null;
-      for (const cnInfo of cardNumbers) {
-        cards = await findByCardNumber(cnInfo);
-        if (cards && cards.length > 0) {
-          console.log(`[Scan] Matched via card number ${cnInfo.number}/${cnInfo.total} → ${cards[0].name}`);
-          break;
-        }
-      }
-
-      // ── Step 3: Fall back to name matching ──
-      // Prioritize the top crop for name extraction (biggest text on card)
-      // then fall back to full image OCR text
-      const topNames = topText ? extractCandidateNames(topText) : [];
-      const fullNames = extractCandidateNames(ocrText);
-      // Deduplicate: top crop names first, then full image names
-      const seenNames = new Set<string>();
-      const candidateNames: string[] = [];
-      for (const name of [...topNames, ...fullNames]) {
-        const key = name.toLowerCase();
-        if (!seenNames.has(key)) {
-          seenNames.add(key);
-          candidateNames.push(name);
-        }
-      }
-      console.log('[Scan] Name candidates (top+full):', candidateNames.slice(0, 8));
-
-      if (!cards || cards.length === 0) {
-        // Try card number + name combo before pure name search
-        if (cardNumbers.length > 0 && candidateNames.length > 0) {
-          const num = cardNumbers[0].number;
-          const variants = [num, num.replace(/^0+/, '') || num, num.padStart(3, '0')];
-
-          for (const v of variants) {
-            for (const name of candidateNames.slice(0, 3)) {
-              const found = await prisma.card.findMany({
-                where: {
-                  cardNumber: v,
-                  name: { contains: name, mode: 'insensitive' },
-                },
-                take: 5,
-                include: CARD_INCLUDE,
-              });
-              if (found.length > 0) {
-                cards = found;
-                console.log(`[Scan] Matched via number+name: ${v} + "${name}" → ${found[0].name}`);
-                break;
-              }
-            }
-            if (cards && cards.length > 0) break;
-          }
-        }
-
-        if (!cards || cards.length === 0) {
-          cards = await findByName(candidateNames);
-        }
-      }
-
-      if (!cards || cards.length === 0) {
-        return res.status(404).json({
-          error: 'No matching card found',
-          ocrText: ocrText.slice(0, 200),
-          bottomOcr: bottomText.slice(0, 100),
-          cardNumbers: cardNumbers.map(cn => `${cn.number}/${cn.total}`),
-          candidates: candidateNames.slice(0, 5),
         });
       }
 

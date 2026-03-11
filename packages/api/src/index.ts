@@ -103,36 +103,6 @@ app.use('/api/debug', debugRouter);
 app.use('/api/scan', scanRouter);
 app.use('/api/pokedex', pokedexRouter);
 
-// One-time backfill: populate printedTotal for all sets
-app.get('/api/backfill-printed-total', async (req: Request, res: Response) => {
-  const token = req.query.token as string;
-  if (!token || token !== process.env.CRON_SECRET) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-  try {
-    // Ensure column exists (migration may not have run)
-    await prisma.$executeRawUnsafe(
-      `ALTER TABLE "PokemonSet" ADD COLUMN IF NOT EXISTS "printedTotal" INTEGER`
-    );
-
-    const resp = await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json');
-    const sets = (await resp.json()) as any[];
-    let updated = 0;
-    for (const s of sets) {
-      if (s.printedTotal) {
-        await prisma.$executeRawUnsafe(
-          `UPDATE "PokemonSet" SET "printedTotal" = $1 WHERE code = $2 AND "printedTotal" IS NULL`,
-          s.printedTotal, s.id
-        );
-        updated++;
-      }
-    }
-    res.json({ success: true, updated });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // Public cron endpoint for UptimeRobot - triggers nightly sync
 const CRON_SECRET = process.env.CRON_SECRET;
 
