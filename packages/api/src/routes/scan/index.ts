@@ -353,29 +353,49 @@ scanRouter.post(
         }
       }
 
-      // Priority 3: cardNumber + setTotal
+      // Priority 3: cardNumber + setTotal, with rawText disambiguation
       if ((!cards || cards.length === 0) && cardNumber && setTotal) {
-        const cnInfo: CardNumberInfo = { number: cardNumber, total: setTotal, raw: '' };
-        cards = await findByCardNumber(cnInfo);
-        if (cards && cards.length > 1 && rawText) {
-          // Multiple cards matched — use rawText to disambiguate
-          const candidates = extractCandidateNames(rawText);
-          const rawLower = rawText.toLowerCase();
-          console.log(`[Scan/match] ${cards.length} cards for ${cardNumber}/${setTotal}, disambiguating with rawText candidates:`, candidates.slice(0, 5));
-          const scored = cards.map((card: any) => {
-            const nameLower = card.name.toLowerCase();
-            // Check if card name appears in raw OCR text
-            const inRaw = rawLower.includes(nameLower) ? 10 : 0;
-            // Check if card name matches any candidate
-            const inCandidates = candidates.some(c => c.toLowerCase().includes(nameLower) || nameLower.includes(c.toLowerCase())) ? 5 : 0;
-            return { card, score: inRaw + inCandidates };
-          });
-          scored.sort((a: any, b: any) => b.score - a.score);
-          if (scored[0].score > 0) {
-            cards = scored.map((s: any) => s.card);
-            console.log(`[Scan/match] Disambiguated: ${cards[0].name} (score ${scored[0].score})`);
+        // Find ALL sets with this total, then ALL cards with this number across those sets
+        const matchingSets = await prisma.pokemonSet.findMany({
+          where: { totalCards: setTotal },
+          orderBy: { releaseYear: 'desc' },
+        });
+        console.log(`[Scan/match] Sets with totalCards=${setTotal}:`, matchingSets.map((s: any) => `${s.code} (${s.name})`));
+
+        if (matchingSets.length > 0) {
+          const setCodes = matchingSets.map((s: any) => s.code);
+          const variants = [cardNumber, cardNumber.replace(/^0+/, '') || cardNumber];
+          if (cardNumber.length < 3) variants.push(cardNumber.padStart(3, '0'));
+
+          for (const num of variants) {
+            const found = await prisma.card.findMany({
+              where: { cardNumber: num, setCode: { in: setCodes } },
+              include: CARD_INCLUDE,
+              take: 20,
+            });
+            if (found.length > 0) {
+              cards = found;
+              console.log(`[Scan/match] Found ${found.length} cards for #${num} across ${setCodes.length} sets: ${found.map((c: any) => `${c.name} (${c.setCode})`).join(', ')}`);
+              break;
+            }
+          }
+
+          // Disambiguate using rawText if multiple cards found
+          if (cards && cards.length > 1 && rawText) {
+            const rawLower = rawText.toLowerCase();
+            const scored = cards.map((card: any) => {
+              const nameLower = card.name.toLowerCase();
+              const inRaw = rawLower.includes(nameLower) ? 10 : 0;
+              return { card, score: inRaw };
+            });
+            scored.sort((a: any, b: any) => b.score - a.score);
+            console.log(`[Scan/match] Disambiguation scores:`, scored.map((s: any) => `${s.card.name}=${s.score}`));
+            if (scored[0].score > 0) {
+              cards = scored.map((s: any) => s.card);
+            }
           }
         }
+
         if (cards && cards.length > 0) {
           console.log(`[Scan/match] Matched via cardNumber+setTotal: ${cardNumber}/${setTotal} → ${cards[0].name}`);
         }
