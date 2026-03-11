@@ -195,11 +195,11 @@ async function findByCardNumber(cnInfo: CardNumberInfo): Promise<any | null> {
   // If we have a set total, use it to narrow down the set
   if (total) {
     const matchingSets = await prisma.pokemonSet.findMany({
-      where: { totalCards: total },
+      where: { totalCards: { gte: total, lte: total + 15 } },
       orderBy: { releaseYear: 'desc' },
     });
 
-    console.log(`[Scan] Sets with totalCards=${total}:`, matchingSets.map(s => `${s.code} (${s.name})`));
+    console.log(`[Scan] Sets with totalCards ~${total}:`, matchingSets.map((s: any) => `${s.code} (${s.name}, ${s.totalCards})`));
 
     if (matchingSets.length > 0) {
       const setCodes = matchingSets.map(s => s.code);
@@ -355,12 +355,12 @@ scanRouter.post(
 
       // Priority 3: cardNumber + setTotal, with rawText disambiguation
       if ((!cards || cards.length === 0) && cardNumber && setTotal) {
-        // Find ALL sets with this total, then ALL cards with this number across those sets
+        // Find ALL sets with this total (with range to account for secret rares)
         const matchingSets = await prisma.pokemonSet.findMany({
-          where: { totalCards: setTotal },
+          where: { totalCards: { gte: setTotal, lte: setTotal + 15 } },
           orderBy: { releaseYear: 'desc' },
         });
-        console.log(`[Scan/match] Sets with totalCards=${setTotal}:`, matchingSets.map((s: any) => `${s.code} (${s.name})`));
+        console.log(`[Scan/match] Sets with totalCards ~${setTotal} (${setTotal}-${setTotal+15}):`, matchingSets.map((s: any) => `${s.code} (${s.name}, ${s.totalCards})`));
 
         if (matchingSets.length > 0) {
           const setCodes = matchingSets.map((s: any) => s.code);
