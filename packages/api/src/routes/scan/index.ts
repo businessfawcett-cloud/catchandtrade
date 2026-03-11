@@ -357,6 +357,25 @@ scanRouter.post(
       if ((!cards || cards.length === 0) && cardNumber && setTotal) {
         const cnInfo: CardNumberInfo = { number: cardNumber, total: setTotal, raw: '' };
         cards = await findByCardNumber(cnInfo);
+        if (cards && cards.length > 1 && rawText) {
+          // Multiple cards matched — use rawText to disambiguate
+          const candidates = extractCandidateNames(rawText);
+          const rawLower = rawText.toLowerCase();
+          console.log(`[Scan/match] ${cards.length} cards for ${cardNumber}/${setTotal}, disambiguating with rawText candidates:`, candidates.slice(0, 5));
+          const scored = cards.map((card: any) => {
+            const nameLower = card.name.toLowerCase();
+            // Check if card name appears in raw OCR text
+            const inRaw = rawLower.includes(nameLower) ? 10 : 0;
+            // Check if card name matches any candidate
+            const inCandidates = candidates.some(c => c.toLowerCase().includes(nameLower) || nameLower.includes(c.toLowerCase())) ? 5 : 0;
+            return { card, score: inRaw + inCandidates };
+          });
+          scored.sort((a: any, b: any) => b.score - a.score);
+          if (scored[0].score > 0) {
+            cards = scored.map((s: any) => s.card);
+            console.log(`[Scan/match] Disambiguated: ${cards[0].name} (score ${scored[0].score})`);
+          }
+        }
         if (cards && cards.length > 0) {
           console.log(`[Scan/match] Matched via cardNumber+setTotal: ${cardNumber}/${setTotal} → ${cards[0].name}`);
         }
