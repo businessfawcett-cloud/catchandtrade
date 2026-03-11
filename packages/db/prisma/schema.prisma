@@ -37,13 +37,14 @@ model User {
 }
 
 model PokemonSet {
-  id          String   @id @default(cuid())
-  name        String
-  code        String   @unique
-  totalCards  Int
-  releaseYear Int
-  imageUrl    String?
-  cards       Card[]
+  id           String   @id @default(cuid())
+  name         String
+  code         String   @unique
+  totalCards   Int
+  printedTotal Int?
+  releaseYear  Int
+  imageUrl     String?
+  cards        Card[]
 }
 
 model Card {

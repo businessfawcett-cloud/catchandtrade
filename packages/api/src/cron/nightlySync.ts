@@ -11,6 +11,7 @@ interface GithubSet {
   id: string;
   name: string;
   total: number;
+  printedTotal: number;
   releaseDate: string;
   images: { symbol: string; logo: string };
 }
@@ -68,18 +69,24 @@ export async function syncSets(): Promise<{ newSets: number }> {
   const existingCodes = new Set(existingSets.map(s => s.code));
 
   for (const tcgSet of response) {
-    if (existingCodes.has(tcgSet.id)) {
-      continue;
-    }
-
     const releaseYear = parseInt(tcgSet.releaseDate.split('-')[0], 10);
     const logoUrl = `https://images.pokemontcg.io/${tcgSet.id}/logo.png`;
+
+    if (existingCodes.has(tcgSet.id)) {
+      // Update printedTotal for existing sets that don't have it yet
+      await prisma.pokemonSet.update({
+        where: { code: tcgSet.id },
+        data: { printedTotal: tcgSet.printedTotal || tcgSet.total },
+      });
+      continue;
+    }
 
     await prisma.pokemonSet.create({
       data: {
         name: tcgSet.name,
         code: tcgSet.id,
         totalCards: tcgSet.total,
+        printedTotal: tcgSet.printedTotal || tcgSet.total,
         releaseYear,
         imageUrl: logoUrl,
       },

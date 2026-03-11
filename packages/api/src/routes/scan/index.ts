@@ -194,12 +194,18 @@ async function findByCardNumber(cnInfo: CardNumberInfo): Promise<any | null> {
 
   // If we have a set total, use it to narrow down the set
   if (total) {
-    const matchingSets = await prisma.pokemonSet.findMany({
-      where: { totalCards: { gte: total, lte: total + 50 } },
+    let matchingSets = await prisma.pokemonSet.findMany({
+      where: { printedTotal: total },
       orderBy: { releaseYear: 'desc' },
     });
+    if (matchingSets.length === 0) {
+      matchingSets = await prisma.pokemonSet.findMany({
+        where: { totalCards: { gte: total, lte: total + 50 } },
+        orderBy: { releaseYear: 'desc' },
+      });
+    }
 
-    console.log(`[Scan] Sets with totalCards ~${total}:`, matchingSets.map((s: any) => `${s.code} (${s.name}, ${s.totalCards})`));
+    console.log(`[Scan] Sets matching total=${total}:`, matchingSets.map((s: any) => `${s.code} (${s.name}, printed=${s.printedTotal})`));
 
     if (matchingSets.length > 0) {
       const setCodes = matchingSets.map(s => s.code);
@@ -353,14 +359,21 @@ scanRouter.post(
         }
       }
 
-      // Priority 3: cardNumber + setTotal, with rawText disambiguation
+      // Priority 3: cardNumber + setTotal (using printedTotal for exact match)
       if ((!cards || cards.length === 0) && cardNumber && setTotal) {
-        // Find ALL sets with this total (with range to account for secret rares)
-        const matchingSets = await prisma.pokemonSet.findMany({
-          where: { totalCards: { gte: setTotal, lte: setTotal + 50 } },
+        // First try exact match on printedTotal (the number printed on the card)
+        let matchingSets = await prisma.pokemonSet.findMany({
+          where: { printedTotal: setTotal },
           orderBy: { releaseYear: 'desc' },
         });
-        console.log(`[Scan/match] Sets with totalCards ~${setTotal} (${setTotal}-${setTotal+15}):`, matchingSets.map((s: any) => `${s.code} (${s.name}, ${s.totalCards})`));
+        // Fallback to range on totalCards if printedTotal not populated yet
+        if (matchingSets.length === 0) {
+          matchingSets = await prisma.pokemonSet.findMany({
+            where: { totalCards: { gte: setTotal, lte: setTotal + 50 } },
+            orderBy: { releaseYear: 'desc' },
+          });
+        }
+        console.log(`[Scan/match] Sets matching total=${setTotal}:`, matchingSets.map((s: any) => `${s.code} (${s.name}, printed=${s.printedTotal}, total=${s.totalCards})`));
 
         if (matchingSets.length > 0) {
           const setCodes = matchingSets.map((s: any) => s.code);
