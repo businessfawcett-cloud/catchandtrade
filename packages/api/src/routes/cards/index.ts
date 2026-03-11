@@ -291,14 +291,20 @@ cardsRouter.get('/:id/price-history', async (req: Request, res: Response, next: 
 
     const currentPrice = card.prices[0]?.priceMarket || null;
 
+    const periodDays = parseInt(period);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - periodDays);
+
     let priceHistory: any[] = [];
     try {
       priceHistory = await prisma.priceHistory.findMany({
-        where: { cardId },
+        where: { 
+          cardId,
+          date: { gte: startDate }
+        },
         orderBy: { date: 'asc' }
       });
     } catch (e) {
-      // PriceHistory model may not exist yet, use mock data
       priceHistory = [];
     }
 
