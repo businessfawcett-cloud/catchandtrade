@@ -103,6 +103,31 @@ app.use('/api/debug', debugRouter);
 app.use('/api/scan', scanRouter);
 app.use('/api/pokedex', pokedexRouter);
 
+// One-time backfill: populate printedTotal for all sets
+app.get('/api/backfill-printed-total', async (req: Request, res: Response) => {
+  const token = req.query.token as string;
+  if (!token || token !== process.env.CRON_SECRET) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+  try {
+    const resp = await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json');
+    const sets: any[] = await resp.json();
+    let updated = 0;
+    for (const s of sets) {
+      if (s.printedTotal) {
+        await prisma.pokemonSet.updateMany({
+          where: { code: s.id, printedTotal: null },
+          data: { printedTotal: s.printedTotal },
+        });
+        updated++;
+      }
+    }
+    res.json({ success: true, updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Public cron endpoint for UptimeRobot - triggers nightly sync
 const CRON_SECRET = process.env.CRON_SECRET;
 
