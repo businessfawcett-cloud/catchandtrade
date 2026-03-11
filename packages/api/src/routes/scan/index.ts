@@ -299,7 +299,125 @@ async function findByName(candidateNames: string[]): Promise<any[]> {
   return [];
 }
 
-// ── Main endpoint ───────────────────────────────────────────────────────
+// ── Text-based match endpoint (on-device OCR) ──────────────────────────
+
+scanRouter.post(
+  '/match',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { cardNumber, setTotal, setCode, name, rawText } = req.body;
+
+      console.log('[Scan/match] Input:', { cardNumber, setTotal, setCode, name, rawText: rawText?.slice(0, 100) });
+
+      let cards: any[] | null = null;
+
+      // Priority 1: cardNumber + setCode (exact match)
+      if (cardNumber && setCode) {
+        const variants = new Set<string>();
+        variants.add(cardNumber);
+        variants.add(cardNumber.replace(/^0+/, '') || cardNumber);
+        if (cardNumber.length < 3) variants.add(cardNumber.padStart(3, '0'));
+        if (cardNumber.length < 2) variants.add(cardNumber.padStart(2, '0'));
+
+        for (const num of variants) {
+          const found = await prisma.card.findMany({
+            where: { cardNumber: num, setCode: setCode },
+            include: CARD_INCLUDE,
+            take: 5,
+          });
+          if (found.length > 0) {
+            cards = found;
+            console.log(`[Scan/match] Matched via cardNumber+setCode: ${num} + ${setCode} → ${found[0].name}`);
+            break;
+          }
+        }
+      }
+
+      // Priority 2: cardNumber + name
+      if ((!cards || cards.length === 0) && cardNumber && name) {
+        const variants = [cardNumber, cardNumber.replace(/^0+/, '') || cardNumber, cardNumber.padStart(3, '0')];
+        for (const v of variants) {
+          const found = await prisma.card.findMany({
+            where: {
+              cardNumber: v,
+              name: { contains: name, mode: 'insensitive' },
+            },
+            take: 5,
+            include: CARD_INCLUDE,
+          });
+          if (found.length > 0) {
+            cards = found;
+            console.log(`[Scan/match] Matched via cardNumber+name: ${v} + "${name}" → ${found[0].name}`);
+            break;
+          }
+        }
+      }
+
+      // Priority 3: cardNumber + setTotal
+      if ((!cards || cards.length === 0) && cardNumber && setTotal) {
+        const cnInfo: CardNumberInfo = { number: cardNumber, total: setTotal, raw: '' };
+        cards = await findByCardNumber(cnInfo);
+        if (cards && cards.length > 0) {
+          console.log(`[Scan/match] Matched via cardNumber+setTotal: ${cardNumber}/${setTotal} → ${cards[0].name}`);
+        }
+      }
+
+      // Priority 4: name alone
+      if ((!cards || cards.length === 0) && name) {
+        cards = await findByName([name]);
+        if (cards && cards.length > 0) {
+          console.log(`[Scan/match] Matched via name: "${name}" → ${cards[0].name}`);
+        }
+      }
+
+      // Priority 5: rawText → extract candidate names
+      if ((!cards || cards.length === 0) && rawText) {
+        const candidates = extractCandidateNames(rawText);
+        console.log('[Scan/match] Extracted candidates from rawText:', candidates.slice(0, 5));
+        cards = await findByName(candidates);
+        if (cards && cards.length > 0) {
+          console.log(`[Scan/match] Matched via rawText candidates → ${cards[0].name}`);
+        }
+      }
+
+      if (!cards || cards.length === 0) {
+        return res.status(404).json({
+          error: 'No matching card found',
+          candidates: name ? [name] : [],
+        });
+      }
+
+      const bestMatch = cards[0];
+
+      let setName: string | null = null;
+      if (bestMatch.setCode) {
+        const set = await prisma.pokemonSet.findUnique({
+          where: { code: bestMatch.setCode },
+        });
+        if (set) setName = set.name;
+      }
+
+      const currentPrice = bestMatch.prices?.[0]?.priceMarket ?? null;
+
+      return res.json({
+        card: {
+          id: bestMatch.id,
+          name: bestMatch.name,
+          setName,
+          setCode: bestMatch.setCode,
+          cardNumber: bestMatch.cardNumber,
+          rarity: bestMatch.rarity,
+          imageUrl: bestMatch.imageUrl,
+          currentPrice,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ── Legacy image-based endpoint ─────────────────────────────────────────
 
 scanRouter.post(
   '/',
