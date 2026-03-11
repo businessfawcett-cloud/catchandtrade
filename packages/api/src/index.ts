@@ -111,7 +111,7 @@ app.get('/api/backfill-printed-total', async (req: Request, res: Response) => {
   }
   try {
     const resp = await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json');
-    const sets: any[] = await resp.json();
+    const sets = (await resp.json()) as any[];
     let updated = 0;
     for (const s of sets) {
       if (s.printedTotal) {
