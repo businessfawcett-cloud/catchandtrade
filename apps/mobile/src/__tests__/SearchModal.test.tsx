@@ -34,14 +34,11 @@ describe('API Client', () => {
   describe('scanCard', () => {
     it('returns scanned card result', async () => {
       (mockedApi.scanCard as jest.Mock).mockResolvedValueOnce({
-        id: '1',
-        name: 'Charizard',
-        confidence: 0.95,
+        card: { id: '1', name: 'Charizard', setName: 'Base Set', cardNumber: '4', setCode: 'base1', rarity: 'Rare Holo', imageUrl: null, currentPrice: 100 },
       });
 
       const result = await scanCard('base64image');
-      expect(result.name).toBe('Charizard');
-      expect(result.confidence).toBe(0.95);
+      expect(result.card.name).toBe('Charizard');
     });
 
     it('returns null when scan fails', async () => {

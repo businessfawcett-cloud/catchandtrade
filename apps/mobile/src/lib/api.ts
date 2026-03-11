@@ -133,8 +133,55 @@ export async function scanCard(imageBase64: string): Promise<{ card: Card }> {
     headers: await getHeaders(),
     body: JSON.stringify({ imageBase64 }),
   });
-  
+
   return handleResponse(response);
+}
+
+export async function matchCard(parsed: {
+  cardNumber?: string;
+  setTotal?: number;
+  setCode?: string;
+  name?: string;
+  rawText?: string;
+}): Promise<{ card: Card }> {
+  // Try the dedicated match endpoint first
+  try {
+    const response = await fetch(`${API_URL}/api/scan/match`, {
+      method: 'POST',
+      headers: await getHeaders(),
+      body: JSON.stringify(parsed),
+    });
+    if (response.ok) {
+      return response.json();
+    }
+  } catch (e) {
+    // match endpoint not available, fall through to search
+  }
+
+  // Fallback: use search endpoint with the card name
+  let query = (parsed.name || parsed.rawText || '').trim();
+  // Strip common OCR noise prefixes
+  query = query.replace(/^(BASIC|STAGE\s*[12]|TRAINER|SUPPORTER|ITEM|ENERGY)\s*/i, '').trim();
+  if (!query) throw new Error('No card name to search');
+
+  let results = await searchCards(query);
+  // If no results with full query, try individual words (skip noise)
+  if (results.length === 0 && query.includes(' ')) {
+    const words = query.split(/\s+/).filter(w => w.length >= 3);
+    for (const word of words) {
+      results = await searchCards(word);
+      if (results.length > 0) break;
+    }
+  }
+  if (results.length === 0) throw new Error('No cards found');
+
+  // If we have a card number, try to find an exact match
+  if (parsed.cardNumber) {
+    const exact = results.find(c => c.cardNumber === parsed.cardNumber);
+    if (exact) return { card: exact };
+  }
+
+  return { card: results[0] };
 }
 
 export async function getPortfolios() {
@@ -255,4 +302,47 @@ export async function removeFromWatchlist(itemId: string) {
 interface SetDetails {
   set: PokemonSet;
   cards: Card[];
+}
+
+export interface PublicUser {
+  id: string;
+  username: string | null;
+  displayName: string | null;
+  avatarId: string | null;
+  isPublic: boolean;
+  country: string | null;
+  twitterHandle: string | null;
+  instagramHandle: string | null;
+  tiktokHandle: string | null;
+  portfolios?: PortfolioItem[];
+}
+
+export async function getUserByUsername(username: string): Promise<PublicUser | null> {
+  const response = await fetch(
+    `${API_URL}/api/users/${encodeURIComponent(username)}`,
+    { headers: await getHeaders() }
+  );
+  
+  if (response.status === 404) return null;
+  return handleResponse(response);
+}
+
+export async function updateProfile(data: {
+  username?: string | null;
+  displayName?: string | null;
+  avatarId?: string | null;
+  isPublic?: boolean;
+  hideCollectionValue?: boolean;
+  country?: string | null;
+  twitterHandle?: string | null;
+  instagramHandle?: string | null;
+  tiktokHandle?: string | null;
+}) {
+  const response = await fetch(`${API_URL}/api/users/me`, {
+    method: 'PATCH',
+    headers: await getHeaders(),
+    body: JSON.stringify(data),
+  });
+  
+  return handleResponse(response);
 }

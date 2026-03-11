@@ -28,7 +28,7 @@ const COLORS = {
 
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }: { navigation?: any }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isLogin, setIsLogin] = useState(true);
@@ -194,6 +194,13 @@ export default function ProfileScreen() {
         <View style={styles.actionButtons}>
           <TouchableOpacity style={styles.editProfileButton}>
             <Text style={styles.editProfileButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.viewPublicButton}
+            onPress={() => navigation?.navigate('PublicProfile', { username: user?.username })}
+          >
+            <Text style={styles.viewPublicButtonText}>View Public Profile</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -608,6 +615,18 @@ const styles = StyleSheet.create({
   },
   editProfileButtonText: {
     color: COLORS.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  viewPublicButton: {
+    borderWidth: 1,
+    borderColor: COLORS.gold,
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  viewPublicButtonText: {
+    color: COLORS.gold,
     fontSize: 16,
     fontWeight: '600',
   },
