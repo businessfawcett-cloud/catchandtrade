@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE "PokemonSet" ADD COLUMN "language" TEXT NOT NULL DEFAULT 'EN';
+ALTER TABLE "PokemonSet" ADD COLUMN IF NOT EXISTS "language" TEXT NOT NULL DEFAULT 'EN';
 
 -- AlterTable
-ALTER TABLE "CardPrice" ADD COLUMN "variant" TEXT;
+ALTER TABLE "CardPrice" ADD COLUMN IF NOT EXISTS "variant" TEXT;

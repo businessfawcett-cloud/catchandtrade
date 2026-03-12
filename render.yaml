@@ -4,7 +4,7 @@ services:
     env: node
     region: oregon
     buildCommand: npm install && cd packages/db && npx prisma generate && cd ../.. && npx turbo run build --filter=@catchandtrade/api
-    startCommand: cd packages/db && npx prisma migrate deploy && cd ../api && node dist/index.js
+    startCommand: node packages/db/scripts/apply-pending-migrations.js && cd packages/api && node dist/index.js
     healthCheckPath: /ping
     envVars:
       - key: DATABASE_URL
