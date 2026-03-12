@@ -211,13 +211,21 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`API server running on http://localhost:${PORT}`);
-  });
-  
-  if (process.env.NODE_ENV !== 'test') {
-    startNightlySync();
-  }
+  // Apply pending schema changes before starting (idempotent)
+  prisma.$executeRawUnsafe(`ALTER TABLE "PokemonSet" ADD COLUMN IF NOT EXISTS "language" TEXT NOT NULL DEFAULT 'EN'`)
+    .catch(() => {})
+    .then(() => prisma.$executeRawUnsafe(`ALTER TABLE "CardPrice" ADD COLUMN IF NOT EXISTS "variant" TEXT`))
+    .catch(() => {})
+    .then(() => {
+      console.log('[startup] Schema migrations applied');
+      app.listen(PORT, () => {
+        console.log(`API server running on http://localhost:${PORT}`);
+      });
+
+      if (process.env.NODE_ENV !== 'test') {
+        startNightlySync();
+      }
+    });
 }
 
 export default app;
