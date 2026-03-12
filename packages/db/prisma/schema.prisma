@@ -44,6 +44,7 @@ model PokemonSet {
   printedTotal Int?
   releaseYear  Int
   imageUrl     String?
+  language     String   @default("EN")
   cards        Card[]
 }
 
@@ -97,6 +98,7 @@ model CardPrice {
   gradedBGS95         Float?
   expectedValue       Float?
   lastUpdated         DateTime?
+  variant             String?
   isStale             Boolean   @default(false)
   listingCount        Int       @default(0)
   @@index([cardId, date])

@@ -10,6 +10,7 @@ export interface Card {
   cardNumber: string;
   rarity: string | null;
   imageUrl: string | null;
+  language?: string;
   currentPrice: number | null;
 }
 
@@ -143,6 +144,7 @@ export async function matchCard(parsed: {
   setCode?: string;
   name?: string;
   rawText?: string;
+  language?: string;
 }): Promise<{ card: Card }> {
   // Try the dedicated match endpoint first
   try {

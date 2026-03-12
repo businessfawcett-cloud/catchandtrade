@@ -95,13 +95,20 @@ function cardNumberVariants(cardNumber: string): string[] {
 }
 
 /**
+ * Language filter helper — returns empty object if no language specified.
+ */
+function languageWhere(language?: string) {
+  return language ? { language } : {};
+}
+
+/**
  * Search by candidate names using multiple strategies.
  */
-async function findByName(candidateNames: string[]): Promise<any[]> {
+async function findByName(candidateNames: string[], language?: string): Promise<any[]> {
   // Strategy 1: Full candidate name contains
   for (const name of candidateNames.slice(0, 5)) {
     const cards = await prisma.card.findMany({
-      where: { name: { contains: name, mode: 'insensitive' } },
+      where: { name: { contains: name, mode: 'insensitive' }, ...languageWhere(language) },
       take: 10,
       include: CARD_INCLUDE,
     });
@@ -118,6 +125,7 @@ async function findByName(candidateNames: string[]): Promise<any[]> {
         AND: words.map(word => ({
           name: { contains: word, mode: 'insensitive' as const },
         })),
+        ...languageWhere(language),
       },
       take: 10,
       include: CARD_INCLUDE,
@@ -142,6 +150,7 @@ async function findByName(candidateNames: string[]): Promise<any[]> {
         OR: uniqueWords.map(word => ({
           name: { contains: word, mode: 'insensitive' as const },
         })),
+        ...languageWhere(language),
       },
       take: 20,
       include: CARD_INCLUDE,
@@ -200,9 +209,9 @@ scanRouter.post(
   '/match',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { cardNumber, setTotal, setCode, name, rawText } = req.body;
+      const { cardNumber, setTotal, setCode, name, rawText, language } = req.body;
 
-      console.log('[Scan/match] Input:', { cardNumber, setTotal, setCode, name, rawText: rawText?.slice(0, 100) });
+      console.log('[Scan/match] Input:', { cardNumber, setTotal, setCode, name, language, rawText: rawText?.slice(0, 100) });
 
       let cards: any[] | null = null;
 
@@ -210,7 +219,7 @@ scanRouter.post(
       if (cardNumber && setCode) {
         for (const num of cardNumberVariants(cardNumber)) {
           const found = await prisma.card.findMany({
-            where: { cardNumber: num, setCode: setCode },
+            where: { cardNumber: num, setCode: setCode, ...languageWhere(language) },
             include: CARD_INCLUDE,
             take: 5,
           });
@@ -229,6 +238,7 @@ scanRouter.post(
             where: {
               cardNumber: v,
               name: { contains: name, mode: 'insensitive' },
+              ...languageWhere(language),
             },
             take: 5,
             include: CARD_INCLUDE,
@@ -249,7 +259,7 @@ scanRouter.post(
           // Secret rares (e.g., 201/198): skip printedTotal, search by card number alone
           for (const num of cardNumberVariants(cardNumber)) {
             const found = await prisma.card.findMany({
-              where: { cardNumber: num },
+              where: { cardNumber: num, ...languageWhere(language) },
               include: CARD_INCLUDE_WITH_SET,
               take: 20,
             });
@@ -262,13 +272,13 @@ scanRouter.post(
         } else {
           // Normal cards: match via printedTotal
           let matchingSets = await prisma.pokemonSet.findMany({
-            where: { printedTotal: setTotal },
+            where: { printedTotal: setTotal, ...languageWhere(language) },
             orderBy: { releaseYear: 'desc' },
           });
           // Fallback to narrow range on totalCards
           if (matchingSets.length === 0) {
             matchingSets = await prisma.pokemonSet.findMany({
-              where: { totalCards: { gte: setTotal, lte: setTotal + 10 } },
+              where: { totalCards: { gte: setTotal, lte: setTotal + 10 }, ...languageWhere(language) },
               orderBy: { releaseYear: 'desc' },
             });
           }
@@ -304,7 +314,7 @@ scanRouter.post(
 
       // Priority 4: name alone
       if ((!cards || cards.length === 0) && name) {
-        cards = await findByName([name]);
+        cards = await findByName([name], language);
         if (cards && cards.length > 0) {
           console.log(`[Scan/match] Matched via name: "${name}" → ${cards[0].name}`);
         }
@@ -314,7 +324,7 @@ scanRouter.post(
       if ((!cards || cards.length === 0) && rawText) {
         const candidates = extractCandidateNames(rawText);
         console.log('[Scan/match] Extracted candidates from rawText:', candidates.slice(0, 5));
-        cards = await findByName(candidates);
+        cards = await findByName(candidates, language);
         if (cards && cards.length > 0) {
           console.log(`[Scan/match] Matched via rawText candidates → ${cards[0].name}`);
         }
@@ -348,6 +358,7 @@ scanRouter.post(
           cardNumber: bestMatch.cardNumber,
           rarity: bestMatch.rarity,
           imageUrl: bestMatch.imageUrl,
+          language: bestMatch.language,
           currentPrice,
         },
       });

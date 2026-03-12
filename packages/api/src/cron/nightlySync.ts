@@ -1,6 +1,5 @@
 import { prisma } from '@catchandtrade/db';
 import * as cron from 'node-cron';
-import EbayPriceFetcher, { BudgetTracker } from '../services/pricing/ebay';
 
 const POKEMON_TCG_API_URL = 'https://api.pokemontcg.io/v2';
 const GITHUB_SETS_URL = 'https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json';
@@ -23,6 +22,36 @@ interface TCGCard {
   rarity: string | null;
   images: { small: string; large: string };
   set: { id: string; name: string };
+}
+
+// ── TCGdex API (Japanese cards + pricing) ────────────────────────────────
+const TCGDEX_BASE = 'https://api.tcgdex.net/v2';
+
+interface TCGdexSetBrief {
+  id: string;
+  name: string;
+  cardCount?: { total: number; official: number };
+}
+
+interface TCGdexSetDetail {
+  id: string;
+  name: string;
+  serie: string;
+  releaseDate?: string;
+  cardCount: { total: number; official: number };
+  logo?: string;
+  cards: Array<{ id: string; localId: string; name: string; image?: string }>;
+}
+
+interface TCGdexCardDetail {
+  id: string;
+  name: string;
+  rarity?: string;
+  category?: string;
+  image?: string;
+  set: { id: string; name: string };
+  tcgplayer?: Record<string, { low?: number; mid?: number; high?: number; market?: number; directLow?: number }>;
+  cardmarket?: { averageSellPrice?: number; lowPrice?: number; trendPrice?: number; avg1?: number; avg7?: number; avg30?: number };
 }
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -151,206 +180,167 @@ export async function syncCards(): Promise<{ newCards: number }> {
   return { newCards };
 }
 
-// ── Price Sync (rewritten: two-tiered eBay engine) ──────────────────────
+// ── Japanese Card Sync (TCGdex) ──────────────────────────────────────────
 
-const ebayFetcher = new EbayPriceFetcher();
-const budgetTracker = new BudgetTracker();
+export async function syncJPSets(): Promise<{ newSets: number }> {
+  console.log('Starting JP Set Sync from TCGdex...');
+  let newSets = 0;
 
-async function runBulkPass(): Promise<{ updatedPrices: number; errorCount: number }> {
-  console.log('  Tier 1: Bulk Discovery Pass — searching by set name');
-  let updatedPrices = 0;
-  let errorCount = 0;
+  const sets = await fetchWithRetry<TCGdexSetBrief[]>(`${TCGDEX_BASE}/ja/sets`);
+  if (!sets) {
+    console.log('  TCGdex JP sets unavailable, skipping');
+    return { newSets: 0 };
+  }
 
-  const sets = await prisma.pokemonSet.findMany({
-    include: {
-      cards: {
-        select: { id: true, cardNumber: true }
-      }
-    }
-  });
+  const existingSets = await prisma.pokemonSet.findMany({ select: { code: true } });
+  const existingCodes = new Set(existingSets.map(s => s.code));
 
   for (const set of sets) {
-    if (!budgetTracker.canMakeCall()) {
-      console.log(`  Bulk pass stopping — budget low (${budgetTracker.getRemainingBudget()} remaining)`);
-      break;
+    if (existingCodes.has(set.id)) continue;
+
+    // Fetch full set detail for release date and card count
+    const detail = await fetchWithRetry<TCGdexSetDetail>(`${TCGDEX_BASE}/ja/sets/${set.id}`);
+    if (!detail) continue;
+
+    const releaseYear = detail.releaseDate
+      ? parseInt(detail.releaseDate.split('/')[0] || detail.releaseDate.split('-')[0], 10)
+      : 2020;
+
+    await prisma.pokemonSet.create({
+      data: {
+        name: detail.name,
+        code: detail.id,
+        totalCards: detail.cardCount.total,
+        printedTotal: detail.cardCount.official,
+        releaseYear: isNaN(releaseYear) ? 2020 : releaseYear,
+        imageUrl: detail.logo || null,
+        language: 'JA',
+      },
+    });
+    newSets++;
+    console.log(`  Added JP set: ${detail.name} (${detail.id})`);
+    await delay(300);
+  }
+
+  console.log(`  Found ${newSets} new JP sets`);
+  return { newSets };
+}
+
+export async function syncJPCards(): Promise<{ newCards: number }> {
+  console.log('Starting JP Card Sync from TCGdex...');
+  let newCards = 0;
+
+  const sets = await prisma.pokemonSet.findMany({ where: { language: 'JA' } });
+  console.log(`  Checking ${sets.length} JP sets for new cards...`);
+
+  for (const set of sets) {
+    const detail = await fetchWithRetry<TCGdexSetDetail>(`${TCGDEX_BASE}/ja/sets/${set.code}`);
+    if (!detail || !detail.cards) continue;
+
+    const existingCards = await prisma.card.findMany({
+      where: { setCode: set.code },
+      select: { pokemonTcgId: true },
+    });
+    const existingIds = new Set(existingCards.map(c => c.pokemonTcgId));
+
+    for (const card of detail.cards) {
+      const pokemonTcgId = `ja-${card.id}`;
+      if (existingIds.has(pokemonTcgId)) continue;
+
+      const cardNumber = card.localId || card.id.split('-').pop() || '';
+      const imageUrl = card.image ? `${card.image}/high.webp` : null;
+
+      await prisma.card.create({
+        data: {
+          name: card.name,
+          setName: set.name,
+          setCode: set.code,
+          cardNumber,
+          pokemonTcgId,
+          imageUrl,
+          gameType: 'POKEMON',
+          language: 'JA',
+          setId: set.id,
+        },
+      });
+      newCards++;
+    }
+
+    await delay(300);
+  }
+
+  console.log(`  Found ${newCards} new JP cards`);
+  return { newCards };
+}
+
+// ── Price Sync (TCGdex — replaces eBay) ──────────────────────────────────
+
+async function syncTCGdexPricesForCards(cards: Array<{ id: string; pokemonTcgId: string | null; language: string }>) {
+  let updatedPrices = 0;
+  let errorCount = 0;
+  const now = new Date();
+
+  for (const card of cards) {
+    if (!card.pokemonTcgId) continue;
+
+    // Map pokemonTcgId to TCGdex API card ID
+    const lang = card.language === 'JA' ? 'ja' : 'en';
+    const tcgdexId = card.language === 'JA'
+      ? card.pokemonTcgId.replace(/^ja-/, '')  // "ja-S1a-1" → "S1a-1"
+      : card.pokemonTcgId;                      // "xy6-38" as-is
+
+    const detail = await fetchWithRetry<TCGdexCardDetail>(`${TCGDEX_BASE}/${lang}/cards/${tcgdexId}`);
+    if (!detail) {
+      await delay(200);
+      continue;
     }
 
     try {
-      const listings = await ebayFetcher.searchBySet(set.name);
-      budgetTracker.recordCall();
-
-      const matched = ebayFetcher.matchListingsToCards(listings, set.cards);
-      let setUpdated = 0;
-
-      const now = new Date();
-      for (const [cardId, cardListings] of matched.entries()) {
-        try {
-          const calculated = ebayFetcher.calculatePrices(cardListings);
-
-          // Skip if no eBay data found - preserve existing price
-          if (calculated.priceMarket === null) {
-            continue;
-          }
-
-          // Skip outliers - filter out unrealistic prices
-          if (calculated.priceMarket < 0.10 || calculated.priceMarket > 10000) {
-            console.log(`  Skipping outlier price for card ${cardId}: $${calculated.priceMarket}`);
-            continue;
-          }
+      // TCGPlayer pricing (USD)
+      if (detail.tcgplayer) {
+        for (const [variant, prices] of Object.entries(detail.tcgplayer)) {
+          if (!prices.market && !prices.mid) continue;
 
           await prisma.cardPrice.create({
             data: {
-              cardId,
-              priceLow: calculated.priceLow,
-              priceMid: calculated.priceMid,
-              priceHigh: calculated.priceHigh,
-              priceMarket: calculated.priceMarket,
-              ebayBuyNowLow: calculated.ebayBuyNowLow,
+              cardId: card.id,
+              priceLow: prices.low ?? null,
+              priceMid: prices.mid ?? null,
+              priceHigh: prices.high ?? null,
+              priceMarket: prices.market ?? prices.mid ?? null,
+              variant,
               lastUpdated: now,
               isStale: false,
-              listingCount: calculated.listingCount,
-            }
+              listingCount: 0,
+            },
           });
+        }
 
+        // Use first variant's market price for price history
+        const firstVariant = Object.values(detail.tcgplayer)[0];
+        const marketPrice = firstVariant?.market ?? firstVariant?.mid;
+        if (marketPrice) {
           await prisma.priceHistory.create({
-            data: {
-              cardId,
-              price: calculated.priceMarket,
-              source: 'ebay',
-            }
+            data: { cardId: card.id, price: marketPrice, source: 'tcgplayer' },
           });
-
-          updatedPrices++;
-          setUpdated++;
-        } catch (err) {
-          errorCount++;
-          console.log(`  Error updating price for card ${cardId}: ${(err as Error).message}`);
         }
-      }
 
-      console.log(`  Set "${set.name}": ${listings.length} listings → ${setUpdated} cards priced`);
+        updatedPrices++;
+      }
     } catch (err) {
       errorCount++;
-      console.log(`  Error searching set "${set.name}": ${(err as Error).message}`);
+      console.log(`  Error pricing card ${card.pokemonTcgId}: ${(err as Error).message}`);
     }
+
+    await delay(200);
   }
 
-  console.log(`  Bulk pass complete: ${updatedPrices} cards updated, ${errorCount} errors`);
-  return { updatedPrices, errorCount };
-}
-
-async function runPrecisionPass(): Promise<{ updatedPrices: number; errorCount: number }> {
-  console.log('  Tier 2: Precision Cleanup Pass — targeting stale high-priority cards');
-  let updatedPrices = 0;
-  let errorCount = 0;
-
-  // Prioritize: portfolio/watchlist membership → highest value → oldest lastUpdated
-  const staleCards = await prisma.card.findMany({
-    where: {
-      prices: {
-        some: {
-          OR: [
-            { isStale: true },
-            { lastUpdated: null },
-          ]
-        }
-      }
-    },
-    include: {
-      set: true,
-      prices: {
-        orderBy: { date: 'desc' },
-        take: 1,
-      },
-      portfolioItems: { take: 1 },
-      watchlistItems: { take: 1 },
-    },
-  });
-
-  // Sort: portfolio/watchlist first, then highest price, then oldest update
-  staleCards.sort((a, b) => {
-    const aInCollection = (a.portfolioItems.length > 0 || a.watchlistItems.length > 0) ? 1 : 0;
-    const bInCollection = (b.portfolioItems.length > 0 || b.watchlistItems.length > 0) ? 1 : 0;
-    if (aInCollection !== bInCollection) return bInCollection - aInCollection;
-
-    const aPrice = a.prices[0]?.priceMarket ?? 0;
-    const bPrice = b.prices[0]?.priceMarket ?? 0;
-    if (aPrice !== bPrice) return bPrice - aPrice;
-
-    const aUpdated = a.prices[0]?.lastUpdated?.getTime() ?? 0;
-    const bUpdated = b.prices[0]?.lastUpdated?.getTime() ?? 0;
-    return aUpdated - bUpdated;
-  });
-
-  for (const card of staleCards) {
-    if (!budgetTracker.canMakeCall()) {
-      console.log(`  Precision pass stopping — budget exhausted (${budgetTracker.getRemainingBudget()} remaining)`);
-      break;
-    }
-
-    if (!card.set) continue;
-
-    try {
-      const listings = await ebayFetcher.searchByCard(card.set.name, card.cardNumber);
-      budgetTracker.recordCall();
-
-      const matched = ebayFetcher.matchListingsToCards(
-        listings,
-        [{ id: card.id, cardNumber: card.cardNumber }]
-      );
-
-      const cardListings = matched.get(card.id) || [];
-      const calculated = ebayFetcher.calculatePrices(cardListings);
-
-      // Skip if no eBay data found - preserve existing price
-      if (calculated.priceMarket === null) {
-        continue;
-      }
-
-      // Skip outliers - filter out unrealistic prices
-      if (calculated.priceMarket < 0.10 || calculated.priceMarket > 10000) {
-        continue;
-      }
-
-      const now = new Date();
-
-      await prisma.cardPrice.create({
-        data: {
-          cardId: card.id,
-          priceLow: calculated.priceLow,
-          priceMid: calculated.priceMid,
-          priceHigh: calculated.priceHigh,
-          priceMarket: calculated.priceMarket,
-          ebayBuyNowLow: calculated.ebayBuyNowLow,
-          lastUpdated: now,
-          isStale: false,
-          listingCount: calculated.listingCount,
-        }
-      });
-
-      await prisma.priceHistory.create({
-        data: {
-          cardId: card.id,
-          price: calculated.priceMarket,
-          source: 'ebay',
-        }
-      });
-
-      updatedPrices++;
-    } catch (err) {
-      errorCount++;
-      console.log(`  Error in precision pass for card ${card.id}: ${(err as Error).message}`);
-    }
-  }
-
-  console.log(`  Precision pass complete: ${updatedPrices} cards updated, ${errorCount} errors`);
   return { updatedPrices, errorCount };
 }
 
 async function markStaleCards(): Promise<number> {
   const staleThreshold = new Date(Date.now() - STALE_THRESHOLD_HOURS * 60 * 60 * 1000);
 
-  // Get the latest CardPrice for each card and mark stale if lastUpdated is old
   const result = await prisma.$executeRaw`
     UPDATE "CardPrice" cp
     SET "isStale" = true
@@ -368,30 +358,33 @@ async function markStaleCards(): Promise<number> {
 }
 
 export async function syncPrices(): Promise<{ updatedPrices: number }> {
-  console.log('Starting Job 3: Sync Prices (eBay two-tiered engine)...');
+  console.log('Starting Job 3: Sync Prices (TCGdex)...');
   const syncStart = Date.now();
 
-  console.log(`  Budget at start: ${budgetTracker.getRemainingBudget()} calls remaining`);
+  // Get cards needing price updates: no price, or stale
+  const cardsNeedingPrices = await prisma.card.findMany({
+    where: {
+      OR: [
+        { prices: { none: {} } },
+        { prices: { some: { isStale: true } } },
+      ],
+    },
+    select: { id: true, pokemonTcgId: true, language: true },
+    take: 500, // Process in batches to avoid overwhelming TCGdex
+  });
 
-  // Tier 1: Bulk pass
-  const bulk = await runBulkPass();
-  console.log(`  Budget after bulk pass: ${budgetTracker.getRemainingBudget()} calls remaining`);
+  console.log(`  Found ${cardsNeedingPrices.length} cards needing price updates`);
 
-  // Tier 2: Precision pass
-  const precision = await runPrecisionPass();
-  console.log(`  Budget after precision pass: ${budgetTracker.getRemainingBudget()} calls remaining`);
+  const result = await syncTCGdexPricesForCards(cardsNeedingPrices);
 
   // Staleness sweep
   const markedStale = await markStaleCards();
   console.log(`  Staleness sweep: ${markedStale} cards marked stale (threshold: ${STALE_THRESHOLD_HOURS}h)`);
 
-  const totalUpdated = bulk.updatedPrices + precision.updatedPrices;
-  const totalErrors = bulk.errorCount + precision.errorCount;
   const duration = Date.now() - syncStart;
+  console.log(`  Price sync complete in ${duration}ms: ${result.updatedPrices} updated, ${result.errorCount} errors`);
 
-  console.log(`  Price sync complete in ${duration}ms: ${totalUpdated} updated, ${totalErrors} errors, ${budgetTracker.getRemainingBudget()} budget remaining`);
-
-  return { updatedPrices: totalUpdated };
+  return { updatedPrices: result.updatedPrices };
 }
 
 // ── Weekly/Nightly Orchestration ────────────────────────────────────────
@@ -417,6 +410,23 @@ export async function runWeeklySync(): Promise<void> {
   } catch (err) {
     errors.push(`Job 2 (syncCards) failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     console.error('  Job 2 failed:', err);
+  }
+
+  // JP sync from TCGdex (independent — failures don't affect EN)
+  try {
+    const jpSetsResult = await syncJPSets();
+    newSets += jpSetsResult.newSets;
+  } catch (err) {
+    errors.push(`JP syncSets failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    console.error('  JP syncSets failed:', err);
+  }
+
+  try {
+    const jpCardsResult = await syncJPCards();
+    newCards += jpCardsResult.newCards;
+  } catch (err) {
+    errors.push(`JP syncCards failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    console.error('  JP syncCards failed:', err);
   }
 
   const duration = Date.now() - startTime;

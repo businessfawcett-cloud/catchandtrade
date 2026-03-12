@@ -58,9 +58,15 @@ export default function ScanScreen({ navigation }: { navigation: any }) {
           setCode: parsed.setCode,
           name: parsed.query,
           rawText: ocrResult.text,
+          language: parsed.language,
         });
 
-        navigation.navigate('CardDetail', { cardId: matchResult.card.id, cardName: matchResult.card.name });
+        navigation.navigate('CardDetail', {
+          cardId: matchResult.card.id,
+          cardName: matchResult.card.name,
+          fromScan: true,
+          scanHint: parsed.query || undefined,
+        });
         resetToCamera();
       } catch (error) {
         setScanHint(null);
@@ -87,24 +93,32 @@ export default function ScanScreen({ navigation }: { navigation: any }) {
 
       setScanHint(parsed.query || null);
 
-      const result = await matchCard({
-        cardNumber: parsed.cardNumber,
-        setTotal: parsed.setTotal,
-        setCode: parsed.setCode,
-        name: parsed.query,
-        rawText: ocrResult.text,
-      });
-
-      const matchedName = result.card.name;
-      // Show confirmation so user can reject wrong matches
+      // Debug: show what OCR + parser produced
       Alert.alert(
-        'Card Found',
-        `OCR read: "${parsed.query}"\nCard #${parsed.cardNumber || '?'}/${parsed.setTotal || '?'}\n\nMatched: ${matchedName}`,
+        'OCR Debug',
+        `Query: "${parsed.query}"\nCard#: ${parsed.cardNumber || '?'}\nSetTotal: ${parsed.setTotal || '?'}\nSetCode: ${parsed.setCode || '?'}\nLang: ${parsed.language || '?'}\n\nRaw OCR (first 300):\n${ocrResult.text.substring(0, 300)}`,
         [
-          { text: 'Wrong Card', style: 'cancel', onPress: () => setState('FAILED') },
-          { text: 'Correct', onPress: () => {
-            navigation.navigate('CardDetail', { cardId: result.card.id, cardName: result.card.name });
-            resetToCamera();
+          { text: 'Cancel', style: 'cancel', onPress: () => setState('CAMERA') },
+          { text: 'Continue', onPress: async () => {
+            try {
+              const result = await matchCard({
+                cardNumber: parsed.cardNumber,
+                setTotal: parsed.setTotal,
+                setCode: parsed.setCode,
+                name: parsed.query,
+                rawText: ocrResult.text,
+                language: parsed.language,
+              });
+              navigation.navigate('CardDetail', {
+                cardId: result.card.id,
+                cardName: result.card.name,
+                fromScan: true,
+                scanHint: parsed.query || undefined,
+              });
+              resetToCamera();
+            } catch (e: any) {
+              setState('FAILED');
+            }
           }},
         ]
       );
