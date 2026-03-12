@@ -180,11 +180,12 @@ function disambiguateByRawText(cards: any[], rawText: string): any[] {
   const rawLower = rawText.toLowerCase();
   const scored = cards.map((card: any) => {
     const nameLower = card.name.toLowerCase();
-    const nameWords = nameLower.split(/\s+/);
+    // Split on spaces AND hyphens so "Thundurus-EX" → ["thundurus", "ex"]
+    const nameWords = nameLower.split(/[\s\-]+/);
 
     let score = 0;
-    // Full name match
-    if (rawLower.includes(nameLower)) score += 10;
+    // Full name match (also try hyphen→space variant)
+    if (rawLower.includes(nameLower) || rawLower.includes(nameLower.replace(/-/g, ' '))) score += 10;
     // Partial: count how many name words appear in raw text
     score += nameWords.filter(w => w.length > 2 && rawLower.includes(w)).length * 3;
     // Boost newer sets (more likely to be scanned)
@@ -256,16 +257,34 @@ scanRouter.post(
         const isSecretRare = parseInt(cardNumber, 10) > setTotal;
 
         if (isSecretRare) {
-          // Secret rares (e.g., 201/198): skip printedTotal, search by card number alone
+          // Secret rares (e.g., 201/198): use printedTotal to find the right set
+          // The set's printedTotal should equal the denominator (198 for "201/198")
+          let secretSets = await prisma.pokemonSet.findMany({
+            where: { printedTotal: setTotal, ...languageWhere(language) },
+            orderBy: { releaseYear: 'desc' },
+          });
+          // Fallback: sets where totalCards >= cardNumber (set must contain this card)
+          if (secretSets.length === 0) {
+            secretSets = await prisma.pokemonSet.findMany({
+              where: { totalCards: { gte: parseInt(cardNumber, 10) }, ...languageWhere(language) },
+              orderBy: { releaseYear: 'desc' },
+              take: 10,
+            });
+          }
+          const secretSetCodes = secretSets.map((s: any) => s.code);
+          console.log(`[Scan/match] Secret rare: sets with printedTotal=${setTotal}:`, secretSets.map((s: any) => `${s.code} (${s.name})`));
+
           for (const num of cardNumberVariants(cardNumber)) {
+            const where: any = { cardNumber: num, ...languageWhere(language) };
+            if (secretSetCodes.length > 0) where.setCode = { in: secretSetCodes };
             const found = await prisma.card.findMany({
-              where: { cardNumber: num, ...languageWhere(language) },
+              where,
               include: CARD_INCLUDE_WITH_SET,
               take: 20,
             });
             if (found.length > 0) {
               cards = found;
-              console.log(`[Scan/match] Secret rare: found ${found.length} cards for #${num}`);
+              console.log(`[Scan/match] Secret rare: found ${found.length} cards for #${num}: ${found.map((c: any) => `${c.name} (${c.setCode})`).join(', ')}`);
               break;
             }
           }
