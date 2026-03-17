@@ -14,8 +14,9 @@ import {
   StatusBar,
   SafeAreaView,
 } from 'react-native';
-import { getCardDetails, addToPortfolio, addToWatchlist, removeFromWatchlist, getPortfolios, getWatchlist } from '../lib/api';
+import { getCardDetails, addToPortfolio, addToWatchlist, removeFromWatchlist, getPortfolios, getWatchlist, Card } from '../lib/api';
 import * as Storage from '../lib/storage';
+import SearchModal from '../components/SearchModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRAPH_WIDTH = SCREEN_WIDTH - 64;
@@ -46,6 +47,8 @@ interface CardDetailScreenProps {
     params: {
       cardId: string;
       cardName?: string;
+      fromScan?: boolean;
+      scanHint?: string;
     };
   };
 }
@@ -69,8 +72,9 @@ interface CardData {
 }
 
 export default function CardDetailScreen({ navigation, route }: CardDetailScreenProps) {
-  const { cardId } = route.params;
+  const { cardId, fromScan, scanHint } = route.params;
   const [loading, setLoading] = useState(true);
+  const [searchVisible, setSearchVisible] = useState(false);
   const [card, setCard] = useState<CardData | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [inWatchlist, setInWatchlist] = useState(false);
@@ -235,12 +239,18 @@ export default function CardDetailScreen({ navigation, route }: CardDetailScreen
   }
 
   return (
+    <>
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
+        {fromScan && (
+          <TouchableOpacity onPress={() => setSearchVisible(true)} style={styles.notRightButton}>
+            <Text style={styles.notRightText}>Not right? Search</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Card Image */}
@@ -483,6 +493,18 @@ export default function CardDetailScreen({ navigation, route }: CardDetailScreen
         </View>
       </Modal>
     </ScrollView>
+    {fromScan && (
+      <SearchModal
+        visible={searchVisible}
+        onClose={() => setSearchVisible(false)}
+        onSelectCard={(selectedCard: Card) => {
+          setSearchVisible(false);
+          navigation.replace('CardDetail', { cardId: selectedCard.id, cardName: selectedCard.name });
+        }}
+        initialQuery={scanHint || undefined}
+      />
+    )}
+    </>
   );
 }
 
@@ -582,6 +604,9 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 12,
     paddingHorizontal: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   backButton: {
     padding: 4,
@@ -589,6 +614,17 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: '#58a6ff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  notRightButton: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  notRightText: {
+    color: '#ff6b6b',
+    fontSize: 13,
     fontWeight: '600',
   },
   imageContainer: {

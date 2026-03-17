@@ -43,6 +43,12 @@ const BookIcon = () => (
   </svg>
 );
 
+const StarIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+  </svg>
+);
+
 interface NavItem {
   href?: string;
   label: string;
@@ -196,12 +202,13 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive
                       ? 'bg-poke-red/20 text-poke-red'
                       : 'text-poke-text-muted hover:text-white hover:bg-poke-bg-light'
                   }`}
                 >
+                  {link.icon}
                   {link.label}
                 </Link>
               );

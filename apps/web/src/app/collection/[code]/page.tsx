@@ -103,6 +103,7 @@ const SetBadge = ({ imageUrl, name }: { imageUrl: string | null; name: string })
 };
 
 export default function CollectionDetailPage({ params }: { params: { code: string } }) {
+  const code = params.code;
   const [user, setUser] = useState<User | null>(null);
   const [set, setSet] = useState<SetData | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
@@ -130,7 +131,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
   useEffect(() => {
     const fetchSetData = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/sets/${encodeURIComponent(params.code)}`);
+        const response = await fetch(`${API_URL}/api/sets/${encodeURIComponent(code)}`);
         if (response.ok) {
           const data = await response.json();
           setSet(data.set);
@@ -146,7 +147,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
     };
 
     fetchSetData();
-  }, [params.code]);
+  }, [code]);
 
   useEffect(() => {
     if (!user) {
@@ -162,7 +163,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
       }
 
       try {
-        const response = await fetch(`${API_URL}/api/sets/${params.code}/progress`, {
+        const response = await fetch(`${API_URL}/api/sets/${code}/progress`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
@@ -180,7 +181,7 @@ export default function CollectionDetailPage({ params }: { params: { code: strin
     };
 
     fetchProgress();
-  }, [user, params.code]);
+  }, [user, code]);
 
   // If progress API returned data, use it; otherwise fall back to all set cards as missing
   const effectiveMissing = progress ? missingCards : cards;

@@ -17,7 +17,7 @@ Catch and Trade is a trading card portfolio and marketplace application supporti
 | ORM | Prisma |
 | Authentication | JWT, Passport (Google, Apple) |
 | Payments | Stripe |
-| Card Scanning | Google Cloud Vision OCR |
+| Card Scanning | ML Kit (on-device) + server match API |
 | Scheduling | node-cron |
 
 ### Project Structure
@@ -45,7 +45,7 @@ catchandtrade/
 | Model | Description |
 |-------|-------------|
 | `User` | User accounts with auth, profiles, social links |
-| `PokemonSet` | Pokemon card sets (Base Set, Jungle, etc.) |
+| `PokemonSet` | Pokemon card sets with totalCards and printedTotal |
 | `Card` | Individual cards with metadata, prices |
 | `CardPrice` | Historical price snapshots |
 | `Portfolio` | User's card collections |
@@ -98,10 +98,16 @@ catchandtrade/
 - [x] Price history charts
 
 ### Card Scanning
-- [x] Image upload and preprocessing
-- [x] Google Cloud Vision OCR
-- [x] Card matching algorithm
-- [x] Auto-add to portfolio
+- [x] On-device ML Kit text recognition (replaced Google Cloud Vision)
+- [x] OCR text parser with noise filtering (BASIC, Pokemon, illustrator, body text)
+- [x] Server-side card matching API (`POST /api/scan/match`)
+- [x] Match priority: setCode > cardNumber+name > cardNumber+setTotal > name > rawText
+- [x] printedTotal field for exact set matching (vs totalCards which includes secret rares)
+- [x] rawText disambiguation when multiple cards match
+- [x] Manual photo capture with react-native-vision-camera
+- [x] Gallery image picker for scanning saved photos
+- [x] Debug Alert dialog showing OCR results (temporary)
+- [ ] Auto-add to portfolio from scan
 
 ### Pricing & Alerts
 - [x] Real-time price fetching (TCGPlayer API)
@@ -146,8 +152,11 @@ catchandtrade/
 | `/api/alerts` | GET/POST | JWT | Manage price alerts |
 | `/api/watchlist` | GET/POST | JWT | Manage watchlist |
 | `/api/seller/profile` | GET/PUT | JWT | Seller profile |
+| `/api/scan/match` | POST | No | Match card from OCR data |
 | `/api/admin/sync` | POST | Admin | Trigger sync |
 | `/api/admin/sync/logs` | GET | Admin | View sync logs |
+| `/api/cron/sync` | GET | Token | Trigger nightly sync (24hr rate limit) |
+| `/api/auth/refresh` | POST | No | Refresh JWT access token |
 
 ---
 
@@ -274,9 +283,10 @@ npm run dev
 
 ### Production Database
 
-- **Card Count**: 20,083 Pokemon cards
-- **Set Count**: 171 Pokemon sets
-- **Seeded**: Feb 2026
+- **Card Count**: 20,000+ Pokemon cards
+- **Set Count**: 170+ Pokemon sets
+- **Seeded**: Feb 2026, nightly sync keeps data current
+- **PokemonSet fields**: totalCards (with secret rares), printedTotal (number on card)
 
 ### Production Environment Variables
 
@@ -317,7 +327,9 @@ All critical issues resolved:
 
 - [ ] Email notifications for price alerts
 - [ ] Stripe Connect for seller payouts
-- [ ] Mobile app completion
+- [ ] Improve scanner OCR accuracy (gold/stylized text, card name detection)
+- [ ] Remove scanner debug Alert dialog once stable
+- [ ] Auto-add scanned cards to portfolio
 - [ ] Price expectedValue calculation (90-day linear regression)
 - [x] Production deployment to Render
 - [x] Full Pokemon card database (20,000+ cards)
@@ -325,10 +337,43 @@ All critical issues resolved:
 - [x] Apple OAuth authentication
 - [x] User portfolio creation on signup
 - [x] Legal pages (Terms of Service, Privacy Policy)
+- [x] Mobile app with card scanner (ML Kit OCR)
+- [x] On-device OCR replacing server-side Tesseract
+- [x] printedTotal field for accurate set matching
+- [x] Automatic token refresh to prevent 401 errors
+- [x] Redesigned login/register pages
+- [x] Redesigned logged-in homepage with dashboard
 
 ---
 
 ## Recent Changes
+
+### March 11, 2026 - Mobile Scanner & Set Matching
+
+1. **On-Device OCR Migration**
+   - Replaced server-side Google Cloud Vision/Tesseract with ML Kit on-device text recognition
+   - Added OCR text parser with noise filtering (BASIC variants, Pokemon, illustrator, body text)
+   - Manual photo capture via react-native-vision-camera
+
+2. **Server-Side Card Matching API**
+   - New `POST /api/scan/match` endpoint for text-based card matching
+   - Priority matching: setCode > cardNumber+name > cardNumber+setTotal > name > rawText
+   - rawText disambiguation when multiple cards share same card number across sets
+
+3. **printedTotal Fix**
+   - Added `printedTotal` field to PokemonSet schema
+   - Pokemon TCG API provides both `total` (with secret rares) and `printedTotal` (number on card)
+   - Exact matching on printedTotal instead of fuzzy range on totalCards
+   - Backfill endpoint to populate printedTotal for all existing sets
+
+4. **UI Redesigns**
+   - Redesigned login and register pages with split-layout, floating Pokemon cards
+   - Redesigned logged-in homepage with premium dashboard and Recent Drops section
+   - Improved Pokedex icon with gradient
+
+5. **Auth Improvements**
+   - Automatic token refresh to prevent 401 errors
+   - Refresh token stored in localStorage
 
 ### March 7, 2026 - Production Ready
 

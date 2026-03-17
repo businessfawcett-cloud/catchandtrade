@@ -129,6 +129,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
   const handleAddToPortfolioClick = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
+      sessionStorage.setItem('returnUrl', window.location.pathname);
       window.location.href = '/login';
       return;
     }
@@ -145,6 +146,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
         }
         setShowModal(true);
       } else if (response.status === 401) {
+        sessionStorage.setItem('returnUrl', window.location.pathname);
         window.location.href = '/login';
       }
     } catch (err) {
@@ -157,6 +159,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
 
     const token = localStorage.getItem('token');
     if (!token) {
+      sessionStorage.setItem('returnUrl', window.location.pathname);
       window.location.href = '/login';
       return;
     }
@@ -248,6 +251,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
   const handleAddToWatchlist = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
+      sessionStorage.setItem('returnUrl', window.location.pathname);
       window.location.href = '/login';
       return;
     }

@@ -117,9 +117,17 @@ function PortfolioSearchContent() {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
     
+    console.log('Portfolio search auth check:', { token: !!token, userData: !!userData });
+    
     if (token && userData) {
-      setUser(JSON.parse(userData));
-      fetchPortfolios();
+      try {
+        const parsed = JSON.parse(userData);
+        setUser(parsed);
+        console.log('User set:', parsed);
+        fetchPortfolios();
+      } catch (e) {
+        console.error('Failed to parse user data:', e);
+      }
     }
     fetchCards();
   }, [fetchPortfolios, fetchCards]);

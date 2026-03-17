@@ -91,7 +91,10 @@ export default function LoginPage() {
       localStorage.setItem('token', data.token);
       localStorage.setItem('refreshToken', data.refreshToken);
       localStorage.setItem('user', JSON.stringify(data.user));
-      window.location.href = data.user.username ? '/' : '/onboarding';
+      // Redirect back to previous page or homepage
+      const returnUrl = sessionStorage.getItem('returnUrl') || '/';
+      sessionStorage.removeItem('returnUrl');
+      window.location.href = data.user.username ? returnUrl : '/onboarding';
     } catch (err) {
       setError('An error occurred');
     }

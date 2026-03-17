@@ -9,13 +9,6 @@ const config = getDefaultConfig(projectRoot);
 
 config.resolver.unstable_enablePackageExports = false;
 
-// Packages that MUST resolve from mobile's node_modules (React 19)
-const forceLocal = {
-  'react': path.resolve(mobileModules, 'react'),
-  'react-dom': path.resolve(mobileModules, 'react-dom'),
-  'react-native': path.resolve(mobileModules, 'react-native'),
-};
-
 config.resolver.nodeModulesPaths = [
   mobileModules,
   path.resolve(monorepoRoot, 'node_modules'),
@@ -23,25 +16,28 @@ config.resolver.nodeModulesPaths = [
 
 config.watchFolders = [monorepoRoot];
 
-// Intercept all resolution to force react packages from mobile node_modules
-const originalResolveRequest = config.resolver.resolveRequest;
-config.resolver.resolveRequest = (context, moduleName, platform) => {
-  // Check if this is a package we need to force-resolve locally
-  for (const [pkg, pkgPath] of Object.entries(forceLocal)) {
-    if (moduleName === pkg || moduleName.startsWith(pkg + '/')) {
-      const newContext = {
-        ...context,
-        nodeModulesPaths: [mobileModules],
-      };
-      if (originalResolveRequest) {
-        return originalResolveRequest(newContext, moduleName, platform);
-      }
-      return context.resolveRequest(newContext, moduleName, platform);
-    }
-  }
+// Hard aliases: ANY import of these packages resolves to mobile's copy.
+// This is critical because the web workspace uses React 18 (hoisted to root)
+// while mobile uses React 19. Without this, packages hoisted to root
+// (e.g. @react-navigation) would import root's React 18 and cause
+// "Invalid hook call" errors due to duplicate React instances.
+const forceLocal = {
+  'react': path.resolve(mobileModules, 'react'),
+  'react-dom': path.resolve(mobileModules, 'react-dom'),
+  'react-native': path.resolve(mobileModules, 'react-native'),
+};
 
-  if (originalResolveRequest) {
-    return originalResolveRequest(context, moduleName, platform);
+config.resolver.extraNodeModules = forceLocal;
+
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // For react/react-native, always resolve to mobile's node_modules
+  // regardless of where the importing module lives
+  const base = moduleName.split('/')[0];
+  if (forceLocal[base]) {
+    return {
+      type: 'sourceFile',
+      filePath: require.resolve(moduleName, { paths: [mobileModules] }),
+    };
   }
   return context.resolveRequest(context, moduleName, platform);
 };

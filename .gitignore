@@ -40,6 +40,9 @@ yarn-error.log*
 # IDE
 .idea/
 .vscode/
+
+# Claude Code
+.claude/mcp.json
 *.swp
 *.swo
 

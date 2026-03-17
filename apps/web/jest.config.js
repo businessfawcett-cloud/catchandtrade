@@ -7,6 +7,7 @@ module.exports = {
   testRegex: '(/__tests__/.*|\\.)(test|spec)\\.(ts|tsx)$',
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   maxWorkers: 1,
+  workerIdleMemoryLimit: '512MB',
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', { 
       useESM: false,

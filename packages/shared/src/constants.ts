@@ -78,6 +78,6 @@ export const GRADE_MULTIPLIERS: Record<GradingService, Record<Grade, number>> = 
 };
 
 export const GRADING_VERDICT_THRESHOLDS = {
-  STRONG: 1.0,
-  MARGINAL: 0.3,
+  STRONG: 0.5,    // 50%+ ROI = strong buy
+  MARGINAL: 0.0,  // 0-50% ROI = marginal (depends on card quality)
 } as const;

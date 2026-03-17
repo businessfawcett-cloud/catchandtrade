@@ -8,16 +8,15 @@
     "icon": "./assets/icon.png",
     "updates": {
       "enabled": false,
-      "checkAutomatically": "never",
-      "fallbackToCacheTimeout": 0,
-      "url": ""
+      "checkAutomatically": "ON_ERROR_RECOVERY",
+      "fallbackToCacheTimeout": 0
     },
-    "runtimeVersion": "1.0.0",
     "plugins": [
       [
-        "expo-camera",
+        "react-native-vision-camera",
         {
-          "cameraPermission": "Allow Catch and Trade to access your camera to scan Pokemon cards."
+          "cameraPermissionText": "Allow Catch and Trade to access your camera to scan Pokemon cards.",
+          "enableFrameProcessors": true
         }
       ],
       "expo-secure-store",
@@ -34,8 +33,7 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA"
       ]
     },
     "extra": {

@@ -19,6 +19,12 @@ interface GradingResult {
   verdict: 'strong' | 'marginal' | 'skip';
   verdictText: string;
   verdictColor: 'green' | 'yellow' | 'red';
+  priceSource?: 'psa_population' | 'multiplier';
+  rarityInfo?: {
+    totalGraded: number;
+    gradeCount: number;
+    percentage: number;
+  };
 }
 
 interface GradingCalculatorProps {
@@ -201,6 +207,17 @@ export default function GradingCalculator({ cardId, cardName }: GradingCalculato
                 <span className="text-poke-text-muted">Est. graded value:</span>
                 <span className="text-white">${result.gradedValue.toFixed(2)}</span>
               </div>
+              {result.rarityInfo && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-poke-text-muted">PSA Pop:</span>
+                  <span className="text-blue-400">
+                    {result.rarityInfo.gradeCount} / {result.rarityInfo.totalGraded} ({result.rarityInfo.percentage.toFixed(1)}%)
+                  </span>
+                </div>
+              )}
+              {result.priceSource === 'psa_population' && (
+                <div className="text-xs text-blue-400">Based on real PSA population data</div>
+              )}
               <div className="border-t border-poke-border my-2"></div>
               <div className="flex justify-between">
                 <span className="text-poke-text-muted">Net profit:</span>

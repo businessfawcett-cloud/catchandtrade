@@ -7,49 +7,7 @@ import RarityBadge from '@/components/RarityBadge';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
 
-const containerStyle: React.CSSProperties = {
-  background: '#0a0f1e',
-  minHeight: '100vh',
-  padding: '2rem'
-};
-
-const cardStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.05)',
-  backdropFilter: 'blur(20px)',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: '16px',
-  padding: '2rem'
-};
-
-const inputStyle: React.CSSProperties = {
-  background: '#1a2332',
-  border: '1px solid rgba(255,255,255,0.1)',
-  color: 'white',
-  padding: '0.75rem',
-  borderRadius: '8px',
-  width: '100%',
-  fontSize: '1rem',
-  boxSizing: 'border-box'
-};
-
-const buttonStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #e63946, #c1121f)',
-  color: 'white',
-  border: 'none',
-  padding: '0.75rem 1.5rem',
-  borderRadius: '8px',
-  fontSize: '0.9rem',
-  fontWeight: 'bold',
-  cursor: 'pointer',
-  transition: 'opacity 0.2s'
-};
-
-const gridStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-  gap: '1rem',
-  marginTop: '1rem'
-};
+// Styles will be applied directly using Tailwind classes in JSX
 
 interface Card {
   id: string;
@@ -115,6 +73,7 @@ export default function PortfolioPage() {
   const [newPortfolioName, setNewPortfolioName] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingPortfolioId, setDeletingPortfolioId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'all' | 'graded' | 'ungraded'>('all');
 
   const fetchPortfolios = useCallback(async () => {
     const token = localStorage.getItem('token');
@@ -168,11 +127,24 @@ export default function PortfolioPage() {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
     
-    if (token && userData) {
-      setUser(JSON.parse(userData));
-      fetchPortfolios();
+    if (token) {
+      try {
+        if (userData) {
+          const parsed = JSON.parse(userData);
+          setUser(parsed);
+        }
+      } catch (e) {
+        console.error('Failed to parse user data:', e);
+      }
     }
     setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchPortfolios();
+    }
   }, [fetchPortfolios]);
 
   useEffect(() => {
@@ -388,6 +360,13 @@ export default function PortfolioPage() {
 
   const currentPortfolio = portfolios.find(p => p.id === selectedPortfolio);
 
+  // Filter items based on view mode
+  const filteredItems = currentPortfolio?.items.filter(item => {
+    if (viewMode === 'graded') return item.isGraded;
+    if (viewMode === 'ungraded') return !item.isGraded;
+    return true;
+  }) || [];
+
   const normalizeRarity = (rarity: string | null): string => {
     if (!rarity) return '';
     if (rarity.toUpperCase().includes('MEGA') && rarity.toUpperCase().includes('RARE')) {
@@ -451,6 +430,15 @@ export default function PortfolioPage() {
     return 'bg-gray-600';
   };
 
+  const getSlabCompanyColor = (company: string) => {
+    const c = company?.toLowerCase() || '';
+    if (c.includes('psa')) return '#ef4444';
+    if (c.includes('cgc')) return '#60a5fa';
+    if (c.includes('bgs') || c.includes('beckett')) return '#d4af37';
+    if (c.includes('sgc')) return '#22c55e';
+    return '#ffffff';
+  };
+
   const getRawCardPrice = (item: PortfolioItem): number | null => {
     if (item.card.currentPrice != null) {
       return item.card.currentPrice;
@@ -467,27 +455,28 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <div style={containerStyle}>
-        <div style={{ ...cardStyle, textAlign: 'center', color: 'white' }}>
-          Loading...
+      <div className="min-h-screen bg-poke-bg p-6 flex items-center justify-center">
+        <div className="bg-poke-bg-light/50 backdrop-blur-md border border-poke-border/20 rounded-xl p-8 text-center">
+          <p className="text-poke-text-muted animate-pulse">Loading...</p>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    return (
-      <div style={containerStyle}>
-        <div style={{ ...cardStyle, textAlign: 'center', maxWidth: '500px', margin: '0 auto' }}>
-          <h1 style={{ color: 'white', fontSize: '1.75rem', marginBottom: '1rem' }}>Portfolio</h1>
-          <p style={{ color: '#94a3b8' }}>Please <a href="/login" style={{ color: '#e63946' }}>login</a> to view your portfolio.</p>
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return (
+        <div className="min-h-screen bg-poke-bg p-6 flex items-center justify-center">
+          <div className="bg-poke-bg-light/50 backdrop-blur-md border border-poke-border/20 rounded-xl p-8 max-w-md w-full text-center">
+            <h1 className="text-2xl font-bold text-white mb-4">Portfolio</h1>
+            <p className="text-poke-text-muted mb-4">Please <a href="/login" className="text-poke-red hover:underline">login</a> to view your portfolio.</p>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
   return (
-    <div style={containerStyle}>
+    <div className="min-h-screen bg-poke-bg p-6">
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -656,7 +645,7 @@ export default function PortfolioPage() {
               placeholder="Search for a card..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ ...inputStyle, paddingLeft: '2.5rem' }}
+              className="w-full pl-10 bg-poke-bg-light border border-poke-border/20 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-poke-red"
             />
             <svg 
               style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', width: '20px', height: '20px' }}
@@ -715,61 +704,145 @@ export default function PortfolioPage() {
           </div>
         </div>
 
-        {!currentPortfolio?.items || currentPortfolio.items.length === 0 ? (
-          <div style={{ ...cardStyle, textAlign: 'center', padding: '3rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-              <PokeballDecorative />
-            </div>
-            <h2 style={{ color: 'white', fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-              Your portfolio is empty
-            </h2>
-            <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
-              Start adding cards to track your collection!
-            </p>
-            <Link href="/marketplace" style={{ ...buttonStyle, display: 'inline-block', textDecoration: 'none' }}>
-              Browse Marketplace
-            </Link>
-          </div>
+        {/* View Mode Toggle */}
+        <div className="mb-6 flex gap-2">
+          <button
+            onClick={() => setViewMode('all')}
+            className={`px-4 py-2 rounded text-sm font-medium transition-all 
+              ${viewMode === 'all' ? 'bg-poke-red text-white' : 'bg-poke-bg-light text-gray-400 hover:text-white hover:bg-poke-bg-medium'}`}
+          >
+            All Cards ({currentPortfolio?.items.length || 0})
+          </button>
+          <button
+            onClick={() => setViewMode('graded')}
+            className={`px-4 py-2 rounded text-sm font-medium transition-all 
+              ${viewMode === 'graded' ? 'bg-poke-red text-white' : 'bg-poke-bg-light text-gray-400 hover:text-white hover:bg-poke-bg-medium'}`}
+          >
+            Graded ({currentPortfolio?.items.filter(i => i.isGraded).length || 0})
+          </button>
+          <button
+            onClick={() => setViewMode('ungraded')}
+            className={`px-4 py-2 rounded text-sm font-medium transition-all 
+              ${viewMode === 'ungraded' ? 'bg-poke-red text-white' : 'bg-poke-bg-light text-gray-400 hover:text-white hover:bg-poke-bg-medium'}`}
+          >
+            Ungraded ({currentPortfolio?.items.filter(i => !i.isGraded).length || 0})
+          </button>
+        </div>
+
+        {!filteredItems || filteredItems.length === 0 ? (
+           <div className="bg-poke-bg-light/50 backdrop-blur-md border border-poke-border/20 rounded-xl p-12 text-center">
+             <div className="flex items-center justify-center mb-6">
+               <PokeballDecorative />
+             </div>
+             <h2 className="text-xl font-bold text-white mb-2">
+               Your portfolio is empty
+             </h2>
+             <p className="text-poke-text-muted mb-6">
+               Start adding cards to track your collection!
+             </p>
+             <Link href="/marketplace" className="bg-poke-red hover:bg-poke-red-dark text-white font-medium px-6 py-2 rounded-lg transition-colors">
+               Browse Marketplace
+             </Link>
+           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {currentPortfolio.items.map(item => {
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 overflow-visible">
+            {filteredItems.map(item => {
               const links = getAffiliateLinks(item.card);
               const normalizedRarity = normalizeRarity(item.card.rarity);
               const itemUnitValue = getDisplayUnitValue(item);
               return (
                 <div
                   key={item.id}
-                  className={`card-wrapper bg-[#111827] rounded-xl overflow-hidden border ${getTypeColor(normalizedRarity)} card-lift ${isRareHolo(normalizedRarity) ? 'holo-effect' : ''}`}
+                  className={`card-wrapper bg-[#111827] rounded-xl overflow-visible border ${getTypeColor(normalizedRarity)} card-lift ${isRareHolo(normalizedRarity) ? 'holo-effect' : ''}`}
+                  style={{ maxWidth: '100%', boxSizing: 'border-box' }}
                 >
                   <Link href={`/marketplace/${item.card.id}`} className="block">
-                    <div className="relative aspect-[3/4] bg-gradient-to-br from-[#1a2332] to-[#0a0f1e] flex items-center justify-center p-3">
-                      {item.card.imageUrl ? (
-                        <img
-                          src={item.card.imageUrl}
-                          alt={item.card.name}
-                          className="max-w-full max-h-full object-contain drop-shadow-lg"
-                        />
+                    <div className="relative min-h-[200px] bg-gradient-to-br from-[#1a2332] to-[#0a0f1e] flex items-center justify-center p-3">
+                      {item.isGraded ? (
+                        <div style={{ 
+                          position: 'relative', 
+                          width: '100%', 
+                          aspectRatio: '334/522',  
+                          maxHeight: '100%',
+                          background: '#0d0d18',
+                          overflow: 'hidden',
+                          borderRadius: '8px',
+                        }}>
+                          <img
+                            src={item.card.imageUrl}
+                            alt={item.card.name}
+                            style={{
+                              position: 'absolute',
+                              top: '29%',
+                              left: '8%',
+                              width: '84%',
+                              height: '65%',
+                              objectFit: 'cover',
+                              objectPosition: 'center top',
+                              overflow: 'hidden',
+                              borderRadius: '3px',
+                              zIndex: 1,
+                            }}
+                          />
+                          <img
+                            src="/images/slab_overlay.png"
+                            alt="graded slab"
+                            style={{
+                              position: 'absolute',
+                              top: 0, left: 0,
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              zIndex: 2,
+                            }}
+                          />
+                          <div style={{
+                            position: 'absolute',
+                            top: '3.6%',
+                            left: '8%',
+                            width: '84%',
+                            zIndex: 3,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '0 4px',
+                          }}>
+                            <span style={{
+                              fontSize: '9px', fontWeight: '900', 
+                              letterSpacing: '1px',
+                              color: getSlabCompanyColor(item.gradeCompany || ''),
+                              textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                            }}>
+                              {item.gradeCompany?.toUpperCase()}
+                            </span>
+                            <span style={{
+                              fontSize: '12px', fontWeight: '900',
+                              color: '#f0c040',
+                              textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                            }}>
+                              {item.gradeValue}
+                            </span>
+                          </div>
+                        </div>
                       ) : (
-                        <div className="text-poke-text-muted text-sm">No Image</div>
+                        item.card.imageUrl ? (
+                          <img
+                            src={item.card.imageUrl}
+                            alt={item.card.name}
+                            className="max-w-full max-h-full object-contain drop-shadow-lg"
+                          />
+                        ) : (
+                          <div className="text-poke-text-muted text-sm">No Image</div>
+                        )
                       )}
-                      <span className={`absolute top-2 left-2 ${getConditionColor(item.condition)} text-white text-xs px-2 py-0.5 rounded`}>
-                        {item.condition.replace('_', ' ')}
-                      </span>
+                      {!item.isGraded && (
+                        <span className={`absolute top-2 left-2 ${getConditionColor(item.condition)} text-white text-xs px-2 py-0.5 rounded`}>
+                          {item.condition.replace('_', ' ')}
+                        </span>
+                      )}
                       {item.quantity > 1 && (
                         <span className="absolute top-2 right-2 bg-poke-red text-white text-xs px-2 py-0.5 rounded">
                           x{item.quantity}
-                        </span>
-                      )}
-                      {item.isGraded && item.gradeCompany && item.gradeValue != null && (
-                        <span
-                          className="absolute bottom-2 left-2 text-xs px-2 py-0.5 rounded font-bold"
-                          style={{
-                            background: 'linear-gradient(135deg, #f59e0b, #fcd34d)',
-                            color: '#1f2937',
-                            border: '1px solid rgba(255,255,255,0.4)'
-                          }}
-                        >
-                          {item.gradeCompany} {item.gradeValue}
                         </span>
                       )}
                     </div>
@@ -801,7 +874,7 @@ export default function PortfolioPage() {
                     <button 
                       onClick={(e) => {
                         e.preventDefault();
-                        handleRemoveItem(item.id, currentPortfolio.id, item.card.name);
+                        handleRemoveItem(item.id, currentPortfolio?.id ?? '', item.card.name);
                       }}
                       className="flex-1 py-1.5 text-xs bg-gray-600 hover:bg-red-500 text-white text-center rounded transition-colors"
                     >
@@ -846,7 +919,7 @@ export default function PortfolioPage() {
                   <select
                     value={addPortfolioId}
                     onChange={(e) => setAddPortfolioId(e.target.value)}
-                    style={{ ...inputStyle, cursor: 'pointer' }}
+                    className="w-full bg-poke-bg-light border border-poke-border/20 rounded-lg p-3 text-white cursor-pointer"
                   >
                     {portfolios.map(p => (
                       <option key={p.id} value={p.id} style={{ background: '#1a2332' }}>{p.name}</option>
@@ -860,7 +933,7 @@ export default function PortfolioPage() {
                 <select
                   value={condition}
                   onChange={(e) => setCondition(e.target.value)}
-                  style={{ ...inputStyle, cursor: 'pointer' }}
+                  className="w-full bg-poke-bg-light border border-poke-border/20 rounded-lg p-3 text-white cursor-pointer"
                 >
                   <option value="MINT" style={{ background: '#1a2332' }}>Mint</option>
                   <option value="NEAR_MINT" style={{ background: '#1a2332' }}>Near Mint</option>
@@ -879,7 +952,7 @@ export default function PortfolioPage() {
                   max="99"
                   value={quantity}
                   onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                  style={inputStyle}
+                  className="w-full bg-poke-bg-light border border-poke-border/20 rounded-lg p-3 text-white"
                 />
               </div>
 
@@ -891,7 +964,7 @@ export default function PortfolioPage() {
                   value={purchasePrice}
                   onChange={(e) => setPurchasePrice(e.target.value)}
                   placeholder="0.00"
-                  style={inputStyle}
+                  className="w-full bg-poke-bg-light border border-poke-border/20 rounded-lg p-3 text-white"
                 />
               </div>
 
@@ -961,7 +1034,7 @@ export default function PortfolioPage() {
                   value={newPortfolioName}
                   onChange={(e) => setNewPortfolioName(e.target.value)}
                   placeholder="My Collection"
-                  style={inputStyle}
+                  className="w-full bg-poke-bg-light border border-poke-border/20 rounded-lg p-3 text-white"
                   autoFocus
                 />
               </div>

@@ -20,15 +20,18 @@ import ebayRouter from './routes/ebay';
 import { debugRouter } from './routes/debug';
 import { scanRouter } from './routes/scan';
 import { pokedexRouter } from './routes/pokedex';
+import { slabsRouter } from './routes/slabs';
 import { startNightlySync, runNightlySync, syncPrices } from './cron/nightlySync';
 
 const PORT = process.env.PORT || 3003;
 
 const CORS_ORIGINS = [
   'http://localhost:3002',
+  'http://localhost:3006',
+  process.env.WEB_URL || 'http://localhost:3002',
   'https://catchandtrade.com',
   'https://www.catchandtrade.com'
-];
+].filter((v, i, a) => a.indexOf(v) === i); // Remove duplicates
 if (process.env.WEB_URL) {
   CORS_ORIGINS.push(process.env.WEB_URL);
 }
@@ -99,6 +102,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/webhooks', webhooksRouter);
 app.use('/api/ebay', ebayRouter);
 app.use('/api/grading', gradingRouter);
+app.use('/api/slabs', slabsRouter);
 app.use('/api/debug', debugRouter);
 app.use('/api/scan', scanRouter);
 app.use('/api/pokedex', pokedexRouter);

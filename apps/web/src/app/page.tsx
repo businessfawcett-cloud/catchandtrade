@@ -55,6 +55,7 @@ interface User {
   username: string | null;
   displayName: string;
   avatarId: string | null;
+  starterPokemonId: string | null;
 }
 
 function AnimatedCounter({ end, suffix = '' }: { end: number; suffix?: string }) {
@@ -468,8 +469,8 @@ function Dashboard({ user: initialUser }: { user: User }) {
   const displayName = user.displayName || user.username || 'Trainer';
 
   // Stat card icons - larger 24px
-  const StackedCardsIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+  const StackedCardsIcon = ({ style }: { style?: React.CSSProperties }) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" style={style}>
       <rect x="2" y="4" width="20" height="14" rx="2" />
       <rect x="4" y="2" width="20" height="14" rx="2" opacity="0.5" />
     </svg>
@@ -548,16 +549,36 @@ function Dashboard({ user: initialUser }: { user: User }) {
         
         {/* SECTION 1 - Profile Hero - Full width gradient banner */}
         <div style={{
-          background: 'linear-gradient(135deg, #0d0d18 0%, #1a1035 50%, #0d0d18 100%)',
+          background: 'linear-gradient(140deg, #0e0e1c 0%, #1a0e30 40%, #0e1828 100%)',
           borderRadius: '20px',
           padding: '32px 36px',
           marginBottom: '32px',
           position: 'relative',
           overflow: 'hidden'
         }}>
-          {/* Top row: avatar + name + buttons */}
+          {/* Grid texture overlay */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+            opacity: 0.02,
+            pointerEvents: 'none'
+          }} />
+          
+          {/* Purple accent line at bottom */}
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '2px',
+            background: 'linear-gradient(90deg, #8b5cf6, transparent)'
+          }} />
+          
+          {/* Top row: avatar + name + starter + buttons */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
-            {/* Avatar + Name */}
+            {/* Avatar + Name + Starter */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
               {/* Avatar - 64px with purple glow */}
               <div style={{
@@ -577,12 +598,41 @@ function Dashboard({ user: initialUser }: { user: User }) {
                 )}
               </div>
 
-              {/* Name - Bebas Neue */}
-              <div>
-                <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '36px', color: 'white', letterSpacing: '1px', lineHeight: 1 }}>{displayName}</h2>
-                {user.username && (
-                  <span style={{ color: '#6b7280', fontSize: '14px' }}>@{user.username}</span>
-                )}
+              {/* Name + Starter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div>
+                  <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '36px', color: 'white', letterSpacing: '1px', lineHeight: 1 }}>{displayName}</h2>
+                  {user.username && (
+                    <span style={{ color: '#6b7280', fontSize: '14px' }}>@{user.username}</span>
+                  )}
+                </div>
+                
+                {/* Your starter Pokemon */}
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  border: '2px solid rgba(139,92,246,0.4)',
+                  background: '#1e1040',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden'
+                }}>
+                  {user.starterPokemonId ? (
+                    <img 
+                      src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${user.starterPokemonId}.png`}
+                      alt="Starter"
+                      style={{ width: '36px', height: '36px', objectFit: 'contain' }}
+                    />
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 100 100" fill="none" stroke="rgba(139,92,246,0.3)" strokeWidth="4">
+                      <circle cx="50" cy="50" r="45" />
+                      <line x1="5" y1="50" x2="95" y2="50" />
+                      <circle cx="50" cy="50" r="14" />
+                    </svg>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -636,35 +686,35 @@ function Dashboard({ user: initialUser }: { user: User }) {
 
           {/* Stats row - borderless with dividers */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
-            {/* Stat 1 - Total Cards */}
+            {/* Stat 1 - Total Cards (smaller, muted) */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 20px' }}>
-              <StackedCardsIcon />
-              <div style={{ color: 'white', fontSize: '40px', fontWeight: '800', lineHeight: 1.1, marginTop: '8px' }}>
+              <StackedCardsIcon style={{ opacity: 0.5 }} />
+              <div style={{ color: '#40404e', fontSize: '18px', fontWeight: '700', lineHeight: 1.1, marginTop: '8px' }}>
                 {totalCardsCount.toLocaleString()}
               </div>
-              <div style={{ color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>Total Cards</div>
+              <div style={{ color: '#40404e', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>Cards in DB</div>
             </div>
 
             {/* Divider */}
             <div style={{ width: '1px', height: '60px', background: 'rgba(255,255,255,0.08)' }} />
 
-            {/* Stat 2 - Cards Owned */}
+            {/* Stat 2 - Cards Owned (larger) */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 20px' }}>
               <StarIcon />
-              <div style={{ color: 'white', fontSize: '40px', fontWeight: '800', lineHeight: 1.1, marginTop: '8px' }}>{totalCards}</div>
-              <div style={{ color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>Owned</div>
+              <div style={{ color: 'white', fontSize: '32px', fontWeight: '800', lineHeight: 1.1, marginTop: '8px' }}>{totalCards}</div>
+              <div style={{ color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>Your Cards</div>
             </div>
 
             {/* Divider */}
             <div style={{ width: '1px', height: '60px', background: 'rgba(255,255,255,0.08)' }} />
 
-            {/* Stat 3 - Market Value */}
+            {/* Stat 3 - Market Value (larger) */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 20px' }}>
               <DollarCircleIcon />
-              <div style={{ color: '#f0c040', fontSize: '40px', fontWeight: '800', lineHeight: 1.1, marginTop: '8px' }}>
+              <div style={{ color: '#f0c040', fontSize: '32px', fontWeight: '800', lineHeight: 1.1, marginTop: '8px' }}>
                 ${portfolioValue ? portfolioValue.totalValue.toFixed(2) : '0.00'}
               </div>
-              <div style={{ color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>Value</div>
+              <div style={{ color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>Collection Value</div>
             </div>
 
             {/* Divider */}
@@ -673,8 +723,8 @@ function Dashboard({ user: initialUser }: { user: User }) {
             {/* Stat 4 - Sets */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 20px' }}>
               <GridIcon />
-              <div style={{ color: 'white', fontSize: '40px', fontWeight: '800', lineHeight: 1.1, marginTop: '8px' }}>{uniqueSets.size}</div>
-              <div style={{ color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>Sets</div>
+              <div style={{ color: 'white', fontSize: '32px', fontWeight: '800', lineHeight: 1.1, marginTop: '8px' }}>{uniqueSets.size}</div>
+              <div style={{ color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>Sets Owned</div>
             </div>
           </div>
         </div>
@@ -682,7 +732,7 @@ function Dashboard({ user: initialUser }: { user: User }) {
         {/* SECTION 2 - Recent Collection */}
         <div style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '20px', letterSpacing: '3px', color: '#f0c040' }}>Recent Collection</h2>
+            <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '20px', letterSpacing: '3px', color: 'white' }}>Recent Collection</h2>
             <Link href="/portfolio" style={{ color: '#f0c040', fontSize: '13px', textDecoration: 'none' }}>
               View Full Portfolio →
             </Link>
@@ -748,7 +798,7 @@ function Dashboard({ user: initialUser }: { user: User }) {
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                   >
-                    <div style={{ aspectRatio: '3/4', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px' }}>
+                    <div style={{ aspectRatio: '2/3', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px' }}>
                       {item.card.imageUrl ? (
                         <img src={item.card.imageUrl} alt={item.card.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                       ) : (
@@ -767,7 +817,7 @@ function Dashboard({ user: initialUser }: { user: User }) {
 
         {/* SECTION 3 - Quick Actions - 4 column row */}
         <div>
-          <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '20px', letterSpacing: '3px', color: '#f0c040', marginBottom: '16px' }}>Quick Actions</h2>
+          <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '20px', letterSpacing: '3px', color: 'white', marginBottom: '16px' }}>Quick Actions</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
             {/* Action 1 - Search Cards */}
             <Link href="/marketplace" style={{ textDecoration: 'none' }}>
@@ -893,7 +943,7 @@ function Dashboard({ user: initialUser }: { user: User }) {
 
         {/* SECTION 4 - Recent Drops - New TCG Sets */}
         <div style={{ marginBottom: '32px' }}>
-          <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '20px', letterSpacing: '3px', color: '#f0c040', marginBottom: '16px' }}>Recent Drops</h2>
+          <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '20px', letterSpacing: '3px', color: 'white', marginBottom: '16px' }}>Recent Drops</h2>
           
           {recentSets.length === 0 ? (
             <div style={{
@@ -942,30 +992,44 @@ function Dashboard({ user: initialUser }: { user: User }) {
                   >
                     {/* Set logo image */}
                     <div style={{ 
-                      aspectRatio: '1/1', 
+                      height: '120px',
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center', 
                       padding: '12px',
-                      background: 'linear-gradient(135deg, rgba(139,92,246,0.1), rgba(30,16,64,0.3))'
+                      background: 'linear-gradient(135deg, rgba(139,92,246,0.1), rgba(30,16,64,0.3))',
+                      position: 'relative'
                     }}>
                       {set.images?.logo ? (
                         <img 
                           src={set.images.logo} 
                           alt={set.name} 
-                          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+                          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', transition: 'transform 0.25s' }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         />
                       ) : set.images?.symbol ? (
                         <img 
                           src={set.images.symbol} 
                           alt={set.name} 
-                          style={{ maxWidth: '60%', maxHeight: '60%', objectFit: 'contain' }} 
+                          style={{ width: '60px', height: '60px', objectFit: 'contain' }}
                         />
                       ) : (
-                        <div style={{ color: '#6b7280', fontSize: '11px' }}>No Image</div>
+                        <span style={{ color: '#6b7280', fontSize: '11px' }}>No Image</span>
                       )}
+                      {/* Gradient overlay with set name */}
+                      <div style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        background: 'linear-gradient(transparent, rgba(17,17,30,0.9))',
+                        padding: '8px',
+                        textAlign: 'center'
+                      }}>
+                        <span style={{ color: 'white', fontSize: '10px', fontWeight: '600' }}>{set.name}</span>
+                      </div>
                     </div>
-                    
                     {/* Set info */}
                     <div style={{ padding: '12px' }}>
                       <h4 style={{ color: 'white', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '4px' }}>
@@ -1060,7 +1124,8 @@ export default function HomePage() {
           id: 'logged-in',
           username: null,
           displayName: 'Trainer',
-          avatarId: null
+          avatarId: null,
+          starterPokemonId: null
         }} />
       ) : (
         <>

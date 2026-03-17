@@ -296,18 +296,19 @@ async function syncTCGdexPricesForCards(cards: Array<{ id: string; pokemonTcgId:
     }
 
     try {
-      // TCGPlayer pricing (USD)
-      if (detail.tcgplayer) {
-        for (const [variant, prices] of Object.entries(detail.tcgplayer)) {
-          if (!prices.market && !prices.mid) continue;
+      // TCGPlayer pricing (USD) - note: API returns pricing under detail.pricing.tcgplayer
+      const tcgplayerPricing = (detail as any).pricing?.tcgplayer;
+      if (tcgplayerPricing) {
+        for (const [variant, prices] of Object.entries(tcgplayerPricing)) {
+          if (!prices || (!prices.market && !prices.mid)) continue;
 
           await prisma.cardPrice.create({
             data: {
               cardId: card.id,
-              priceLow: prices.low ?? null,
-              priceMid: prices.mid ?? null,
-              priceHigh: prices.high ?? null,
-              priceMarket: prices.market ?? prices.mid ?? null,
+              priceLow: prices.lowPrice ?? null,
+              priceMid: prices.midPrice ?? null,
+              priceHigh: prices.highPrice ?? null,
+              priceMarket: prices.marketPrice ?? prices.midPrice ?? null,
               variant,
               lastUpdated: now,
               isStale: false,
@@ -317,8 +318,8 @@ async function syncTCGdexPricesForCards(cards: Array<{ id: string; pokemonTcgId:
         }
 
         // Use first variant's market price for price history
-        const firstVariant = Object.values(detail.tcgplayer)[0];
-        const marketPrice = firstVariant?.market ?? firstVariant?.mid;
+        const firstVariant = Object.values(tcgplayerPricing)[0] as any;
+        const marketPrice = firstVariant?.marketPrice ?? firstVariant?.midPrice;
         if (marketPrice) {
           await prisma.priceHistory.create({
             data: { cardId: card.id, price: marketPrice, source: 'tcgplayer' },
@@ -361,19 +362,18 @@ export async function syncPrices(): Promise<{ updatedPrices: number }> {
   console.log('Starting Job 3: Sync Prices (TCGdex)...');
   const syncStart = Date.now();
 
-  // Get cards needing price updates: no price, or stale
+  // Get cards to update - prioritize cards with no prices or stale prices
+  // Then take remaining cards to populate more price history
   const cardsNeedingPrices = await prisma.card.findMany({
     where: {
-      OR: [
-        { prices: { none: {} } },
-        { prices: { some: { isStale: true } } },
-      ],
+      pokemonTcgId: { not: null },
     },
     select: { id: true, pokemonTcgId: true, language: true },
-    take: 500, // Process in batches to avoid overwhelming TCGdex
+    take: 2000, // Increased batch size to process more cards
+    orderBy: { id: 'asc' },
   });
 
-  console.log(`  Found ${cardsNeedingPrices.length} cards needing price updates`);
+  console.log(`  Processing ${cardsNeedingPrices.length} cards for price history`);
 
   const result = await syncTCGdexPricesForCards(cardsNeedingPrices);
 
