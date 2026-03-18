@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
-  transpilePackages: ['@catchandtrade/shared'],
+  transpilePackages: ['@catchandtrade/shared', '@catchandtrade/db'],
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -12,14 +12,6 @@ const nextConfig = {
         hostname: '**',
       },
     ],
-  },
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003'}/api/:path*`,
-      },
-    ];
   },
 };
 
