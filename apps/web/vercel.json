@@ -1,6 +1,8 @@
 {
   "framework": "nextjs",
-  "buildCommand": "cd ../packages/shared && npm run build && next build",
+  "buildCommand": "npm run build",
   "devCommand": "npm run dev",
-  "installCommand": "npm ci"
+  "installCommand": "npm ci",
+  "regions": ["iad1"],
+  "areas": ["oregon"]
 }

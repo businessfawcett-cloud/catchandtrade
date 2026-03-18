@@ -4,7 +4,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["DATABASE_URL", "JWT_SECRET", "JWT_REFRESH_SECRET", "WEB_URL", "API_URL"]
     },
     "lint": {},
     "test": {
