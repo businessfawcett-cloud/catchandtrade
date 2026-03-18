@@ -1,6 +1,6 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "cd ../packages/shared && npm install && npm run build && cd ../apps/web && npm install && npm run build",
+  "framework": null,
+  "buildCommand": "npm install && npm run build",
   "devCommand": "npm run dev",
-  "installCommand": "npm ci --ignore-scripts"
+  "installCommand": "npm ci"
 }
