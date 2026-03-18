@@ -7,9 +7,10 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npx turbo run build",
+    "build": "npx turbo run build || (cd packages/shared && npm run build && cd ../../apps/web && next build)",
     "vercel-build": "npm run build",
-    "dev": "turbo run dev --parallel",
+    "dev": "turbo run dev --parallel || npm run dev:standalone",
+    "dev:standalone": "cd packages/shared && npm run build && cd ../../apps/web && npm run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "db:generate": "turbo run db:generate",
