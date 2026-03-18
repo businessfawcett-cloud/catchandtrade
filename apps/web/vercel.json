@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "cd ../packages/shared && npx tsc && next build",
+  "buildCommand": "cd ../packages/shared && npm run build && npm run build",
   "devCommand": "npm run dev",
-  "installCommand": "npm install"
+  "installCommand": "npm ci"
 }
