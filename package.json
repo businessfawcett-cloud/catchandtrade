@@ -3,14 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "apps/*",
+    "apps/web",
     "packages/*"
   ],
   "scripts": {
-    "build": "npx turbo run build || (cd packages/shared && npm run build && cd ../../apps/web && next build)",
-    "vercel-build": "npm run build",
-    "dev": "turbo run dev --parallel || npm run dev:standalone",
-    "dev:standalone": "cd packages/shared && npm run build && cd ../../apps/web && npm run dev",
+    "build": "cd packages/shared && npm install && npm run build && cd ../db && npm install && npm run build && cd ../../apps/web && next build",
+    "dev": "cd packages/shared && npm run build && cd ../../apps/web && npm run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "db:generate": "turbo run db:generate",
@@ -19,16 +17,6 @@
     "db:seed": "turbo run db:seed",
     "record-snapshot": "node packages/db/scripts/record-price-snapshot.js",
     "stripe:listen": "stripe listen --forward-to localhost:3003/api/webhooks/stripe"
-  },
-  "dependencies": {
-    "install": "^0.13.0",
-    "metro": "^0.82.2",
-    "metro-config": "^0.82.2",
-    "metro-core": "^0.82.2",
-    "metro-resolver": "^0.82.2",
-    "metro-runtime": "^0.82.2",
-    "next": "^14.2.35",
-    "react-native-gesture-handler": "^2.30.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",

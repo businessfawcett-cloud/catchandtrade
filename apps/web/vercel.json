@@ -1,6 +1,6 @@
 {
-  "framework": null,
-  "buildCommand": "npm install && npm run build",
+  "framework": "nextjs",
+  "buildCommand": "bash vercel-build.sh",
   "devCommand": "npm run dev",
   "installCommand": "npm ci"
 }
