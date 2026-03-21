@@ -4,7 +4,10 @@
   "private": true,
   "workspaces": [
     "apps/web",
-    "packages/*"
+    "packages/api",
+    "packages/db",
+    "packages/scanning",
+    "packages/shared"
   ],
   "scripts": {
     "build": "cd packages/shared && npm install && npm run build && cd ../db && npm install && npm run build && cd ../../apps/web && next build",
