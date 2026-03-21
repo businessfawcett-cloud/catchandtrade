@@ -248,7 +248,7 @@ function PortfolioSearchContent() {
             padding: '3rem',
             textAlign: 'center'
           }}>
-            <p style={{ color: '#94a3b8' }}>No results for "{query}"</p>
+            <p style={{ color: '#94a3b8' }}>No results for &quot;{query}&quot;</p>
           </div>
         ) : (
           <div style={{ 

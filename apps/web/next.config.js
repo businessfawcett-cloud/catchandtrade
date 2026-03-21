@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
-  transpilePackages: ['@catchandtrade/shared', '@catchandtrade/db'],
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -12,6 +11,16 @@ const nextConfig = {
         hostname: '**',
       },
     ],
+  },
+  async redirects() {
+    return [
+      {
+        source: '/(.*)',
+        has: [{ type: 'host', value: 'www\\.catchandtrade\\.com' }],
+        destination: 'https://catchandtrade.com/:(.*)',
+        permanent: true,
+      },
+    ];
   },
 };
 

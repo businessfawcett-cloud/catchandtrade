@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import PriceHistoryChart from '@/components/PriceHistoryChart';
 import GradingCalculator from '@/components/GradingCalculator';
-import { GRADE_MULTIPLIERS } from '@catchandtrade/shared';
-import type { Grade, GradingService } from '@catchandtrade/shared';
+import { GRADE_MULTIPLIERS } from '@/lib/constants';
+import type { Grade, GradingService } from '@/lib/constants';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@catchandtrade/db';
+import { prisma } from '@/lib/prisma';
 
 // users/[id] API routes
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {

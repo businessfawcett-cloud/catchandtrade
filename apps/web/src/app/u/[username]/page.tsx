@@ -144,7 +144,7 @@ export default function PublicProfilePage() {
             </svg>
           </div>
           <h1 className="font-rajdhani text-3xl font-bold text-white mb-2">{error}</h1>
-          <p className="text-poke-text-muted mb-6">This profile may be private or doesn't exist</p>
+          <p className="text-poke-text-muted mb-6">This profile may be private or doesn&apos;t exist</p>
           <Link href="/" className="text-poke-gold hover:text-white transition-colors">
             ← Back to Home
           </Link>

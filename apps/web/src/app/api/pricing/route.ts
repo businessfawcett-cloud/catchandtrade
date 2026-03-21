@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@catchandtrade/db';
+import { prisma } from '@/lib/prisma';
 
 // pricing API routes
 // Convert Express routes to Next.js App Router format

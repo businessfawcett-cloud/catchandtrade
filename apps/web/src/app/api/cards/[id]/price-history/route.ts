@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@catchandtrade/db';
+import { prisma } from '@/lib/prisma';
 
 // GET /api/cards/:id/price-history - Get price history for a card
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@catchandtrade/db';
+import { prisma } from '@/lib/prisma';
 
 // GET /api/cards - List cards with pagination and filtering
 // GET /api/cards/search - Search cards
@@ -199,7 +199,7 @@ async function handleSearch(request: NextRequest, searchParams: URLSearchParams)
       FROM "Card" c
       WHERE 1=1 ${searchCondition}
     `;
-    const countResult = await prisma.$queryRawUnsafe<[{ count: bigint }]>(countSql, ...params);
+    const countResult = await prisma.$queryRawUnsafe(countSql, ...params) as [{ count: bigint }];
     total = Number(countResult[0].count);
   } else {
     const fetchLimit = Math.min(limit * 4, 200);

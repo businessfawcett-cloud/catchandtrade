@@ -1,5 +1,14 @@
 # Agent Guidelines
 
+## Architecture
+
+The project has migrated from a monorepo with shared packages to a self-contained Next.js app with embedded Prisma:
+
+- **Database**: Supabase PostgreSQL (was Neon). Connection: `postgresql://postgres:umvYuTBwUK3SJQng@db.ijnajdpcplapwiyvzsdh.supabase.co:5432/postgres`
+- **Hosting**: Vercel (was Render)
+- **Data Package**: `@catchandtrade/db` package has been moved into `apps/web/prisma/` and `apps/web/src/lib/prisma.ts`. All API routes import from `@/lib/prisma`.
+- **Supabase project ID**: `ijnajdpcplapwiyvzsdh`
+
 ## Database Commands
 
 **NEVER run these commands** as they will wipe all data:
@@ -45,3 +54,14 @@ If the DEV database (port 5435) is empty:
 1. Run `node packages/db/scripts/fetch-cards.js` to fetch card data
 2. Run `node packages/db/prisma/seed.js` to populate the database
 3. This will add 20,000+ cards with prices to the dev database
+
+## Deployment (Vercel)
+
+The `apps/web` directory is deployed to Vercel. It is self-contained with its own `prisma/schema.prisma` and `src/lib/prisma.ts`. The build command runs `prisma generate && next build`.
+
+Environment variables to set in Vercel:
+- `DATABASE_URL` - Supabase PostgreSQL connection string
+- `JWT_SECRET` - JWT signing secret
+- `JWT_REFRESH_SECRET` - JWT refresh secret
+- `STRIPE_SECRET_KEY` - Stripe secret key (optional)
+- `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret (optional)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@catchandtrade/db';
+import { prisma } from '@/lib/prisma';
 
 // Stripe webhook handler
 export async function POST(request: NextRequest) {

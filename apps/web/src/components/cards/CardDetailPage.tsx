@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { GAME_TYPES } from '@catchandtrade/shared';
+import { GAME_TYPES } from '@/lib/constants';
 import PriceHistoryChart from '../PriceHistoryChart';
 
 interface CardPrice {

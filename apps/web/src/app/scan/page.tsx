@@ -60,7 +60,7 @@ export default function ScanPage() {
             📱 Mobile App Coming Soon
           </p>
           <p style={{ margin: '0.5rem 0 0', color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>
-            The scanning feature is available in our mobile app. Sign up to get notified when it's ready!
+            The scanning feature is available in our mobile app. Sign up to get notified when it&apos;s ready!
           </p>
         </div>
       </div>
