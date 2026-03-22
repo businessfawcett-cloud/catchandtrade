@@ -68,6 +68,16 @@ export default function LoginPage() {
     if (token) {
       router.push('/');
     }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenParam = urlParams.get('token');
+    const userParam = urlParams.get('user');
+    if (tokenParam && userParam) {
+      localStorage.setItem('token', tokenParam);
+      localStorage.setItem('user', userParam);
+      window.history.replaceState({}, '', '/');
+      router.push('/');
+    }
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
