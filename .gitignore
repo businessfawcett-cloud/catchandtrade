@@ -72,3 +72,5 @@ packages/db/card-images/
 packages/db/set-logos/
 packages/db/scripts/card-images/
 packages/db/scripts/set-logos/
+
+.vercel
