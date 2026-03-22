@@ -117,7 +117,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
 
   const getAffiliateLinks = () => {
     if (!card) return { amazon: '#', ebay: '#' };
-    const searchTerm = `${card.name} ${card.setName} ${card.cardNumber} Pokemon Card`;
+    const searchTerm = `${card.name} ${(card as any).setname} ${(card as any).cardnumber} Pokemon Card`;
     const searchTermEncoded = encodeURIComponent(searchTerm);
     const amazonTag = process.env.NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG || 'catchandtrade-20';
     return {
@@ -383,13 +383,13 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 3fr', gap: '2.5rem', alignItems: 'start' }}>
         {/* Left Column - Image & Actions */}
         <div>
-          {card.imageUrl ? (
-            <img
-              src={card.imageUrl}
-              alt={card.name}
-              style={{ width: '100%', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}
-            />
-          ) : (
+        {(card as any).imageurl ? (
+          <img
+            src={(card as any).imageurl}
+            alt={card.name}
+            style={{ width: '100%', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}
+          />
+        ) : (
             <div style={{ 
               width: '100%', 
               height: '350px', 
@@ -510,7 +510,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
         <div>
           <h1 style={{ fontSize: '1.75rem', marginBottom: '0.5rem', color: 'white', fontWeight: 'bold' }}>{card.name}</h1>
           <p style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>
-            {card.setName} ({card.setCode} #{card.cardNumber})
+            {(card as any).setname} ({(card as any).setcode} #{(card as any).cardnumber})
           </p>
           
           {card.rarity && (
@@ -603,10 +603,10 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
             width: '90%',
             border: '1px solid rgba(255,255,255,0.1)'
           }}>
-            {card?.imageUrl && (
+            {card && (card as any).imageurl && (
               <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
                 <img 
-                  src={card.imageUrl} 
+                  src={(card as any).imageurl} 
                   alt={card.name} 
                   style={{ maxHeight: '120px', objectFit: 'contain', borderRadius: '8px' }}
                 />

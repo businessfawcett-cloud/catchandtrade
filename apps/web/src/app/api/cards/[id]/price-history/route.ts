@@ -1,50 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { supabase } from '@/lib/supabase';
 
-// GET /api/cards/:id/price-history - Get price history for a card
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '30';
 
-    const card = await prisma.card.findUnique({
-      where: { id },
-      include: {
-        prices: {
-          orderBy: { date: 'desc' },
-          take: 1
-        }
-      }
-    });
+    const { data: card } = await supabase
+      .from('Card')
+      .select('id')
+      .eq('id', id)
+      .single();
 
     if (!card) {
       return NextResponse.json({ error: 'Card not found' }, { status: 404 });
     }
 
-    const currentPrice = card.prices[0]?.priceMarket || null;
+    const { data: prices } = await supabase
+      .from('CardPrice')
+      .select('pricemarket, date')
+      .eq('cardid', id)
+      .order('date', { ascending: true })
+      .limit(90);
+
+    const currentPrice = prices && prices.length > 0 ? prices[prices.length - 1].pricemarket : null;
 
     const periodDays = parseInt(period);
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - periodDays);
+    const startStr = startDate.toISOString().split('T')[0];
 
-    let priceHistory: any[] = [];
-    try {
-      priceHistory = await prisma.priceHistory.findMany({
-        where: { 
-          cardId: id,
-          date: { gte: startDate }
-        },
-        orderBy: { date: 'asc' }
-      });
-    } catch (e) {
-      priceHistory = [];
-    }
-
-    if (priceHistory.length > 0) {
-      const data = priceHistory.map(ph => ({
-        date: ph.date.toISOString().split('T')[0],
-        price: ph.price
+    let filteredPrices = (prices || []).filter((p: any) => p.date >= startStr);
+    
+    if (filteredPrices.length > 0) {
+      const data = filteredPrices.map((p: any) => ({
+        date: p.date.split('T')[0],
+        price: p.pricemarket
       }));
 
       const latest = data[data.length - 1];
@@ -58,7 +50,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         hasRealData: true
       });
     } else {
-      const mockData = generateMockPriceHistory(currentPrice, parseInt(period));
+      const mockData = generateMockPriceHistory(currentPrice, periodDays);
       const latest = mockData[mockData.length - 1];
       const oldest = mockData[0];
       const change = oldest ? ((latest.price - oldest.price) / oldest.price) * 100 : 0;

@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-
-// debug API routes
-// Convert Express routes to Next.js App Router format
-// TODO: Implement route handlers
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Implement GET handler for debug
-    return NextResponse.json({ message: 'debug GET endpoint' });
-  } catch (error) {
-    console.error('Error in debug GET:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const [{ count: cardCount }, { count: setCount }] = await Promise.all([
+      supabase.from('Card').select('*', { count: 'exact', head: true }),
+      supabase.from('PokemonSet').select('*', { count: 'exact', head: true }),
+    ]);
+    return NextResponse.json({ cardCount, setCount });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 

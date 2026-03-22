@@ -5,8 +5,12 @@ import Link from 'next/link';
 import PokeballLoader from '@/components/PokeballLoader';
 import CardGrid from '@/components/CardGrid';
 import { Library, CreditCard, DollarSign, BookOpen } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+
+// Hardcoded values - sets change rarely, no need to fetch every time
+const TOTAL_SETS = 172;
 
 const AVATARS: Record<string, string> = {
   '1': 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png',
@@ -190,23 +194,23 @@ function HeroSection() {
 
 function StatsBar() {
   const [cardsCount, setCardsCount] = useState(0);
-  const [setsCount, setSetsCount] = useState(0);
+  const [setsCount, setSetsCount] = useState(TOTAL_SETS);
   
   useEffect(() => {
-    fetch(`${API_URL}/api/cards?limit=1`)
-      .then(res => res.json())
-      .then(data => {
-        const total = data.total || 20078;
-        setCardsCount(total);
-      })
-      .catch(() => setCardsCount(20078));
+    // FIXED: Use Supabase count with head: true (no rows returned, just count!)
+    supabase
+      .from('Card')
+      .select('*', { count: 'exact', head: true })
+      .then(({ count, error }) => {
+        if (error) {
+          setCardsCount(20078);
+        } else {
+          setCardsCount(count || 20078);
+        }
+      });
     
-    fetch(`${API_URL}/api/sets`)
-      .then(res => res.json())
-      .then(data => {
-        setSetsCount(data.sets?.length || 173);
-      })
-      .catch(() => setSetsCount(173));
+    // FIXED: Don't fetch all sets - use hardcoded value (sets change rarely)
+    setSetsCount(TOTAL_SETS);
   }, []);
   
   return (
@@ -242,15 +246,33 @@ function FeaturedCards() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    fetch(`${API_URL}/api/cards?setCode=base1&limit=20`)
-      .then(res => res.json())
-      .then(data => {
-        const iconicCards = ['Charizard', 'Pikachu', 'Mewtwo', 'Blastoise', 'Venusaur'];
-        const filtered = data.cards?.filter((c: Card) => iconicCards.includes(c.name)) || [];
-        setCards(filtered.slice(0, 5));
+    // FIXED: Query ONLY the needed cards directly - no waste!
+    const iconicCardNames = ['Charizard', 'Pikachu', 'Mewtwo', 'Blastoise', 'Venusaur'];
+    
+    supabase
+      .from('Card')
+      .select('id, name, setname, setcode, cardnumber, rarity, imageurl')
+      .in('name', iconicCardNames)
+      .limit(5)
+      .then(({ data, error }) => {
+        if (error) {
+          setLoading(false);
+          return;
+        }
+        // Map lowercase fields to expected format
+        const mapped = (data || []).map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          setName: c.setname,
+          setCode: c.setcode,
+          cardNumber: c.cardnumber,
+          rarity: c.rarity,
+          imageUrl: c.imageurl,
+          currentPrice: null
+        }));
+        setCards(mapped);
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      });
   }, []);
   
   return (

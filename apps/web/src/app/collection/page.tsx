@@ -56,7 +56,14 @@ export default function CollectionPage() {
         const response = await fetch(`${API_URL}/api/sets`);
         if (response.ok) {
           const data = await response.json();
-          setSets(data.sets || []);
+          // Map lowercase fields to camelCase for frontend compatibility
+          const mappedSets = (data.sets || []).map((s: any) => ({
+            ...s,
+            imageUrl: s.imageurl,
+            releaseYear: s.releaseyear,
+            totalCards: s.totalcards
+          }));
+          setSets(mappedSets);
         }
       } catch (err) {
         console.error('Failed to fetch sets:', err);
