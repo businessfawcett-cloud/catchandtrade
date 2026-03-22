@@ -4,14 +4,14 @@ const SUPABASE_URL = 'https://ijnajdpcplapwiyvzsdh.supabase.co';
 const SUPABASE_KEY = 'sb_secret_npPQJSJtOVSfpAhN-MjjZg_6d5YbZkC';
 
 export async function GET(request: NextRequest) {
-  console.log('Callback invoked, env vars:', {
-    clientId: process.env.GOOGLE_CLIENT_ID ? 'set' : 'missing',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'set' : 'missing'
-  });
-  
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get('code');
-  console.log('Code present:', !!code);
+  const error = searchParams.get('error');
+  const errorDescription = searchParams.get('error_description');
+
+  if (error || errorDescription) {
+    return NextResponse.redirect('https://catchandtrade.com/login?error=' + encodeURIComponent(error || errorDescription || 'unknown'));
+  }
 
   if (!code) {
     return NextResponse.redirect('https://catchandtrade.com/login?error=no_code');
@@ -19,17 +19,15 @@ export async function GET(request: NextRequest) {
 
   const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
   const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-  
-  console.log('Using credentials, ID length:', GOOGLE_CLIENT_ID?.length);
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-    return NextResponse.json({ error: 'OAuth not configured' }, { status: 500 });
+    return NextResponse.redirect('https://catchandtrade.com/login?error=oauth_not_configured');
   }
 
   const REDIRECT_URI = 'https://catchandtrade.com/api/auth/google/callback';
 
   try {
-    console.log('Exchanging code...');
+    // Exchange code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -42,49 +40,56 @@ export async function GET(request: NextRequest) {
       })
     });
 
-    console.log('Token response status:', tokenResponse.status);
-    
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json();
-      console.error('Token error:', errorData);
-      return NextResponse.json({ error: 'Token exchange failed', details: errorData }, { status: 500 });
+      return NextResponse.redirect('https://catchandtrade.com/login?error=token_exchange_failed');
     }
 
     const tokenData = await tokenResponse.json();
-    console.log('Got access token');
 
+    // Get user info from Google
     const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokenData.access_token}` }
     });
 
     const googleUser = await userResponse.json();
-    console.log('Got user:', googleUser.email);
 
-    // Check/create user in Supabase
-    const emailToQuery = googleUser.email.toLowerCase();
-    console.log('Looking for user with email:', emailToQuery);
+    if (!googleUser.email) {
+      return NextResponse.redirect('https://catchandtrade.com/login?error=no_email');
+    }
+
+    // Find user by email - try lowercase and original
+    const userEmail = googleUser.email.toLowerCase();
     
-    const userQuery = await fetch(`${SUPABASE_URL}/rest/v1/User?email=eq.${encodeURIComponent(emailToQuery)}`, {
+    // Direct lookup - try by ID if this is a known Google ID
+    const googleId = googleUser.id;
+    
+    // Check by googleid first
+    const byGoogleIdQuery = await fetch(`${SUPABASE_URL}/rest/v1/User?googleid=eq.${googleId}`, {
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`
       }
     });
-
-    console.log('User query status:', userQuery.status);
     
-    const users = await userQuery.json();
-    console.log('Users response:', users);
-    
-    if (!Array.isArray(users)) {
-      console.error('Users response is not an array:', users);
-    }
-    
+    let users = await byGoogleIdQuery.json();
     let user = users && Array.isArray(users) && users.length > 0 ? users[0] : null;
-    console.log('Found user:', user ? user.id : 'none');
-
+    
+    // If not found, try by email
     if (!user) {
-      console.log('Creating new user...');
+      const byEmailQuery = await fetch(`${SUPABASE_URL}/rest/v1/User?email=ilike.*${encodeURIComponent(userEmail)}`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
+      
+      users = await byEmailQuery.json();
+      user = users && Array.isArray(users) && users.length > 0 ? users[0] : null;
+    }
+
+    // If still not found, create a new user
+    if (!user) {
       const createResponse = await fetch(`${SUPABASE_URL}/rest/v1/User`, {
         method: 'POST',
         headers: {
@@ -94,39 +99,32 @@ export async function GET(request: NextRequest) {
           'Prefer': 'return=representation'
         },
         body: JSON.stringify({
-          email: googleUser.email,
-          username: googleUser.name || googleUser.email.split('@')[0],
+          email: userEmail,
+          username: googleUser.name || userEmail.split('@')[0],
+          googleid: googleId,
           createdat: new Date().toISOString()
         })
       });
       
-      console.log('Create response status:', createResponse.status);
-      const errorText = await createResponse.text();
-      console.log('Create response error:', errorText);
-      
       if (createResponse.ok) {
         const newUsers = await createResponse.json();
-        console.log('Created user response:', newUsers);
         user = newUsers && Array.isArray(newUsers) && newUsers.length > 0 ? newUsers[0] : null;
       }
     }
 
-    console.log('User object:', user);
-
     if (!user) {
-      console.error('User not found or created');
       return NextResponse.redirect('https://catchandtrade.com/login?error=user_not_found');
     }
 
     const token = Buffer.from(`${user.id}:${user.email}`).toString('base64');
-
+    
     const redirectUrl = new URL('https://catchandtrade.com/login');
     redirectUrl.searchParams.set('token', token);
     redirectUrl.searchParams.set('user', JSON.stringify({ id: user.id, email: user.email, username: user.username }));
 
     return NextResponse.redirect(redirectUrl);
   } catch (err) {
-    console.error('Error:', err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error('OAuth callback error:', err);
+    return NextResponse.redirect('https://catchandtrade.com/login?error=callback_failed');
   }
 }
