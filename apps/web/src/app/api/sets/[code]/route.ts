@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 export async function GET(request: NextRequest, { params }: { params: { code: string } }) {
   const { code } = params;
 
-  const { data, error } = await supabase
+  const { data: set, error } = await supabase
     .from('PokemonSet')
     .select('id, name, code, releaseyear, imageurl, totalcards')
     .eq('code', code)
@@ -14,5 +14,11 @@ export async function GET(request: NextRequest, { params }: { params: { code: st
     return NextResponse.json({ error: 'Set not found' }, { status: 404 });
   }
 
-  return NextResponse.json({ set: data });
+  const { data: cards } = await supabase
+    .from('Card')
+    .select('id, name, setcode, setname, cardnumber, rarity, imageurl, gametype')
+    .eq('setcode', code)
+    .order('cardnumber', { ascending: true });
+
+  return NextResponse.json({ set, cards: cards || [] });
 }
