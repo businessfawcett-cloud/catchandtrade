@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   console.log('Code present:', !!code);
 
   if (!code) {
-    return NextResponse.redirect('/login?error=no_code');
+    return NextResponse.redirect('https://catchandtrade.com/login?error=no_code');
   }
 
   const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -101,12 +101,12 @@ export async function GET(request: NextRequest) {
 
     if (!user) {
       console.error('User not found or created');
-      return NextResponse.redirect('/login?error=user_not_found');
+      return NextResponse.redirect('https://catchandtrade.com/login?error=user_not_found');
     }
 
     const token = Buffer.from(`${user.id}:${user.email}`).toString('base64');
-    
-    const redirectUrl = new URL('/login', request.nextUrl.origin);
+
+    const redirectUrl = new URL('https://catchandtrade.com/login');
     redirectUrl.searchParams.set('token', token);
     redirectUrl.searchParams.set('user', JSON.stringify({ id: user.id, email: user.email, username: user.username }));
 
