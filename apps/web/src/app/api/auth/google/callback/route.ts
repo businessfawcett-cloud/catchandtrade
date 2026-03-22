@@ -69,15 +69,17 @@ export async function GET(request: NextRequest) {
     });
 
     const users = await userQuery.json();
-    let user = users && users.length > 0 ? users[0] : null;
+    let user = users && Array.isArray(users) && users.length > 0 ? users[0] : null;
 
     if (!user) {
+      console.log('Creating new user...');
       const createResponse = await fetch(`${SUPABASE_URL}/rest/v1/User`, {
         method: 'POST',
         headers: {
           'apikey': SUPABASE_KEY,
           'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
         },
         body: JSON.stringify({
           email: googleUser.email,
@@ -86,10 +88,20 @@ export async function GET(request: NextRequest) {
         })
       });
       
+      console.log('Create response status:', createResponse.status);
+      
       if (createResponse.ok) {
         const newUsers = await createResponse.json();
-        user = newUsers && newUsers.length > 0 ? newUsers[0] : null;
+        console.log('Created user response:', newUsers);
+        user = newUsers && Array.isArray(newUsers) && newUsers.length > 0 ? newUsers[0] : null;
       }
+    }
+
+    console.log('User object:', user);
+
+    if (!user) {
+      console.error('User not found or created');
+      return NextResponse.redirect('/login?error=user_not_found');
     }
 
     const token = Buffer.from(`${user.id}:${user.email}`).toString('base64');
