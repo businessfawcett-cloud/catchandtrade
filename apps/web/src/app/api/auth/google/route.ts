@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = process.env.NEXT_PUBLIC_API_URL 
-  ? `${process.env.NEXT_PUBLIC_API_URL}/api/auth/callback`
-  : 'https://catchandtrade.com/api/auth/callback';
+const REDIRECT_URI = 'https://catchandtrade.com/api/auth/google/callback';
 
 export async function GET(request: NextRequest) {
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
