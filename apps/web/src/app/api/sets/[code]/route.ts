@@ -20,5 +20,21 @@ export async function GET(request: NextRequest, { params }: { params: { code: st
     .eq('setcode', code)
     .order('cardnumber', { ascending: true });
 
-  return NextResponse.json({ set, cards: cards || [] });
+  const mappedSet = {
+    ...set,
+    imageUrl: set.imageurl,
+    releaseYear: set.releaseyear,
+    totalCards: set.totalcards
+  };
+
+  const mappedCards = (cards || []).map((card: any) => ({
+    ...card,
+    imageUrl: card.imageurl,
+    setCode: card.setcode,
+    setName: card.setname,
+    cardNumber: card.cardnumber,
+    gameType: card.gametype
+  }));
+
+  return NextResponse.json({ set: mappedSet, cards: mappedCards });
 }
