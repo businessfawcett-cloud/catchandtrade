@@ -61,15 +61,27 @@ export async function GET(request: NextRequest) {
     console.log('Got user:', googleUser.email);
 
     // Check/create user in Supabase
-    const userQuery = await fetch(`${SUPABASE_URL}/rest/v1/User?email=eq.${encodeURIComponent(googleUser.email)}`, {
+    const emailToQuery = googleUser.email.toLowerCase();
+    console.log('Looking for user with email:', emailToQuery);
+    
+    const userQuery = await fetch(`${SUPABASE_URL}/rest/v1/User?email=eq.${encodeURIComponent(emailToQuery)}`, {
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`
       }
     });
 
+    console.log('User query status:', userQuery.status);
+    
     const users = await userQuery.json();
+    console.log('Users response:', users);
+    
+    if (!Array.isArray(users)) {
+      console.error('Users response is not an array:', users);
+    }
+    
     let user = users && Array.isArray(users) && users.length > 0 ? users[0] : null;
+    console.log('Found user:', user ? user.id : 'none');
 
     if (!user) {
       console.log('Creating new user...');
@@ -89,6 +101,8 @@ export async function GET(request: NextRequest) {
       });
       
       console.log('Create response status:', createResponse.status);
+      const errorText = await createResponse.text();
+      console.log('Create response error:', errorText);
       
       if (createResponse.ok) {
         const newUsers = await createResponse.json();
