@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+
+const SUPABASE_URL = 'https://ijnajdpcplapwiyvzsdh.supabase.co';
+const SUPABASE_KEY = 'sb_secret_npPQJSJtOVSfpAhN-MjjZg_6d5YbZkC';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -25,6 +27,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Exchange code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -49,6 +52,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect('/login?error=token_failed');
     }
 
+    // Get user info from Google
     const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokenData.access_token}` }
     });
@@ -64,33 +68,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect('/login?error=no_email');
     }
 
-    const { data: existingUser } = await supabase
-      .from('User')
-      .select('*')
-      .eq('email', googleUser.email)
-      .single();
+    // Check if user exists in Supabase using direct fetch
+    const userQuery = await fetch(`${SUPABASE_URL}/rest/v1/User?email=eq.${encodeURIComponent(googleUser.email)}`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
 
-    let user;
-    if (existingUser) {
-      user = existingUser;
-    } else {
-      const { data: newUser, error: createError } = await supabase
-        .from('User')
-        .insert({
+    const users = await userQuery.json();
+    let user = users && users.length > 0 ? users[0] : null;
+
+    if (!user) {
+      // Create new user
+      const createResponse = await fetch(`${SUPABASE_URL}/rest/v1/User`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
           email: googleUser.email,
           username: googleUser.name || googleUser.email.split('@')[0],
           password: 'google_oauth',
           createdat: new Date().toISOString()
         })
-        .select()
-        .single();
+      });
 
-      if (createError && createError.code !== '23505') {
-        console.error('Error creating user:', createError);
-        return NextResponse.redirect('/login?error=create_failed');
+      if (createResponse.ok) {
+        const newUsers = await createResponse.json();
+        user = newUsers && newUsers.length > 0 ? newUsers[0] : null;
       }
-
-      user = newUser || existingUser;
     }
 
     if (!user) {
