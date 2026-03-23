@@ -70,13 +70,18 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    console.log('User query status:', userQuery.status);
+    
     let user = null;
     
     if (userQuery.ok) {
       const users = await userQuery.json();
+      console.log('Users found:', JSON.stringify(users));
       if (users && Array.isArray(users) && users.length > 0) {
         user = users[0];
       }
+    } else {
+      console.log('User query error:', await userQuery.text());
     }
 
     // If no user found, create one
@@ -100,12 +105,16 @@ export async function GET(request: NextRequest) {
         })
       });
 
+      console.log('Create response status:', createResponse.status);
+      
       if (createResponse.ok) {
         const newUsers = await createResponse.json();
+        console.log('Created user:', JSON.stringify(newUsers));
         if (newUsers && Array.isArray(newUsers) && newUsers.length > 0) {
           user = newUsers[0];
         }
       } else {
+        console.log('Create error:', await createResponse.text());
         // If create failed (maybe duplicate), try to find again
         const retryQuery = await fetch(searchUrl, {
           headers: {
@@ -125,7 +134,8 @@ export async function GET(request: NextRequest) {
 
     // If still no user, error
     if (!user) {
-      return NextResponse.redirect('https://catchandtrade.com/login?error=cannot_create_user');
+      console.log('FAILURE: User not found after search and create attempt');
+      return NextResponse.redirect('https://catchandtrade.com/login?error=oauth_user_not_found');
     }
 
     const token = Buffer.from(`${user.id}:${user.email}`).toString('base64');
