@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
     // If still no user, error
     if (!user) {
       console.log('FAILURE: User not found after search and create attempt');
-      return NextResponse.redirect('https://catchandtrade.com/login?error=oauth_user_not_found');
+      return NextResponse.redirect('https://catchandtrade.com/login?error=OAUTH_FAILED_NO_USER');
     }
 
     const token = Buffer.from(`${user.id}:${user.email}`).toString('base64');
