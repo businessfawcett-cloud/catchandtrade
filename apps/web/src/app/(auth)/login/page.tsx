@@ -73,13 +73,23 @@ export default function LoginPage() {
     const tokenParam = urlParams.get('token');
     const userParam = urlParams.get('user');
     const errorParam = urlParams.get('error');
-    console.log('LOGIN PAGE: error param is:', errorParam);
-    setError(errorParam || '');
+    if (errorParam) {
+      setError(errorParam);
+    }
     if (tokenParam && userParam) {
       localStorage.setItem('token', tokenParam);
       localStorage.setItem('user', userParam);
       window.history.replaceState({}, '', '/');
-      router.push('/');
+      try {
+        const userData = JSON.parse(userParam);
+        if (userData.username) {
+          router.push('/');
+        } else {
+          router.push('/onboarding');
+        }
+      } catch {
+        router.push('/');
+      }
     }
   }, [router]);
 
@@ -224,19 +234,15 @@ export default function LoginPage() {
                 marginBottom: '1.5rem', 
                 padding: '0.75rem', 
                 borderRadius: '8px', 
-                background: 'rgba(239,68,68,0.3)', 
-                border: '2px solid red',
-                color: 'red',
+                background: 'rgba(239,68,68,0.1)', 
+                border: '1px solid rgba(239,68,68,0.3)',
+                color: '#f87171',
                 textAlign: 'center',
-                fontSize: '18px',
-                fontWeight: 'bold'
+                fontSize: '14px'
               }}>
-                ERROR: {error}
+                {error}
               </div>
             )}
-            
-            {/* Debug */}
-            <div id="debug-info" style={{ display: 'none' }}>Login page loaded</div>
             
             {/* Form */}
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
