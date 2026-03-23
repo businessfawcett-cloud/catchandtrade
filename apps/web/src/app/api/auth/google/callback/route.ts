@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://ijnajdpcplapwiyvzsdh.supabase.co';
-const SUPABASE_KEY = 'sb_secret_npPQJSJtOVSfpAhN-MjjZg_6d5YbZkC';
+const supabaseUrl = 'https://ijnajdpcplapwiyvzsdh.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || 'sb_secret_npPQJSJtOVSfpAhN-MjjZg_6d5YbZkC';
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = 'https://catchandtrade.com/api/auth/google/callback';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -17,14 +23,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect('https://catchandtrade.com/login?error=no_code');
   }
 
-  const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-  const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     return NextResponse.redirect('https://catchandtrade.com/login?error=oauth_not_configured');
   }
-
-  const REDIRECT_URI = 'https://catchandtrade.com/api/auth/google/callback';
 
   try {
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!tokenResponse.ok) {
+      console.log('Token exchange failed:', await tokenResponse.text());
       return NextResponse.redirect('https://catchandtrade.com/login?error=token_exchange_failed');
     }
 
@@ -52,94 +54,70 @@ export async function GET(request: NextRequest) {
     const googleUser = await userResponse.json();
 
     if (!googleUser.email) {
-      console.log('DEBUG: no email from Google');
-      return NextResponse.redirect('https://catchandtrade.com/login?error=ERR_NO_EMAIL');
+      return NextResponse.redirect('https://catchandtrade.com/login?error=no_email');
     }
 
     const userEmail = googleUser.email.toLowerCase();
     const googleId = googleUser.id;
-    
-    console.log('DEBUG: email=', userEmail, 'googleId=', googleId);
 
-    let user = null;
+    console.log('OAuth: looking up user', userEmail, googleId);
 
-    const searchUrl = `${SUPABASE_URL}/rest/v1/User?email=eq.${encodeURIComponent(userEmail)}&select=*`;
-    const userQuery = await fetch(searchUrl, {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      }
-    });
+    let { data: user, error: userError } = await supabase
+      .from('User')
+      .select('*')
+      .eq('email', userEmail)
+      .single();
 
-    console.log('DEBUG: query status=', userQuery.status);
-    
-    if (userQuery.ok) {
-      const users = await userQuery.json();
-      console.log('DEBUG: users from email query:', JSON.stringify(users));
-      if (users && Array.isArray(users) && users.length > 0) {
-        user = users[0];
+    if (userError) {
+      console.log('Email lookup error:', userError);
+    }
+
+    if (!user) {
+      const { data: googleIdUser } = await supabase
+        .from('User')
+        .select('*')
+        .eq('googleid', googleId)
+        .single();
+      
+      if (googleIdUser) {
+        user = googleIdUser;
+        console.log('Found user by googleid:', user.id);
       }
     }
 
     if (!user) {
-      console.log('DEBUG: not found by email, trying googleid');
-      const googleIdSearchUrl = `${SUPABASE_URL}/rest/v1/User?googleid=eq.${googleId}&select=*`;
-      
-      const googleIdQuery = await fetch(googleIdSearchUrl, {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        }
-      });
-      
-      if (googleIdQuery.ok) {
-        const usersByGoogleId = await googleIdQuery.json();
-        console.log('DEBUG: users from googleid query:', JSON.stringify(usersByGoogleId));
-        if (usersByGoogleId && Array.isArray(usersByGoogleId) && usersByGoogleId.length > 0) {
-          user = usersByGoogleId[0];
-        }
-      }
-    }
-
-    if (!user) {
-      console.log('DEBUG: not found, creating user');
-      const createUrl = `${SUPABASE_URL}/rest/v1/User`;
-      
-      const createResponse = await fetch(createUrl, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({
+      console.log('Creating new user...');
+      const { data: newUser, error: createError } = await supabase
+        .from('User')
+        .insert({
           email: userEmail,
           username: googleUser.name || userEmail.split('@')[0],
           googleid: googleId,
           displayname: googleUser.name || userEmail.split('@')[0]
         })
-      });
+        .select()
+        .single();
 
-      console.log('DEBUG: create status=', createResponse.status);
-      
-      if (createResponse.ok) {
-        const newUsers = await createResponse.json();
-        console.log('DEBUG: created:', JSON.stringify(newUsers));
-        if (newUsers && Array.isArray(newUsers) && newUsers.length > 0) {
-          user = newUsers[0];
-        }
+      if (createError) {
+        console.log('Create error:', createError);
+        
+        const { data: retryUser } = await supabase
+          .from('User')
+          .select('*')
+          .eq('googleid', googleId)
+          .single();
+        
+        user = retryUser;
       } else {
-        console.log('DEBUG: create error:', await createResponse.text());
+        user = newUser;
       }
     }
 
     if (!user) {
-      console.log('FAILURE: User not found after all attempts');
-      return NextResponse.redirect('https://catchandtrade.com/login?error=X_OAUTH_FAIL_X');
+      return NextResponse.redirect('https://catchandtrade.com/login?error=cannot_find_or_create_user');
     }
 
-    console.log('DEBUG: success, user=', user.email);
+    console.log('Success! User:', user.id, user.email);
 
     const token = Buffer.from(`${user.id}:${user.email}`).toString('base64');
     
