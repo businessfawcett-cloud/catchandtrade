@@ -53,7 +53,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState('LOGIN PAGE MOUNTED - WAITING FOR ERROR');
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -74,9 +74,7 @@ export default function LoginPage() {
     const userParam = urlParams.get('user');
     const errorParam = urlParams.get('error');
     console.log('LOGIN PAGE: error param is:', errorParam);
-    if (errorParam) {
-      setError(errorParam);
-    }
+    setError(errorParam || '');
     if (tokenParam && userParam) {
       localStorage.setItem('token', tokenParam);
       localStorage.setItem('user', userParam);
