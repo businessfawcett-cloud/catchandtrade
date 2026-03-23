@@ -115,8 +115,10 @@ export async function GET(request: NextRequest) {
         }
       } else {
         console.log('Create error:', await createResponse.text());
-        // If create failed (maybe duplicate), try to find again
-        const retryQuery = await fetch(searchUrl, {
+        // If create failed (maybe duplicate googleid), search by googleid
+        const googleIdSearchUrl = `${SUPABASE_URL}/rest/v1/User?googleid=eq.${googleId}&select=*`;
+        
+        const retryQuery = await fetch(googleIdSearchUrl, {
           headers: {
             'apikey': SUPABASE_KEY,
             'Authorization': `Bearer ${SUPABASE_KEY}`
