@@ -72,6 +72,10 @@ export default function LoginPage() {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenParam = urlParams.get('token');
     const userParam = urlParams.get('user');
+    const errorParam = urlParams.get('error');
+    if (errorParam) {
+      setError(errorParam);
+    }
     if (tokenParam && userParam) {
       localStorage.setItem('token', tokenParam);
       localStorage.setItem('user', userParam);
