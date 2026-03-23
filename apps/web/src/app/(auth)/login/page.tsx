@@ -73,6 +73,7 @@ export default function LoginPage() {
     const tokenParam = urlParams.get('token');
     const userParam = urlParams.get('user');
     const errorParam = urlParams.get('error');
+    console.log('LOGIN PAGE: error param is:', errorParam);
     if (errorParam) {
       setError(errorParam);
     }
