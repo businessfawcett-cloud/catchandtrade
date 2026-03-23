@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!user) {
-      return NextResponse.redirect('https://catchandtrade.com/login?error=cannot_find_or_create_user');
+      return NextResponse.redirect('https://catchandtrade.com/login?error=SUPABASE_CLIENT_FAIL');
     }
 
     console.log('Success! User:', user.id, user.email);
