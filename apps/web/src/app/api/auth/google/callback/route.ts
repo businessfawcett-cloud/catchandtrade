@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
   const REDIRECT_URI = 'https://catchandtrade.com/api/auth/google/callback';
 
   try {
-    // Exchange code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -46,7 +45,6 @@ export async function GET(request: NextRequest) {
 
     const tokenData = await tokenResponse.json();
 
-    // Get user info from Google
     const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokenData.access_token}` }
     });
@@ -54,15 +52,18 @@ export async function GET(request: NextRequest) {
     const googleUser = await userResponse.json();
 
     if (!googleUser.email) {
-      return NextResponse.redirect('https://catchandtrade.com/login?error=no_email');
+      console.log('DEBUG: no email from Google');
+      return NextResponse.redirect('https://catchandtrade.com/login?error=ERR_NO_EMAIL');
     }
 
     const userEmail = googleUser.email.toLowerCase();
     const googleId = googleUser.id;
-
-    // Try to find existing user by email (case-insensitive)
-    const searchUrl = `${SUPABASE_URL}/rest/v1/User?email=eq.${encodeURIComponent(userEmail)}&select=*`;
     
+    console.log('DEBUG: email=', userEmail, 'googleId=', googleId);
+
+    let user = null;
+
+    const searchUrl = `${SUPABASE_URL}/rest/v1/User?email=eq.${encodeURIComponent(userEmail)}&select=*`;
     const userQuery = await fetch(searchUrl, {
       headers: {
         'apikey': SUPABASE_KEY,
@@ -70,22 +71,38 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    console.log('User query status:', userQuery.status);
-    
-    let user = null;
+    console.log('DEBUG: query status=', userQuery.status);
     
     if (userQuery.ok) {
       const users = await userQuery.json();
-      console.log('Users found:', JSON.stringify(users));
+      console.log('DEBUG: users from email query:', JSON.stringify(users));
       if (users && Array.isArray(users) && users.length > 0) {
         user = users[0];
       }
-    } else {
-      console.log('User query error:', await userQuery.text());
     }
 
-    // If no user found, create one
     if (!user) {
+      console.log('DEBUG: not found by email, trying googleid');
+      const googleIdSearchUrl = `${SUPABASE_URL}/rest/v1/User?googleid=eq.${googleId}&select=*`;
+      
+      const googleIdQuery = await fetch(googleIdSearchUrl, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
+      
+      if (googleIdQuery.ok) {
+        const usersByGoogleId = await googleIdQuery.json();
+        console.log('DEBUG: users from googleid query:', JSON.stringify(usersByGoogleId));
+        if (usersByGoogleId && Array.isArray(usersByGoogleId) && usersByGoogleId.length > 0) {
+          user = usersByGoogleId[0];
+        }
+      }
+    }
+
+    if (!user) {
+      console.log('DEBUG: not found, creating user');
       const createUrl = `${SUPABASE_URL}/rest/v1/User`;
       
       const createResponse = await fetch(createUrl, {
@@ -100,45 +117,29 @@ export async function GET(request: NextRequest) {
           email: userEmail,
           username: googleUser.name || userEmail.split('@')[0],
           googleid: googleId,
-          displayname: googleUser.name || userEmail.split('@')[0],
-          createdat: new Date().toISOString()
+          displayname: googleUser.name || userEmail.split('@')[0]
         })
       });
 
-      console.log('Create response status:', createResponse.status);
+      console.log('DEBUG: create status=', createResponse.status);
       
       if (createResponse.ok) {
         const newUsers = await createResponse.json();
-        console.log('Created user:', JSON.stringify(newUsers));
+        console.log('DEBUG: created:', JSON.stringify(newUsers));
         if (newUsers && Array.isArray(newUsers) && newUsers.length > 0) {
           user = newUsers[0];
         }
       } else {
-        console.log('Create error:', await createResponse.text());
-        // If create failed (maybe duplicate googleid), search by googleid
-        const googleIdSearchUrl = `${SUPABASE_URL}/rest/v1/User?googleid=eq.${googleId}&select=*`;
-        
-        const retryQuery = await fetch(googleIdSearchUrl, {
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`
-          }
-        });
-        
-        if (retryQuery.ok) {
-          const retryUsers = await retryQuery.json();
-          if (retryUsers && Array.isArray(retryUsers) && retryUsers.length > 0) {
-            user = retryUsers[0];
-          }
-        }
+        console.log('DEBUG: create error:', await createResponse.text());
       }
     }
 
-    // If still no user, error
     if (!user) {
-      console.log('FAILURE: User not found after search and create attempt');
+      console.log('FAILURE: User not found after all attempts');
       return NextResponse.redirect('https://catchandtrade.com/login?error=X_OAUTH_FAIL_X');
     }
+
+    console.log('DEBUG: success, user=', user.email);
 
     const token = Buffer.from(`${user.id}:${user.email}`).toString('base64');
     
