@@ -1,12 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 
-// users/[id] API routes
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ijnajdpcplapwiyvzsdh.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+async function supabase() {
+  const { createClient } = await import('@supabase/supabase-js');
+  return createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
-    // TODO: Implement GET handler for users/:id
-    return NextResponse.json({ message: 'users/:id GET endpoint', id });
+    const client = await supabase();
+    
+    // Try to find user by username (case insensitive)
+    const { data: user, error } = await client
+      .from('User')
+      .select('id, username, displayname, avatarid, ispublic, hidecollectionvalue, twitterhandle, instagramhandle, tiktokhandle')
+      .eq('username', id.toLowerCase())
+      .single();
+    
+    if (error || !user) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+    
+    return NextResponse.json({
+      id: user.id,
+      username: user.username,
+      displayName: user.displayname,
+      avatarId: user.avatarid,
+      isPublic: user.ispublic,
+      hideCollectionValue: user.hidecollectionvalue,
+      twitterHandle: user.twitterhandle,
+      instagramHandle: user.instagramhandle,
+      tiktokHandle: user.tiktokhandle
+    });
   } catch (error) {
     console.error('Error in users/:id GET:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
