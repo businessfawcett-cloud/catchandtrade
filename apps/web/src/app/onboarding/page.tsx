@@ -201,7 +201,11 @@ export default function OnboardingPage() {
       }
 
       const userData = await response.json();
-      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('user', JSON.stringify({
+        ...userData,
+        displayName: userData.displayname,
+        username: userData.username
+      }));
       window.location.href = '/';
     } catch (err: any) {
       setError(err.message || 'An error occurred');

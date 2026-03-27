@@ -97,10 +97,13 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (response.ok) {
-          const portfolios = await response.json();
+          const data = await response.json();
+          const portfolios = Array.isArray(data) ? data : [];
           
           for (const portfolio of portfolios) {
-            const existingItem = portfolio.items?.find((item: any) => item.cardId === cardId);
+            // Check if portfolio has items, otherwise skip
+            if (!portfolio.items) continue;
+            const existingItem = portfolio.items.find((item: any) => item.cardId === cardId);
             if (existingItem) {
               setInPortfolioItem({ portfolioId: portfolio.id, itemId: existingItem.id });
               return;

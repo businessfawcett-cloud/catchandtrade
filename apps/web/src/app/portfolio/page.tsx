@@ -440,10 +440,10 @@ export default function PortfolioPage() {
   };
 
   const getRawCardPrice = (item: PortfolioItem): number | null => {
-    if (item.card.currentPrice != null) {
-      return item.card.currentPrice;
+    if (item.card?.currentPrice != null) {
+      return item.card?.currentPrice;
     }
-    return item.card.prices?.[0]?.priceMarket ?? null;
+    return item.card?.prices?.[0]?.priceMarket ?? null;
   };
 
   const getDisplayUnitValue = (item: PortfolioItem): number | null => {
@@ -747,8 +747,8 @@ export default function PortfolioPage() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 overflow-visible">
             {filteredItems.map(item => {
-              const links = getAffiliateLinks(item.card);
-              const normalizedRarity = normalizeRarity(item.card.rarity);
+              const links = getAffiliateLinks(item.card || {});
+              const normalizedRarity = normalizeRarity(item.card?.rarity);
               const itemUnitValue = getDisplayUnitValue(item);
               return (
                 <div
@@ -756,7 +756,7 @@ export default function PortfolioPage() {
                   className={`card-wrapper bg-[#111827] rounded-xl overflow-visible border ${getTypeColor(normalizedRarity)} card-lift ${isRareHolo(normalizedRarity) ? 'holo-effect' : ''}`}
                   style={{ maxWidth: '100%', boxSizing: 'border-box' }}
                 >
-                  <Link href={`/marketplace/${item.card.id}`} className="block">
+                  <Link href={`/marketplace/${item.card?.id}`} className="block">
                     <div className="relative min-h-[200px] bg-gradient-to-br from-[#1a2332] to-[#0a0f1e] flex items-center justify-center p-3">
                       {item.isGraded ? (
                         <div style={{ 
@@ -769,8 +769,8 @@ export default function PortfolioPage() {
                           borderRadius: '8px',
                         }}>
                           <img
-                            src={item.card.imageUrl}
-                            alt={item.card.name}
+                            src={item.card?.imageUrl}
+                            alt={item.card?.name || 'Card'}
                             style={{
                               position: 'absolute',
                               top: '29%',
@@ -825,10 +825,10 @@ export default function PortfolioPage() {
                           </div>
                         </div>
                       ) : (
-                        item.card.imageUrl ? (
+                        item.card?.imageUrl ? (
                           <img
-                            src={item.card.imageUrl}
-                            alt={item.card.name}
+                            src={item.card?.imageUrl}
+                            alt={item.card?.name}
                             className="max-w-full max-h-full object-contain drop-shadow-lg"
                           />
                         ) : (
@@ -848,11 +848,11 @@ export default function PortfolioPage() {
                     </div>
                     <div className="p-3 space-y-2">
                       <h3 className="font-rajdhani font-bold text-white truncate">
-                        {item.card.name}
+                        {item.card?.name}
                       </h3>
-                      <p className="text-xs text-poke-text-muted truncate font-dm-sans">
-                        {item.card.setName}
-                      </p>
+                        <p className="text-xs text-poke-text-muted truncate font-dm-sans">
+                          {item.card?.setName || 'Unknown Set'}
+                        </p>
                       <div className="flex items-center justify-between">
                         <RarityBadge rarity={normalizedRarity} />
                         {itemUnitValue != null && (
@@ -874,7 +874,7 @@ export default function PortfolioPage() {
                     <button 
                       onClick={(e) => {
                         e.preventDefault();
-                        handleRemoveItem(item.id, currentPortfolio?.id ?? '', item.card.name);
+                        handleRemoveItem(item.id, currentPortfolio?.id ?? '', item.card?.name);
                       }}
                       className="flex-1 py-1.5 text-xs bg-gray-600 hover:bg-red-500 text-white text-center rounded transition-colors"
                     >

@@ -411,7 +411,8 @@ function Dashboard({ user: initialUser }: { user: User }) {
     try {
       if (userData) {
         const parsed = JSON.parse(userData);
-        if (parsed && parsed.username && parsed.username !== 'User') {
+        // Set user if they have either a username OR a displayName
+        if (parsed && (parsed.username || parsed.displayName)) {
           setUser(parsed);
         }
       }
@@ -488,7 +489,7 @@ function Dashboard({ user: initialUser }: { user: User }) {
   };
 
   const avatarUrl = user.avatarId ? AVATARS[user.avatarId] : null;
-  const displayName = user.displayName || user.username || 'Trainer';
+  const displayName = user.displayName || user.displayname || user.username || 'Trainer';
 
   // Stat card icons - larger 24px
   const StackedCardsIcon = ({ style }: { style?: React.CSSProperties }) => (

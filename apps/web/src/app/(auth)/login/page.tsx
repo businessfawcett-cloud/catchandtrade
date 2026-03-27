@@ -82,13 +82,15 @@ export default function LoginPage() {
       window.history.replaceState({}, '', '/');
       try {
         const userData = JSON.parse(userParam);
-        if (userData.username) {
+        // Only go to onboarding if no username OR username looks like a default (contains spaces)
+        const hasProperUsername = userData.username && !userData.username.includes(' ');
+        if (hasProperUsername && userData.displayName) {
           router.push('/');
         } else {
           router.push('/onboarding');
         }
       } catch {
-        router.push('/');
+        router.push('/onboarding');
       }
     }
   }, [router]);

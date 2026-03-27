@@ -80,17 +80,25 @@ export default function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    setIsLoggedIn(!!token);
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        setUsername(user.username || user.displayName || null);
-      } catch (e) {
-        // ignore parse errors
+    const loadUser = () => {
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('user');
+      setIsLoggedIn(!!token);
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          setUsername(user.username || user.displayName || null);
+        } catch (e) {
+          // ignore parse errors
+        }
       }
-    }
+    };
+    
+    loadUser();
+    
+    // Listen for storage changes (when user logs in from another tab)
+    window.addEventListener('storage', loadUser);
+    return () => window.removeEventListener('storage', loadUser);
   }, []);
 
   useEffect(() => {

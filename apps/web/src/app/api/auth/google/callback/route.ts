@@ -120,7 +120,12 @@ export async function GET(request: NextRequest) {
     
     const redirectUrl = new URL('https://catchandtrade.com/login');
     redirectUrl.searchParams.set('token', token);
-    redirectUrl.searchParams.set('user', JSON.stringify({ id: user.id, email: user.email, username: user.username }));
+    redirectUrl.searchParams.set('user', JSON.stringify({ 
+      id: user.id, 
+      email: user.email, 
+      username: user.username || null,
+      displayName: user.displayname || user.username || null 
+    }));
 
     return NextResponse.redirect(redirectUrl);
   } catch (err) {
