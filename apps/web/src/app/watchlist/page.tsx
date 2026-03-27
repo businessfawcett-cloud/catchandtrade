@@ -71,7 +71,7 @@ export default function WatchlistPage() {
     setRemoving(cardId);
     
     try {
-      const response = await fetch(`${API_URL}/api/watchlist/${cardId}`, {
+      const response = await fetch(`${API_URL}/api/watchlist?cardid=${cardId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

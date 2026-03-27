@@ -161,10 +161,10 @@ export default function PortfolioPage() {
 
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`${API_URL}/api/cards/search?q=${encodeURIComponent(searchQuery)}`);
+        const response = await fetch(`${API_URL}/api/cards?q=${encodeURIComponent(searchQuery)}&limit=20`);
         if (response.ok) {
           const data = await response.json();
-          setSearchResults(data.results || []);
+          setSearchResults(data.cards || []);
         }
       } catch (err) {
         console.error('Search failed:', err);
