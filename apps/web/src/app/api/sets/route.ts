@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/api';
 
 // Cache for 1 hour - sets don't change often
 export const revalidate = 3600;
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabase();
     // Fetch all needed fields including totalcards for count display
     const { data, error } = await supabase
       .from('PokemonSet')

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/api';
 
 export async function GET(request: NextRequest, { params }: { params: { code: string } }) {
+  const supabase = getSupabase();
   const { code } = params;
 
   const { data: set, error } = await supabase

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/api';
+import { hashPassword } from '@/lib/password';
+import { generateToken, generateRefreshToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -70,11 +72,13 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    const hashedPassword = await hashPassword(password);
+    
     const { data, error } = await supabase
       .from('User')
       .insert({
         email: email.toLowerCase(),
-        password,
+        password: hashedPassword,
         username: username?.toLowerCase(),
         displayname: displayName || username,
         createdat: new Date().toISOString()
@@ -86,11 +90,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     
-    const token = Buffer.from(`${data.id}:${data.email}`).toString('base64');
+    const token = await generateToken(data.id, data.email);
+    const refreshToken = await generateRefreshToken(data.id, data.email);
     
     return NextResponse.json({
       user: { id: data.id, email: data.email, username: data.username, displayName: data.displayname },
-      token
+      token,
+      refreshToken
     });
   } catch (error) {
     console.error('Error in users POST:', error);
