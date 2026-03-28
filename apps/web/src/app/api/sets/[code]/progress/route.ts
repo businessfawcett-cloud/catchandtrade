@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase } from '@/lib/api';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ijnajdpcplapwiyvzsdh.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
+const supabase = getSupabase();
 
 export async function GET(request: NextRequest, { params }: { params: { code: string } }) {
   const { code } = params;
@@ -20,8 +19,6 @@ export async function GET(request: NextRequest, { params }: { params: { code: st
   } catch (e) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
 
   // Get all cards in this set
   const { data: setCards, error: setError } = await supabase

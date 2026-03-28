@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase, getWebUrl } from '@/lib/api';
 
-const supabaseUrl = 'https://ijnajdpcplapwiyvzsdh.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || 'sb_secret_npPQJSJtOVSfpAhN-MjjZg_6d5YbZkC';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = getSupabase();
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = 'https://catchandtrade.com/api/auth/google/callback';
+const REDIRECT_URI = `${getWebUrl()}/api/auth/google/callback`;
+
+function getLoginUrl(error?: string) {
+  const url = new URL('/login', getWebUrl());
+  if (error) url.searchParams.set('error', error);
+  return url.toString();
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -16,15 +20,15 @@ export async function GET(request: NextRequest) {
   const errorDescription = searchParams.get('error_description');
 
   if (error || errorDescription) {
-    return NextResponse.redirect('https://catchandtrade.com/login?error=' + encodeURIComponent(error || errorDescription || 'unknown'));
+    return NextResponse.redirect(getLoginUrl(error || errorDescription || 'unknown'));
   }
 
   if (!code) {
-    return NextResponse.redirect('https://catchandtrade.com/login?error=no_code');
+    return NextResponse.redirect(getLoginUrl('no_code'));
   }
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-    return NextResponse.redirect('https://catchandtrade.com/login?error=oauth_not_configured');
+    return NextResponse.redirect(getLoginUrl('oauth_not_configured'));
   }
 
   try {
@@ -111,14 +115,14 @@ export async function GET(request: NextRequest) {
     }
 
     if (!user) {
-      return NextResponse.redirect('https://catchandtrade.com/login?error=user_not_found');
+      return NextResponse.redirect(getLoginUrl('user_not_found'));
     }
 
     console.log('Success! User:', user.email);
 
     const token = Buffer.from(`${user.id}:${user.email}`).toString('base64');
     
-    const redirectUrl = new URL('https://catchandtrade.com/login');
+    const redirectUrl = new URL('/login', getWebUrl());
     redirectUrl.searchParams.set('token', token);
     redirectUrl.searchParams.set('user', JSON.stringify({ 
       id: user.id, 

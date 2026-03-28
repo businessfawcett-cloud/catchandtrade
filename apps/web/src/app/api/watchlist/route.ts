@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase, getSupabaseUrl, getSupabaseKey } from '@/lib/api';
 
-const supabaseUrl = 'https://ijnajdpcplapwiyvzsdh.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || 'sb_secret_npPQJSJtOVSfpAhN-MjjZg_6d5YbZkC';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = getSupabase();
+const supabaseUrl = getSupabaseUrl();
+const supabaseKey = getSupabaseKey();
 
 export async function GET(request: NextRequest) {
   try {

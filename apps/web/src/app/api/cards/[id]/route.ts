@@ -87,14 +87,14 @@ async function fetchRealPrices(cardId: string, pokemonTcgId: string | null): Pro
   return prices;
 }
 
+import { getSupabase } from '@/lib/api';
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
+    const supabase = getSupabase();
     
-    const { data: card, error } = await (await import('@supabase/supabase-js')).createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ijnajdpcplapwiyvzsdh.supabase.co',
-      process.env.SUPABASE_SERVICE_KEY || 'sb_secret_npPQJSJtOVSfpAhN-MjjZg_6d5YbZkC'
-    )
+    const { data: card, error } = await supabase
       .from('Card')
       .select('*')
       .eq('id', id)
@@ -105,10 +105,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     // Try to get real prices from database first
-    const { data: dbPrices } = await (await import('@supabase/supabase-js')).createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ijnajdpcplapwiyvzsdh.supabase.co',
-      process.env.SUPABASE_SERVICE_KEY || 'sb_secret_npPQJSJtOVSfpAhN-MjjZg_6d5YbZkC'
-    )
+    const { data: dbPrices } = await supabase
       .from('CardPrice')
       .select('*')
       .eq('cardid', id)
@@ -135,10 +132,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         
         // Save to database for future use
         const latestPrice = realPrices[0];
-        await (await import('@supabase/supabase-js')).createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ijnajdpcplapwiyvzsdh.supabase.co',
-          process.env.SUPABASE_SERVICE_KEY || 'sb_secret_npPQJSJtOVSfpAhN-MjjZg_6d5YbZkC'
-        )
+        await supabase
           .from('CardPrice')
           .upsert({
             cardid: id,

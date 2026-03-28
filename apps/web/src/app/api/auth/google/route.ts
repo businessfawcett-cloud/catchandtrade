@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getWebUrl } from '@/lib/api';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = 'https://catchandtrade.com/api/auth/google/callback';
+const REDIRECT_URI = `${getWebUrl()}/api/auth/google/callback`;
 
 export async function GET(request: NextRequest) {
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
