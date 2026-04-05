@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       .range((page - 1) * limit, page * limit - 1);
     
     if (search) {
-      query = query.or(`username.ilike.%${search}%,displayname.ilike.%${search}%`);
+      query = query.or(`username.ilike.%${search}%,displayname.ilike.%${search}%,email.ilike.%${search}%`);
     }
     
     const { data, error, count } = await query.order('createdat', { ascending: false });
