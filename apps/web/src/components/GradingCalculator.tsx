@@ -66,8 +66,8 @@ export default function GradingCalculator({ cardId, cardName, currentPrice }: Gr
     const cardValue = currentPrice || 50;
 
     try {
-      // Use the calculate endpoint explicitly
-      const response = await fetch('/api/grading/calculate', {
+      // Call the main grading endpoint
+      const response = await fetch('/api/grading', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
