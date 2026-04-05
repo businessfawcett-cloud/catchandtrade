@@ -36,7 +36,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Logged out' });
     }
     
-    if (action === 'refresh') {
+    // Handle refresh token endpoint (no action parameter needed for frontend compatibility)
+    if (action === 'refresh' || request.url.endsWith('/api/auth/refresh')) {
       const body = await request.json();
       const { refreshToken } = body;
       
