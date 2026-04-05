@@ -64,24 +64,30 @@ export default function GradingCalculator({ cardId, cardName, currentPrice }: Gr
     setResult(null);
 
     const cardValue = currentPrice || 50;
-
-    // Use relative API call that goes through Vercel's routing
-    const url = `/api/grading?action=calculate&cardValue=${cardValue}&company=${selectedService}&tier=${selectedTier.toUpperCase()}&expectedGrade=${selectedGrade}`;
-    console.log('Grading API URL:', url);
+    console.log('Calculating ROI for card value:', cardValue);
 
     try {
-      const response = await fetch(url, {
-        method: 'GET'
+      const response = await fetch('/api/grading', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cardValue: cardValue,
+          service: selectedService,
+          tier: selectedTier,
+          expectedGrade: selectedGrade
+        })
       });
 
+      console.log('Response status:', response.status);
+
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (!response.ok) {
         setError(data.error || 'Failed to calculate');
         return;
       }
 
-      // Map API response to expected format
       setResult({
         cardName,
         rawPrice: cardValue,
@@ -98,6 +104,7 @@ export default function GradingCalculator({ cardId, cardName, currentPrice }: Gr
         verdictColor: data.recommended ? 'green' : data.roi > 20 ? 'yellow' : 'red'
       });
     } catch (err) {
+      console.error('Grading calc error:', err);
       setError('Failed to connect to server');
     } finally {
       setLoading(false);
