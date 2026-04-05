@@ -64,10 +64,10 @@ export default function GradingCalculator({ cardId, cardName, currentPrice }: Gr
     setResult(null);
 
     const cardValue = currentPrice || 50;
-    console.log('Calculating ROI for card value:', cardValue);
 
     try {
-      const response = await fetch('/api/grading', {
+      // Use the calculate endpoint explicitly
+      const response = await fetch('/api/grading/calculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -78,10 +78,7 @@ export default function GradingCalculator({ cardId, cardName, currentPrice }: Gr
         })
       });
 
-      console.log('Response status:', response.status);
-
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (!response.ok) {
         setError(data.error || 'Failed to calculate');
@@ -104,7 +101,6 @@ export default function GradingCalculator({ cardId, cardName, currentPrice }: Gr
         verdictColor: data.recommended ? 'green' : data.roi > 20 ? 'yellow' : 'red'
       });
     } catch (err) {
-      console.error('Grading calc error:', err);
       setError('Failed to connect to server');
     } finally {
       setLoading(false);
