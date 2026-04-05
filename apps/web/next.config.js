@@ -12,6 +12,14 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/grading/calculate',
+        destination: '/api/grading',
+      },
+    ];
+  },
   async redirects() {
     return [
       {
