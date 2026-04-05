@@ -30,6 +30,7 @@ interface GradingResult {
 interface GradingCalculatorProps {
   cardId: string;
   cardName: string;
+  currentPrice?: number;
 }
 
 const services: GradingService[] = ['PSA', 'CGC', 'BGS', 'SGC'];
@@ -49,7 +50,7 @@ const serviceColors: Record<GradingService, string> = {
   SGC: 'bg-green-500',
 };
 
-export default function GradingCalculator({ cardId, cardName }: GradingCalculatorProps) {
+export default function GradingCalculator({ cardId, cardName, currentPrice }: GradingCalculatorProps) {
   const [selectedService, setSelectedService] = useState<GradingService>('PSA');
   const [selectedTier, setSelectedTier] = useState<GradingTier>('economy');
   const [selectedGrade, setSelectedGrade] = useState<Grade>(9);
@@ -62,18 +63,11 @@ export default function GradingCalculator({ cardId, cardName }: GradingCalculato
     setError(null);
     setResult(null);
 
+    const cardValue = currentPrice || 50;
+
     try {
-      const response = await fetch(`${API_URL}/api/grading/calculate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          cardId,
-          expectedGrade: selectedGrade,
-          service: selectedService,
-          tier: selectedTier,
-        }),
+      const response = await fetch(`${API_URL}/api/grading?action=calculate&cardValue=${cardValue}&company=${selectedService}&tier=${selectedTier.toUpperCase()}&expectedGrade=${selectedGrade}`, {
+        method: 'GET'
       });
 
       const data = await response.json();
@@ -83,7 +77,22 @@ export default function GradingCalculator({ cardId, cardName }: GradingCalculato
         return;
       }
 
-      setResult(data);
+      // Map API response to expected format
+      setResult({
+        cardName,
+        rawPrice: cardValue,
+        expectedGrade: selectedGrade,
+        service: selectedService,
+        tier: selectedTier,
+        gradedValue: data.potentialValue || 0,
+        gradingFee: data.gradingCost || 0,
+        netProfit: data.profit || 0,
+        roi: data.roi || 0,
+        turnaround: selectedTier === 'economy' ? '45-60 days' : selectedTier === 'standard' ? '30-40 days' : '15-20 days',
+        verdict: data.recommended ? 'strong' : data.roi > 20 ? 'marginal' : 'skip',
+        verdictText: data.recommended ? 'Great ROI potential!' : data.roi > 20 ? 'Marginal returns' : 'Not worth grading',
+        verdictColor: data.recommended ? 'green' : data.roi > 20 ? 'yellow' : 'red'
+      });
     } catch (err) {
       setError('Failed to connect to server');
     } finally {
