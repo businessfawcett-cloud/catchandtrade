@@ -55,7 +55,7 @@ export default function PokedexPage() {
     }
 
     console.log('Pokédex: Making API call to /api/pokedex/overview');
-    fetch(`${API_URL}/api/pokedex/overview`, {
+     fetch(`${API_URL}/api/pokedex`, {
       headers: { 
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'

@@ -56,19 +56,20 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { cardid } = body;
+    const { cardId, cardid } = body;
+    const finalCardId = cardId || cardid;
     
-    if (!cardid) {
-      return NextResponse.json({ error: 'cardid required' }, { status: 400 });
-    }
-    
-    // Check if already in watchlist
-    const { data: existing } = await supabase
-      .from('WatchlistItem')
-      .select('id')
-      .eq('userid', userid)
-      .eq('cardid', cardid)
-      .single();
+     if (!finalCardId) {
+       return NextResponse.json({ error: 'cardid required' }, { status: 400 });
+     }
+     
+     // Check if already in watchlist
+     const { data: existing } = await supabase
+       .from('WatchlistItem')
+       .select('id')
+       .eq('userid', userid)
+       .eq('cardid', finalCardId)
+       .single();
     
     if (existing) {
       return NextResponse.json({ error: 'Already in watchlist' }, { status: 400 });
@@ -76,10 +77,10 @@ export async function POST(request: NextRequest) {
     
     const { data: item, error } = await supabase
       .from('WatchlistItem')
-      .insert({
-        userid,
-        cardid
-      })
+       .insert({
+         userid,
+         cardid: finalCardId
+       })
       .select()
       .single();
     
@@ -111,18 +112,18 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
     
-    const { searchParams } = new URL(request.url);
-    const cardid = searchParams.get('cardid');
-    
-    if (!cardid) {
-      return NextResponse.json({ error: 'cardid required' }, { status: 400 });
-    }
-    
-    const { error } = await supabase
-      .from('WatchlistItem')
-      .delete()
-      .eq('userid', userid)
-      .eq('cardid', cardid);
+     const { searchParams } = new URL(request.url);
+     const cardidParam = searchParams.get('cardid');
+     
+     if (!cardidParam) {
+       return NextResponse.json({ error: 'cardid required' }, { status: 400 });
+     }
+     
+     const { error } = await supabase
+       .from('WatchlistItem')
+       .delete()
+       .eq('userid', userid)
+       .eq('cardid', cardidParam);
     
     if (error) {
       console.error('Error removing from watchlist:', error);

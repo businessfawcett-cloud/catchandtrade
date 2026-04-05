@@ -101,7 +101,7 @@ function PortfolioSearchContent() {
   const fetchCards = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/cards/search?q=${encodeURIComponent(query)}`);
+       const response = await fetch(`${API_URL}/api/cards?q=${encodeURIComponent(query)}`);
       if (response.ok) {
         const data = await response.json();
         setCards(data.results || []);

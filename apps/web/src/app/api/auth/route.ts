@@ -36,6 +36,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Logged out' });
     }
     
+    if (action === 'refresh') {
+      const body = await request.json();
+      const { refreshToken } = body;
+      
+      if (!refreshToken) {
+        return NextResponse.json({ error: 'Refresh token required' }, { status: 400 });
+      }
+      
+      try {
+        const decoded = Buffer.from(refreshToken, 'base64').toString();
+        const userId = decoded.split(':')[0];
+        
+        const supabase = getSupabase();
+        const { data: user } = await supabase
+          .from('User')
+          .select('id, email')
+          .eq('id', userId)
+          .single();
+          
+        if (!user) {
+          return NextResponse.json({ error: 'Invalid refresh token' }, { status: 401 });
+        }
+        
+        const token = await generateToken(user.id, user.email);
+        const newRefreshToken = await generateRefreshToken(user.id, user.email);
+        
+        return NextResponse.json({ token, refreshToken: newRefreshToken });
+      } catch (err) {
+        return NextResponse.json({ error: 'Invalid refresh token' }, { status: 401 });
+      }
+    }
+    
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error) {
     console.error('Error in auth POST:', error);
