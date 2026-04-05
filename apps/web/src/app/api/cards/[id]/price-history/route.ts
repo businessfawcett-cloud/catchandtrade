@@ -17,15 +17,17 @@ function generateMockPriceHistory(cardId: string, currentPrice: number | null, d
   // Generate consistent seed from cardId
   const seed = cardId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   
+  // Determine a trend direction based on seed (consistent per card)
+  const trendDirection = seed % 2 === 0 ? 1 : -1;
+  
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
     
     // Use seeded random for consistent data
-    const rand1 = seededRandom(seed + i);
-    const rand2 = seededRandom(seed + i + 100);
-    const variance = (rand1 - 0.5) * 0.2;
-    const trend = (days - i) / days * 0.03;
+    const rand = seededRandom(seed + i);
+    const variance = (rand - 0.5) * 0.1;
+    const trend = (trendDirection * (days - i) / days * 0.05);
     const price = Math.max(1, basePrice * (1 + variance + trend));
     
     data.push({
