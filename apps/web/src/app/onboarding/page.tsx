@@ -206,6 +206,27 @@ export default function OnboardingPage() {
         displayName: userData.displayname,
         username: userData.username
       }));
+
+      // Create default portfolio if none exists
+      try {
+        const portfolioRes = await fetch(`${API_URL}/api/portfolios`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: 'My Collection',
+            isDefault: true
+          })
+        });
+        if (portfolioRes.ok) {
+          console.log('Default portfolio created');
+        }
+      } catch (portfolioErr) {
+        console.warn('Could not create default portfolio:', portfolioErr);
+      }
+
       window.location.href = '/';
     } catch (err: any) {
       setError(err.message || 'An error occurred');

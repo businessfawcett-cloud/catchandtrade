@@ -90,6 +90,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     
+    // Create default portfolio for new user
+    const portfolioId = 'p-' + Buffer.from(data.id + Date.now().toString()).toString('base64').substring(0, 20);
+    await supabase
+      .from('Portfolio')
+      .insert({
+        id: portfolioId,
+        userid: data.id,
+        name: 'My Collection',
+        isdefault: true,
+        ispublic: false,
+        createdat: new Date().toISOString()
+      });
+    
     const token = await generateToken(data.id, data.email);
     const refreshToken = await generateRefreshToken(data.id, data.email);
     
