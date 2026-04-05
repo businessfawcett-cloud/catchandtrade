@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Calculate endpoint for grading ROI
 export async function GET(request: NextRequest) {
   return calculate(request);
 }
@@ -30,7 +31,9 @@ async function calculate(request: NextRequest) {
       company = body.company || body.service || 'PSA';
       tier = body.tier || 'STANDARD';
       expectedGrade = parseInt(body.expectedGrade || '10');
-    } catch (e) {}
+    } catch (e) {
+      console.error('Parse error:', e);
+    }
   }
   
   const pricing: Record<string, Record<string, number>> = {
