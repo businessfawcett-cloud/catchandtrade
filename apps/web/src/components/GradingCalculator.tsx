@@ -65,8 +65,12 @@ export default function GradingCalculator({ cardId, cardName, currentPrice }: Gr
 
     const cardValue = currentPrice || 50;
 
+    // Use relative API call that goes through Vercel's routing
+    const url = `/api/grading?action=calculate&cardValue=${cardValue}&company=${selectedService}&tier=${selectedTier.toUpperCase()}&expectedGrade=${selectedGrade}`;
+    console.log('Grading API URL:', url);
+
     try {
-      const response = await fetch(`${API_URL}/api/grading?action=calculate&cardValue=${cardValue}&company=${selectedService}&tier=${selectedTier.toUpperCase()}&expectedGrade=${selectedGrade}`, {
+      const response = await fetch(url, {
         method: 'GET'
       });
 
