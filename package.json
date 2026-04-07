@@ -1,1 +1,26 @@
-{"name":"temp","private":true,"dependencies":{"playwright":"^1.58.2"}}
+{
+  "name": "temp",
+  "private": true,
+  "dependencies": {
+    "@playwright/test": "^1.59.1",
+    "node-fetch": "^3.3.2",
+    "playwright": "^1.58.2"
+  },
+  "description": "A monorepo for the Catch and Trade trading card marketplace — web app, REST API, and shared packages.",
+  "version": "1.0.0",
+  "main": "check-cards.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/businessfawcett-cloud/catchandtrade.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/businessfawcett-cloud/catchandtrade/issues"
+  },
+  "homepage": "https://github.com/businessfawcett-cloud/catchandtrade#readme"
+}

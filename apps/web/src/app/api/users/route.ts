@@ -72,19 +72,19 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    const hashedPassword = await hashPassword(password);
-    
-    const { data, error } = await supabase
-      .from('User')
-      .insert({
-        email: email.toLowerCase(),
-        password: hashedPassword,
-        username: username?.toLowerCase(),
-        displayname: displayName || username,
-        createdat: new Date().toISOString()
-      })
-      .select()
-      .single();
+     const hashedPassword = await hashPassword(password);
+     
+     const { data, error } = await supabase
+       .from('User')
+       .insert({
+         email: email.toLowerCase(),
+         passwordHash: hashedPassword,
+         username: username?.toLowerCase(),
+         displayname: displayName || username,
+         createdat: new Date().toISOString()
+       })
+       .select()
+       .single();
     
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -95,13 +95,13 @@ export async function POST(request: NextRequest) {
     await supabase
       .from('Portfolio')
       .insert({
-        id: portfolioId,
-        userid: data.id,
-        name: 'My Collection',
-        isdefault: true,
-        ispublic: false,
-        createdat: new Date().toISOString()
-      });
+         id: portfolioId,
+         userid: data.id,
+         name: 'My Collection',
+         ispublic: false,
+         isdefault: true,
+         createdat: new Date().toISOString()
+       });
     
     const token = await generateToken(data.id, data.email);
     const refreshToken = await generateRefreshToken(data.id, data.email);
