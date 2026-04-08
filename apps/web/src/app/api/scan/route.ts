@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/api';
+import Tesseract from 'tesseract.js';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
     return NextResponse.json({ 
-      message: 'Card scanning API',
-      info: 'POST an image URL or base64 to identify a card',
+      message: 'Card scanning API - FREE OCR',
+      info: 'POST an image URL or base64 to identify a card using free Tesseract OCR',
       usage: {
         method: 'POST',
         body: {
           imageUrl: 'https://example.com/card.jpg',
-          // or
           imageBase64: 'data:image/jpeg;base64,...'
         }
-      }
+      },
+      features: [
+        'Free OCR - no paid API required',
+        'Works with Pokemon card images',
+        'Searches database for matching cards'
+      ]
     });
   } catch (error) {
     console.error('Error in scan GET:', error);
@@ -46,69 +53,93 @@ export async function POST(request: NextRequest) {
     
     const supabase = getSupabase();
     
-    const googleVisionKey = process.env.GOOGLE_CLOUD_VISION_API_KEY;
-    
-    let imageContent = imageUrl;
-    if (imageBase64) {
-      imageContent = imageBase64;
-    }
-    
-    if (googleVisionKey && googleVisionKey !== 'REPLACE_WITH_KEY') {
-      try {
-        const visionResponse = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${googleVisionKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            requests: [{
-              image: imageBase64 ? { content: imageBase64.split(',')[1] } : { source: { imageUri: imageUrl } },
-              features: [{ type: 'TEXT_DETECTION' }, { type: 'LABEL_DETECTION' }],
-              imageContext: { languageHints: ['en'] }
-            }]
-          })
-        });
-        
-        if (visionResponse.ok) {
-          const visionData = await visionResponse.json();
-          const textAnnotations = visionData.responses?.[0]?.textAnnotations || [];
-          const labels = visionData.responses?.[0]?.labelAnnotations || [];
-          
-          const extractedText = textAnnotations[0]?.description || '';
-          
-          const cardSearchQuery = extractedText.split('\n')[0].trim();
-          
-          if (cardSearchQuery.length >= 2) {
-            const { data: cards } = await supabase
-              .from('Card')
-              .select('id, name, setname, setcode, cardnumber, rarity, imageurl')
-              .or(`name.ilike.%${cardSearchQuery}%,setname.ilike.%${cardSearchQuery}%`)
-              .limit(10);
-            
-            return NextResponse.json({
-              success: true,
-              extractedText,
-              labels: labels.slice(0, 5).map((l: any) => l.description),
-              possibleCards: cards || [],
-              message: cards?.length ? `Found ${cards.length} possible matches` : 'No matches found'
-            });
-          }
-        }
-      } catch (visionError) {
-        console.error('Vision API error:', visionError);
+    try {
+      let imageContent = imageUrl;
+      if (imageBase64) {
+        imageContent = imageBase64;
       }
+      
+      console.log('Starting OCR scan...');
+      
+      const result = await Tesseract.recognize(imageContent, 'eng', {
+        logger: m => console.log(m)
+      });
+      
+      const extractedText = result.data.text;
+      console.log('OCR extracted:', extractedText);
+      
+      if (!extractedText || extractedText.trim().length < 2) {
+        return NextResponse.json({
+          success: false,
+          message: 'Could not extract text from image. Try a clearer photo.',
+          suggestions: [
+            'Use better lighting',
+            'Ensure text is visible and not blurry',
+            'Avoid glare or reflections'
+          ]
+        });
+      }
+      
+      const cardSearchQuery = extractedText.split('\n')[0].trim();
+      
+      console.log('Searching for card:', cardSearchQuery);
+      
+      if (cardSearchQuery.length >= 2) {
+        const { data: cards, error } = await supabase
+          .from('Card')
+          .select('id, name, setname, setcode, cardnumber, rarity, imageurl')
+          .or(`name.ilike.%${cardSearchQuery}%,setname.ilike.%${cardSearchQuery}%,cardnumber.ilike.%${cardSearchQuery}%`)
+          .limit(15);
+        
+        if (error) {
+          console.error('Database search error:', error);
+        }
+        
+        if (cards && cards.length > 0) {
+          return NextResponse.json({
+            success: true,
+            extractedText,
+            confidence: result.data.confidence,
+            possibleCards: cards,
+            message: `Found ${cards.length} possible matches for "${cardSearchQuery}"`
+          });
+        }
+      }
+      
+      const { data: recentCards } = await supabase
+        .from('Card')
+        .select('id, name, setname, setcode, cardnumber, rarity, imageurl')
+        .order('createdat', { ascending: false })
+        .limit(20);
+      
+      return NextResponse.json({
+        success: false,
+        extractedText,
+        message: `Could not find matching card for "${cardSearchQuery}". Try a different image or browse cards below.`,
+        recentCards: recentCards || [],
+        suggestions: [
+          'Try with a clearer image',
+          'Include the card name in the image',
+          'Use a different angle'
+        ]
+      });
+      
+    } catch (ocrError) {
+      console.error('OCR processing error:', ocrError);
+      
+      const { data: recentCards } = await supabase
+        .from('Card')
+        .select('id, name, setname, setcode, cardnumber, rarity, imageurl')
+        .order('createdat', { ascending: false })
+        .limit(20);
+      
+      return NextResponse.json({
+        success: false,
+        message: 'Failed to process image. Try again with a clearer photo.',
+        recentCards: recentCards || []
+      });
     }
     
-    const { data: recentCards } = await supabase
-      .from('Card')
-      .select('id, name, setname, setcode, cardnumber, rarity, imageurl')
-      .order('createdat', { ascending: false })
-      .limit(20);
-    
-    return NextResponse.json({
-      success: false,
-      message: 'Card identification requires Google Cloud Vision API configuration',
-      suggestion: 'Configure GOOGLE_CLOUD_VISION_API_KEY in environment variables',
-      recentCards: recentCards || []
-    });
   } catch (error) {
     console.error('Error in scan POST:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
