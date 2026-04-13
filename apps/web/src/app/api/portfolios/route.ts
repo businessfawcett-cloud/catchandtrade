@@ -140,12 +140,15 @@ export async function POST(request: NextRequest) {
     }
     
     const token = authHeader.replace('Bearer ', '');
+    console.log('Token received (first 50 chars):', token.substring(0, 50));
     let userId;
     try {
       const decoded = Buffer.from(token, 'base64').toString();
+      console.log('Decoded token:', decoded);
       userId = decoded.split(':')[0];
+      console.log('Extracted userId:', userId);
       if (!userId) throw new Error('Empty userId');
-    } catch {
+    } catch (e) {
       // Try JWT format
       try {
         const jwtParts = token.split('.');
