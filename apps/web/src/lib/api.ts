@@ -1,15 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-function getEnvOrWarn(varName: string, fallback: string | undefined): string {
-  const value = process.env[varName] || fallback;
-  if (!value || value.includes('REPLACE_WITH') || value.includes('fallback')) {
-    console.warn(`Warning: ${varName} not set, using fallback. Set in Vercel for production.`);
-  }
-  return value || fallback || '';
-}
-
-const supabaseUrl = getEnvOrWarn('NEXT_PUBLIC_SUPABASE_URL', 'https://ijnajdpcplapwiyvzsdh.supabase.co');
-const supabaseKey = getEnvOrWarn('SUPABASE_SERVICE_KEY', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) || 'sb_secret_npPQJSJtOVSfpAhN-MjjZg_6d5YbZkC';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ijnajdpcplapwiyvzsdh.supabase.co';
+const providedKey = process.env.SUPABASE_SERVICE_KEY;
+const fallbackKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNiz43_04Dq4bL3C_ngUshOkvKQo';
+const supabaseKey = providedKey && providedKey.startsWith('eyJ') ? providedKey : fallbackKey;
 
 export function getSupabase() {
   return createClient(supabaseUrl, supabaseKey);
@@ -24,9 +18,9 @@ export function getSupabaseKey() {
 }
 
 export function getWebUrl() {
-  return getEnvOrWarn('NEXT_PUBLIC_WEB_URL', process.env.NEXT_PUBLIC_APP_URL) || 'https://catchandtrade.com';
+  return process.env.NEXT_PUBLIC_WEB_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://catchandtrade.com';
 }
 
 export function getApiUrl() {
-  return getEnvOrWarn('NEXT_PUBLIC_API_URL', undefined) || 'https://catchandtrade.com/api';
+  return process.env.NEXT_PUBLIC_API_URL || 'https://catchandtrade.com/api';
 }
