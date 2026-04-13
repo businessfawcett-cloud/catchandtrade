@@ -133,6 +133,7 @@ export async function POST(request: NextRequest) {
   try {
     const supabaseUrl = getSupabaseUrl();
     const supabaseKey = getSupabaseKey();
+    console.log('POST supabaseUrl:', supabaseUrl, 'supabaseKey starts with eyJ:', supabaseKey?.startsWith('eyJ'));
     
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
