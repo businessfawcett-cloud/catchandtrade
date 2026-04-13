@@ -169,6 +169,7 @@ export async function POST(request: NextRequest) {
     const portfolioId = 'p-' + Buffer.from(userId + Date.now().toString()).toString('base64').substring(0, 20);
     
     // Use REST API since Supabase client insert seems to fail
+    console.log('Creating portfolio with userId:', userId, 'supabaseUrl:', supabaseUrl, 'key length:', supabaseKey?.length);
     const insertResponse = await fetch(`${supabaseUrl}/rest/v1/Portfolio`, {
       method: 'POST',
       headers: {
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
     if (!insertResponse.ok) {
       const errText = await insertResponse.text();
       console.error('Error creating portfolio:', errText);
-      return NextResponse.json({ error: 'Failed to create portfolio' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to create portfolio: ' + errText }, { status: 500 });
     }
     
     const portfolios = await insertResponse.json();
