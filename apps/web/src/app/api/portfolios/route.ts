@@ -144,8 +144,22 @@ export async function POST(request: NextRequest) {
     try {
       const decoded = Buffer.from(token, 'base64').toString();
       userId = decoded.split(':')[0];
-    } catch (e) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      if (!userId) throw new Error('Empty userId');
+    } catch {
+      // Try JWT format
+      try {
+        const jwtParts = token.split('.');
+        if (jwtParts.length === 3) {
+          const payload = JSON.parse(Buffer.from(jwtParts[1], 'base64').toString());
+          userId = payload.userId;
+        }
+      } catch (e) {
+        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      }
+    }
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Invalid token - no userId' }, { status: 401 });
     }
     
     const body = await request.json();
@@ -180,7 +194,7 @@ export async function POST(request: NextRequest) {
     const portfolios = await insertResponse.json();
     const portfolio = Array.isArray(portfolios) ? portfolios[0] : portfolios;
     
-    return NextResponse.json({ portfolio });
+    return NextResponse.json(portfolio);
   } catch (err) {
     console.error('Portfolios POST error:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
