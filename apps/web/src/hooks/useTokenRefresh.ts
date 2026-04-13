@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export function useTokenRefresh() {
   const refreshing = useRef(false);
@@ -21,8 +21,32 @@ export function useTokenRefresh() {
 
       try {
         // Decode JWT to check expiration
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const exp = payload.exp * 1000; // Convert to milliseconds
+        const tokenParts = token.split('.');
+        if (tokenParts.length !== 3) {
+          console.log('[TokenRefresh] Invalid token format, clearing');
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          return;
+        }
+        
+        let payload;
+        try {
+          payload = JSON.parse(atob(tokenParts[1]));
+        } catch {
+          console.log('[TokenRefresh] Failed to decode token, clearing');
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          return;
+        }
+        
+        if (!payload.exp) {
+          console.log('[TokenRefresh] No expiration in token');
+          return;
+        }
+        
+        const exp = payload.exp * 1000;
         const now = Date.now();
         const timeUntilExpiry = exp - now;
 
