@@ -201,7 +201,8 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(portfolio);
   } catch (err) {
-    console.error('Portfolios POST error:', err);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error('Portfolios POST error:', errorMessage);
+    return NextResponse.json({ error: 'Server error: ' + errorMessage }, { status: 500 });
   }
 }
