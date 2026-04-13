@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase, getSupabaseUrl, getSupabaseKey } from '@/lib/api';
-
-const supabase = getSupabase();
-const supabaseUrl = getSupabaseUrl();
-const supabaseKey = getSupabaseKey();
+import { getSupabaseUrl, getSupabaseKey } from '@/lib/api';
 
 export async function GET(request: NextRequest) {
   try {
+    const supabaseUrl = getSupabaseUrl();
+    const supabaseKey = getSupabaseKey();
+    
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'No token provided' }, { status: 401 });
@@ -21,16 +20,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
     
-    const { data: portfolios, error } = await supabase
-      .from('Portfolio')
-      .select('*')
-      .eq('userid', userId)
-      .order('createdat', { ascending: false });
+    const portfoliosResponse = await fetch(
+      `${supabaseUrl}/rest/v1/Portfolio?userid=eq.${userId}&order=createdat.desc`,
+      {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      }
+    );
     
-    if (error) {
-      console.error('Error fetching portfolios:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!portfoliosResponse.ok) {
+      const errText = await portfoliosResponse.text();
+      console.error('Error fetching portfolios:', errText);
+      return NextResponse.json({ error: 'Failed to fetch portfolios' }, { status: 500 });
     }
+    
+    const portfolios = await portfoliosResponse.json();
     
     if (!portfolios || portfolios.length === 0) {
       return NextResponse.json([], { status: 200 });
@@ -125,6 +131,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabaseUrl = getSupabaseUrl();
+    const supabaseKey = getSupabaseKey();
+    
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'No token provided' }, { status: 401 });
@@ -140,15 +149,7 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { name, description, isDefault } = body;
-    
-    // If setting as default, unset other defaults
-    if (isDefault) {
-      await supabase
-        .from('Portfolio')
-        .update({ isdefault: false })
-        .eq('userid', userId);
-    }
+    const { name, description } = body;
     
     // Generate a unique ID
     const portfolioId = 'p-' + Buffer.from(userId + Date.now().toString()).toString('base64').substring(0, 20);
@@ -166,8 +167,7 @@ export async function POST(request: NextRequest) {
         id: portfolioId,
         userid: userId,
         name: name || 'My Collection',
-        description: description || null,
-        ispublic: isDefault || false
+        description: description || null
       })
     });
     
