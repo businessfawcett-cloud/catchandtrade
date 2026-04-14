@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseUrl, getSupabaseKey } from '@/lib/api';
+
+const API_URL = 'https://ijnajdpcplapwiyvzsdh.supabase.co';
+const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNiz43_04Dq4bL3C_ngUshOkvKQo';
 
 export async function GET(request: NextRequest) {
+  console.log('GET /api/portfolios called');
   try {
-    const supabaseUrl = getSupabaseUrl();
-    const supabaseKey = getSupabaseKey();
+    console.log('Using hardcoded API_URL:', API_URL);
     
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -21,11 +23,11 @@ export async function GET(request: NextRequest) {
     }
     
     const portfoliosResponse = await fetch(
-      `${supabaseUrl}/rest/v1/Portfolio?userid=eq.${userId}&order=createdat.desc`,
+      `${API_URL}/rest/v1/Portfolio?userid=eq.${userId}&order=createdat.desc`,
       {
         headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
+          'apikey': API_KEY,
+          'Authorization': `Bearer ${API_KEY}`
         }
       }
     );
@@ -45,11 +47,11 @@ export async function GET(request: NextRequest) {
     // Add items to each portfolio using REST API
     const portfoliosWithItems = await Promise.all((portfolios || []).map(async (portfolio) => {
       const itemsResponse = await fetch(
-        `${supabaseUrl}/rest/v1/PortfolioCard?portfolioId=eq.${encodeURIComponent(portfolio.id)}`,
+        `${API_URL}/rest/v1/PortfolioCard?portfolioId=eq.${encodeURIComponent(portfolio.id)}`,
         {
           headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`
+            'apikey': API_KEY,
+            'Authorization': `Bearer ${API_KEY}`
           }
         }
       );
@@ -59,11 +61,11 @@ export async function GET(request: NextRequest) {
       if (items && items.length > 0) {
         items = await Promise.all(items.map(async (item) => {
           const cardResponse = await fetch(
-            `${supabaseUrl}/rest/v1/Card?id=eq.${encodeURIComponent(item.cardId)}`,
+            `${API_URL}/rest/v1/Card?id=eq.${encodeURIComponent(item.cardId)}`,
             {
               headers: {
-                'apikey': supabaseKey,
-                'Authorization': `Bearer ${supabaseKey}`
+                'apikey': API_KEY,
+                'Authorization': `Bearer ${API_KEY}`
               }
             }
           );
@@ -74,11 +76,11 @@ export async function GET(request: NextRequest) {
           let prices: any[] = [];
           if (cardData?.id) {
             const priceResponse = await fetch(
-              `${supabaseUrl}/rest/v1/CardPrice?cardid=eq.${encodeURIComponent(cardData.id)}&order=date.desc&limit=1`,
+              `${API_URL}/rest/v1/CardPrice?cardid=eq.${encodeURIComponent(cardData.id)}&order=date.desc&limit=1`,
               {
                 headers: {
-                  'apikey': supabaseKey,
-                  'Authorization': `Bearer ${supabaseKey}`
+                  'apikey': API_KEY,
+                  'Authorization': `Bearer ${API_KEY}`
                 }
               }
             );
@@ -131,12 +133,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   console.log('POST /api/portfolios called');
+  console.log('Using hardcoded API_URL:', API_URL);
   try {
-    console.log('Getting supabase config...');
-    const supabaseUrl = getSupabaseUrl();
-    console.log('Got supabaseUrl:', supabaseUrl);
-    const supabaseKey = getSupabaseKey();
-    console.log('Got supabaseKey, starts with eyJ:', supabaseKey?.startsWith('eyJ'));
     
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -176,12 +174,12 @@ export async function POST(request: NextRequest) {
     const portfolioId = 'p-' + Buffer.from(userId + Date.now().toString()).toString('base64').substring(0, 20);
     
     // Use REST API since Supabase client insert seems to fail
-    console.log('Creating portfolio with userId:', userId, 'supabaseUrl:', supabaseUrl, 'key length:', supabaseKey?.length);
-    const insertResponse = await fetch(`${supabaseUrl}/rest/v1/Portfolio`, {
+    console.log('Creating portfolio with userId:', userId, 'API_URL:', API_URL, 'key length:', API_KEY?.length);
+    const insertResponse = await fetch(`${API_URL}/rest/v1/Portfolio`, {
       method: 'POST',
       headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
+        'apikey': API_KEY,
+        'Authorization': `Bearer ${API_KEY}`,
         'Content-Type': 'application/json',
         'Prefer': 'return=representation'
       },
