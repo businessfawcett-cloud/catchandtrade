@@ -130,10 +130,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('POST /api/portfolios called');
   try {
+    console.log('Getting supabase config...');
     const supabaseUrl = getSupabaseUrl();
+    console.log('Got supabaseUrl:', supabaseUrl);
     const supabaseKey = getSupabaseKey();
-    console.log('POST supabaseUrl:', supabaseUrl, 'supabaseKey starts with eyJ:', supabaseKey?.startsWith('eyJ'));
+    console.log('Got supabaseKey, starts with eyJ:', supabaseKey?.startsWith('eyJ'));
     
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -201,8 +204,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(portfolio);
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    console.error('Portfolios POST error:', errorMessage);
-    return NextResponse.json({ error: 'Server error: ' + errorMessage }, { status: 500 });
+    console.error('Portfolios POST error:', err);
+    return NextResponse.json({ error: 'Server error: ' + JSON.stringify(err) }, { status: 500 });
   }
 }
