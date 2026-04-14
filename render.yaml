@@ -3,8 +3,8 @@ services:
     name: catchandtrade-api
     env: node
     region: oregon
-    buildCommand: rm -rf ../packages ../apps/mobile 2>/dev/null; npm install --prefix apps/web && npx prisma generate --schema=apps/web/prisma/schema.prisma --prefix apps/web && npm run build --prefix apps/web
-    startCommand: npm run start --prefix apps/web
+    buildCommand: cd apps/web && npm install && npx prisma generate && npm run build
+    startCommand: cd apps/web && npm run start
     healthCheckPath: /ping
     envVars:
       - key: DATABASE_URL
