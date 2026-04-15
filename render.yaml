@@ -3,7 +3,7 @@ services:
     name: catchandtrade-api
     env: node
     region: oregon
-    buildCommand: cd apps/web && npm install && npx tailwindcss init -p && npx prisma generate && npm run build
+    buildCommand: cd apps/web && npm install && npx prisma generate && npm run build
     startCommand: cd apps/web && npm run start
     healthCheckPath: /ping
     envVars:
