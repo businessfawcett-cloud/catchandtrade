@@ -12,37 +12,8 @@ export const prisma =
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
-// Create a Supabase-compatible wrapper around Prisma
-const createPrismaWrapper = () => {
-  const client = prisma;
-  
-  return {
-    from: (table: string) => {
-      const modelName = table.charAt(0).toUpperCase() + table.slice(1).replace(/_([a-z])/, (_, letter) => letter.toUpperCase()).replace(/s$/, '');
-      
-      return {
-        select: (columns?: string) => {
-          const cols = columns?.split(',').map((c: string) => c.trim()) || [];
-          const selectObj: Record<string, boolean> = {};
-          cols.forEach(c => selectObj[c] true);
-          
-          return {
-            range: (start: number, end: number) => ({ limit: (count: number) => ({ order: (field: string, opts?: { ascending: boolean }) => ({}) }) ),
-            order: (field: string, opts?: { ascending: boolean }) => ({}),
-            eq: (field: string, value: unknown) => ({}),
-            in: (field: string, values: unknown[]) => ({}),
-          };
-        },
-        insert: (data: Record<string, unknown>) => ({}),
-        update: (data: Record<string, unknown>) => ({}),
-        delete: () => ({}),
-      };
-    },
-  };
-};
-
 export function getSupabase() {
-  return createPrismaWrapper();
+  return prisma;
 }
 
 export function getSupabaseUrl() {
@@ -61,5 +32,4 @@ export function getApiUrl() {
   return process.env.NEXT_PUBLIC_API_URL || 'https://catchandtrade.com/api';
 }
 
-// Export prisma directly for routes that want to use it
 export { prisma };
