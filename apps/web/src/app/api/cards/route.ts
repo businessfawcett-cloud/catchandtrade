@@ -1,105 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/api';
+import prisma from '@/lib/prisma';
+
+export const revalidate = 60;
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabase();
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50);
     const page = parseInt(searchParams.get('page') || '1');
     const setCode = searchParams.get('setCode');
     const sort = searchParams.get('sort') || 'newest';
     const searchQuery = searchParams.get('q') || '';
-    const gameType = searchParams.get('gameType');
 
-    let query = supabase
-      .from('Card')
-      .select('id, name, setname, setcode, cardnumber, gametype, rarity, imageurl, createdat', { count: 'exact' })
-      .range((page - 1) * limit, page * limit - 1);
-
+    const where: Record<string, unknown> = {};
+    
     if (setCode) {
-        query = query.eq('setcode', setCode);
-    }
-
-    if (gameType) {
-      query = query.eq('gametype', gameType);
+      where.setCode = setCode;
     }
 
     if (searchQuery && searchQuery.trim().length >= 2) {
-      const q = searchQuery.trim();
-      const isCardNumberSearch = q.includes('/') || /^\d+$/.test(q);
-      
-      if (isCardNumberSearch) {
-        const normalized = q.replace(/^0+/, '');
-        query = query.or(`name.ilike.%${q}%,setname.ilike.%${q}%,setcode.ilike.%${q}%,cardnumber.ilike.%${normalized}%`);
-      } else {
-        query = query.or(`name.ilike.%${q}%,setname.ilike.%${q}%,setcode.ilike.%${q}%,cardnumber.ilike.%${q}%`);
-      }
+      where.OR = [
+        { name: { contains: searchQuery, mode: 'insensitive' } },
+        { setName: { contains: searchQuery, mode: 'insensitive' } },
+        { setCode: { contains: searchQuery, mode: 'insensitive' } },
+      ];
     }
 
+    const orderBy: Record<string, string> = {};
     switch (sort) {
       case 'oldest':
-        query = query.order('createdat', { ascending: true });
+        orderBy.createdAt = 'asc';
         break;
       case 'name':
-        query = query.order('name', { ascending: true });
-        break;
-      case 'price-desc':
-      case 'price-asc':
-        query = query.order('createdat', { ascending: false });
+        orderBy.name = 'asc';
         break;
       default:
-        query = query.order('createdat', { ascending: false });
+        orderBy.createdAt = 'desc';
     }
 
-    const { data, error, count } = await query;
+    const cards = await prisma.card.findMany({
+      where,
+      take: limit,
+      skip: (page - 1) * limit,
+      orderBy,
+      select: {
+        id: true,
+        name: true,
+        setName: true,
+        setCode: true,
+        cardNumber: true,
+        gameType: true,
+        rarity: true,
+        imageUrl: true,
+        createdAt: true,
+      },
+    });
 
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    // Get latest prices
+    const cardIds = cards.map(c => c.id);
+    const prices = await prisma.cardPrice.findMany({
+      where: { cardId: { in: cardIds } },
+      orderBy: { date: 'desc' },
+      take: cardIds.length,
+    });
 
-    let cardIds = (data || []).map((c: any) => c.id);
-    let priceMap: Record<string, number> = {};
-
-    // FIXED: Use limit to get only latest price per card - O(n) instead of O(n*90)
-    if (cardIds.length > 0) {
-      const { data: prices } = await supabase
-        .from('CardPrice')
-        .select('cardid, pricemarket')
-        .in('cardid', cardIds)
-        .order('date', { ascending: false })
-        .limit(cardIds.length); // Only fetch latest price per card!
-
-      // Build price map - no filtering needed since we limited above
-      for (const p of (prices || [])) {
-        if (p.cardid && p.pricemarket) {
-          priceMap[p.cardid] = p.pricemarket;
-        }
+    const latestPrices = new Map();
+    for (const p of prices) {
+      if (!latestPrices.has(p.cardId)) {
+        latestPrices.set(p.cardId, p.priceMarket);
       }
     }
 
-    let results = (data || []).map((card: any) => ({
-      id: card.id,
-      name: card.name,
-      setName: card.setname,
-      setCode: card.setcode,
-      cardNumber: card.cardnumber,
-      gameType: card.gametype,
-      rarity: card.rarity,
-      imageUrl: card.imageurl,
-      currentPrice: priceMap[card.id] ?? null
+    const results = cards.map(card => ({
+      ...card,
+      currentPrice: latestPrices.get(card.id) ?? null,
     }));
 
-    if (sort === 'price-desc' || sort === 'price-asc') {
-      results = results.sort((a, b) => {
-        const aPrice = a.currentPrice ?? -1;
-        const bPrice = b.currentPrice ?? -1;
-        return sort === 'price-desc' ? bPrice - aPrice : aPrice - bPrice;
-      });
-    }
-
-    return NextResponse.json({ cards: results, total: count || 0 });
+    return NextResponse.json({ cards: results, total: results.length });
   } catch (error) {
     console.error('Error fetching cards:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
