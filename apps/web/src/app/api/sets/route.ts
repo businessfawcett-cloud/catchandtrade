@@ -6,6 +6,9 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
+    console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'exists' : 'MISSING');
+    console.log('Attempting prisma query...');
+    
     const sets = await prisma.pokemonSet.findMany({
       select: {
         id: true,
@@ -18,9 +21,10 @@ export async function GET() {
       orderBy: { releaseYear: 'desc' },
     });
 
+    console.log('Query succeeded, found', sets.length, 'sets');
     return NextResponse.json({ sets });
   } catch (error) {
     console.error('Error in sets GET:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
