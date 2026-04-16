@@ -31,5 +31,3 @@ export function getWebUrl() {
 export function getApiUrl() {
   return process.env.NEXT_PUBLIC_API_URL || 'https://catchandtrade.com/api';
 }
-
-export { prisma };
