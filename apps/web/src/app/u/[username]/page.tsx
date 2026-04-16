@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { BookOpen } from 'lucide-react';
 import PokeballLoader from '@/components/PokeballLoader';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 const AVATARS: Record<string, string> = {
   '1': 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png',

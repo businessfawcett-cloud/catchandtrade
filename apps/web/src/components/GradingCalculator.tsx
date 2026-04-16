@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { GRADING_FEES, GradingService, GradingTier, Grade } from '@/lib/constants';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface GradingResult {
   cardName: string;

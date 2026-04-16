@@ -13,7 +13,7 @@ interface Props {
   currentPrice: number;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export default function PriceHistoryChart({ cardId, currentPrice }: Props) {
   const [period, setPeriod] = useState<'7' | '30' | '90' | '365'>('30');

@@ -7,7 +7,7 @@ import GradingCalculator from '@/components/GradingCalculator';
 import { GRADE_MULTIPLIERS } from '@/lib/constants';
 import type { Grade, GradingService } from '@/lib/constants';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface CardPrice {
   id: string;

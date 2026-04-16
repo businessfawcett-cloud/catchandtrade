@@ -7,7 +7,7 @@ import CardGrid from '@/components/CardGrid';
 import { Library, CreditCard, DollarSign, BookOpen } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 // Hardcoded values - sets change rarely, no need to fetch every time
 const TOTAL_SETS = 172;
