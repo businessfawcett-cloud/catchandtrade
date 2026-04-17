@@ -1,27 +1,20 @@
-import { PrismaClient } from '@prisma/client';
+import { createClient } from '@supabase/supabase-js';
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
-
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  });
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ijnajdpcplapwiyvzsdh.supabase.co';
+const providedKey = process.env.SUPABASE_SERVICE_KEY;
+const fallbackKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNiz43_04Dq4bL3C_ngUshOkvKQo';
+const supabaseKey = providedKey && providedKey.startsWith('eyJ') ? providedKey : fallbackKey;
 
 export function getSupabase() {
-  return prisma;
+  return createClient(supabaseUrl, supabaseKey);
 }
 
 export function getSupabaseUrl() {
-  return process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  return supabaseUrl;
 }
 
 export function getSupabaseKey() {
-  return process.env.SUPABASE_SERVICE_KEY || '';
+  return supabaseKey;
 }
 
 export function getWebUrl() {

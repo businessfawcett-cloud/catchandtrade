@@ -8,6 +8,13 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
+        value: postgresql://postgres:umvYuTBwUK3SJQng@db.ijnajdpcplapwiyvzsdh.supabase.co:5432/postgres
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+        value: https://ijnajdpcplapwiyvzsdh.supabase.co
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+        value: (your supabase service key - get from Supabase dashboard)
       - key: JWT_SECRET
         sync: false
         value: catchandtrade_super_secret_jwt_key_2025

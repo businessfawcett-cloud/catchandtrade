@@ -1,30 +1,23 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { getSupabase } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 export async function GET() {
   try {
-    console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'exists' : 'MISSING');
-    console.log('Attempting prisma query...');
-    
-    const sets = await prisma.pokemonSet.findMany({
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        releaseYear: true,
-        imageUrl: true,
-        totalCards: true,
-      },
-      orderBy: { releaseYear: 'desc' },
-    });
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('PokemonSet')
+      .select('id, name, code, releaseyear, imageurl, totalcards')
+      .order('releaseyear', { ascending: false });
 
-    console.log('Query succeeded, found', sets.length, 'sets');
-    return NextResponse.json({ sets });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ sets: data || [] });
   } catch (error) {
     console.error('Error in sets GET:', error);
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
