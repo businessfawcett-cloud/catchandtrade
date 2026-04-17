@@ -8,7 +8,7 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
-        value: postgresql://neondb_owner:npg_sX5c2WEpPqwd@ep-lucky-bird-akkvyh6x-pooler.c-3.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+        value: postgresql://catchandtrade_db_p6co_user:kmLyUdkbsl7AiD1JO0kWtTiG5yGudInp@dpg-d7h5rodckfvc739ql21g-a.oregon-postgres.render.com/catchandtrade_db_p6co
       - key: JWT_SECRET
         sync: false
         value: catchandtrade_super_secret_jwt_key_2025
