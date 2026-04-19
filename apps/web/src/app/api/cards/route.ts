@@ -57,25 +57,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Get latest prices
-    const cardIds = cards.map(c => c.id);
-    const prices = await prisma.cardPrice.findMany({
-      where: { cardId: { in: cardIds } },
-      orderBy: { date: 'desc' },
-      take: cardIds.length,
-    });
-
-    const latestPrices = new Map();
-    for (const p of prices) {
-      if (!latestPrices.has(p.cardId)) {
-        latestPrices.set(p.cardId, p.priceMarket);
-      }
-    }
-
-    const results = cards.map(card => ({
-      ...card,
-      currentPrice: latestPrices.get(card.id) ?? null,
-    }));
+    const results = cards;
 
     return NextResponse.json({ cards: results, total: results.length });
   } catch (error) {
