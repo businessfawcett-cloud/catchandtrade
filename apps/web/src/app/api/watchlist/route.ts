@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseUrl, getSupabaseKey } from '@/lib/api';
+import { getUserIdFromToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,11 +10,9 @@ export async function GET(request: NextRequest) {
     }
     
     const token = authHeader.replace('Bearer ', '');
-    let userid;
-    try {
-      const decoded = Buffer.from(token, 'base64').toString();
-      userid = decoded.split(':')[0];
-    } catch (e) {
+    let userid = await getUserIdFromToken(token);
+    
+    if (!userid) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
     
@@ -69,12 +68,9 @@ export async function POST(request: NextRequest) {
     }
     
     const token = authHeader.replace('Bearer ', '');
-    let userid;
-    try {
-      const decoded = Buffer.from(token, 'base64').toString();
-      userid = decoded.split(':')[0];
-      console.log('User ID:', userid);
-    } catch (e) {
+    let userid = await getUserIdFromToken(token);
+    
+    if (!userid) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
     
@@ -145,11 +141,9 @@ export async function DELETE(request: NextRequest) {
     }
     
     const token = authHeader.replace('Bearer ', '');
-    let userid;
-    try {
-      const decoded = Buffer.from(token, 'base64').toString();
-      userid = decoded.split(':')[0];
-    } catch (e) {
+    let userid = await getUserIdFromToken(token);
+    
+    if (!userid) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
     

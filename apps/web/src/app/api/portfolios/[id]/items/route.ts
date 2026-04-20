@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase, getSupabaseUrl, getSupabaseKey } from '@/lib/api';
+import { verifyToken } from '@/lib/auth';
 
 const supabase = getSupabase();
 const supabaseUrl = getSupabaseUrl();
 const supabaseKey = getSupabaseKey();
 
-function getUserIdFromToken(token: string): string | null {
-  try {
-    const decoded = Buffer.from(token, 'base64').toString();
-    return decoded.split(':')[0];
-  } catch {
-    return null;
+async function getUserIdFromToken(token: string): Promise<string | null> {
+  const payload = await verifyToken(token);
+  if (payload?.userId) {
+    return payload.userId;
   }
+  return null;
 }
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
     
     const token = authHeader.replace('Bearer ', '');
-    const userid = getUserIdFromToken(token);
+    const userid = await getUserIdFromToken(token);
     if (!userid) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
     
     const token = authHeader.replace('Bearer ', '');
-    const userid = getUserIdFromToken(token);
+    const userid = await getUserIdFromToken(token);
     if (!userid) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -152,7 +152,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
     
     const token = authHeader.replace('Bearer ', '');
-    const userid = getUserIdFromToken(token);
+    const userid = await getUserIdFromToken(token);
     if (!userid) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -209,7 +209,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
     
     const token = authHeader.replace('Bearer ', '');
-    const userid = getUserIdFromToken(token);
+    const userid = await getUserIdFromToken(token);
     if (!userid) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }

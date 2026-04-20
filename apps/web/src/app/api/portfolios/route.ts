@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseUrl, getSupabaseKey } from '@/lib/api';
+import { getUserIdFromToken } from '@/lib/auth';
 
-const API_URL = 'https://ijnajdpcplapwiyvzsdh.supabase.co';
-const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNiz43_04Dq4bL3C_ngUshOkvKQo';
+const API_URL = getSupabaseUrl();
+const API_KEY = getSupabaseKey();
 
 export async function GET(request: NextRequest) {
   console.log('GET /api/portfolios called');
@@ -14,11 +16,9 @@ export async function GET(request: NextRequest) {
     }
     
     const token = authHeader.replace('Bearer ', '');
-    let userId;
-    try {
-      const decoded = Buffer.from(token, 'base64').toString();
-      userId = decoded.split(':')[0];
-    } catch (e) {
+    let userId = await getUserIdFromToken(token);
+    
+    if (!userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
     
@@ -143,28 +143,10 @@ export async function POST(request: NextRequest) {
     
     const token = authHeader.replace('Bearer ', '');
     console.log('Token received (first 50 chars):', token.substring(0, 50));
-    let userId;
-    try {
-      const decoded = Buffer.from(token, 'base64').toString();
-      console.log('Decoded token:', decoded);
-      userId = decoded.split(':')[0];
-      console.log('Extracted userId:', userId);
-      if (!userId) throw new Error('Empty userId');
-    } catch (e) {
-      // Try JWT format
-      try {
-        const jwtParts = token.split('.');
-        if (jwtParts.length === 3) {
-          const payload = JSON.parse(Buffer.from(jwtParts[1], 'base64').toString());
-          userId = payload.userId;
-        }
-      } catch (e) {
-        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-      }
-    }
+    let userId = await getUserIdFromToken(token);
     
     if (!userId) {
-      return NextResponse.json({ error: 'Invalid token - no userId' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
     
     const body = await request.json();

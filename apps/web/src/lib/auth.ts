@@ -79,3 +79,20 @@ export async function getUserIdFromRequest(request: NextRequest): Promise<string
 
   return null;
 }
+
+export async function getUserIdFromToken(token: string): Promise<string | null> {
+  const payload = await verifyToken(token);
+  if (payload?.userId) {
+    return payload.userId;
+  }
+  try {
+    const decoded = Buffer.from(token, 'base64').toString();
+    const parts = decoded.split(':');
+    if (parts.length >= 1) {
+      return parts[0];
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}

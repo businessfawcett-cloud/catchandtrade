@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: catchandtrade-api
+    name: catchandtrade-web
     env: node
     region: oregon
     buildCommand: cd apps/web && npm install --include=dev && npx prisma generate && npx next build --no-lint
@@ -8,16 +8,25 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
-        value: postgresql://catchandtrade_db_p6co_user:kmLyUdkbsl7AiD1JO0kWtTiG5yGudInp@dpg-d7h5rodckfvc739ql21g-a.oregon-postgres.render.com/catchandtrade_db_p6co
       - key: JWT_SECRET
         sync: false
-        value: catchandtrade_super_secret_jwt_key_2025
       - key: JWT_REFRESH_SECRET
         sync: false
-        value: catchandtrade_super_secret_jwt_refresh_key_2025
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_URL
-        value: https://api.catchandtrade.com
+        value: https://catchandtrade.com/api
       - key: NEXT_PUBLIC_WEB_URL
         value: https://catchandtrade.com
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: POKEMON_TCG_API_KEY
+        sync: false
+      - key: EBAY_APP_ID
+        sync: false
+      - key: EBAY_CERT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

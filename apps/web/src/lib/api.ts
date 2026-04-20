@@ -1,19 +1,29 @@
-import { PrismaClient } from '@prisma/client';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ijnajdpcplapwiyvzsdh.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNiz43_04Dq4bL3C_ngUshOkvKQo';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.E40MxrBEr7ohlX-QwKklSErW0E-6E2KXYWdgBpZMYQdk';
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  });
+export let supabase: SupabaseClient;
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+function initSupabase() {
+  if (!supabaseAnonKey) {
+    console.warn('NEXT_PUBLIC_SUPABASE_ANON_KEY not set - using fallback');
+  }
+  return createClient(supabaseUrl, supabaseAnonKey);
+}
+
+supabase = initSupabase();
 
 export function getSupabase() {
-  return prisma;
+  return supabase;
+}
+
+export function getSupabaseAdmin() {
+  if (!supabaseServiceKey) {
+    throw new Error('SUPABASE_SERVICE_KEY is not set');
+  }
+  return createClient(supabaseUrl, supabaseServiceKey);
 }
 
 export function getSupabaseUrl() {

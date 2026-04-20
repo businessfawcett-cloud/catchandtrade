@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase, getSupabaseUrl, getSupabaseKey } from '@/lib/api';
+import { getUserIdFromToken } from '@/lib/auth';
 
 const supabase = getSupabase();
 const supabaseUrl = getSupabaseUrl();
@@ -13,11 +14,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
     
     const token = authHeader.replace('Bearer ', '');
-    let userId;
-    try {
-      const decoded = Buffer.from(token, 'base64').toString();
-      userId = decoded.split(':')[0];
-    } catch (e) {
+    let userId = await getUserIdFromToken(token);
+    
+    if (!userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
     
