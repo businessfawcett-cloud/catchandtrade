@@ -1,36 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase, getSupabaseUrl, getSupabaseKey } from '@/lib/api';
-
-const supabase = getSupabase();
-const supabaseUrl = getSupabaseUrl();
-const supabaseKey = getSupabaseKey();
+import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const username = searchParams.get('u');
-    
+    const username = request.nextUrl.searchParams.get('u');
+
     if (!username || username.length < 3) {
       return NextResponse.json({ available: false, error: 'Username too short' });
     }
-    
-    // Check if username exists in database
-    const { data: user, error } = await supabase
-      .from('User')
-      .select('id')
-      .eq('username', username.toLowerCase())
-      .single();
-    
-    if (error && error.code !== 'PGRST116') {
-      // PGRST116 = no rows returned (which means username is available)
-      console.error('Error checking username:', error);
-      return NextResponse.json({ available: false, error: 'Server error' }, { status: 500 });
-    }
-    
-    // If user exists, username is taken
-    const available = !user;
-    
-    return NextResponse.json({ available });
+
+    const user = await prisma.user.findUnique({
+      where: { username: username.toLowerCase() },
+      select: { id: true },
+    });
+
+    return NextResponse.json({ available: !user });
   } catch (err) {
     console.error('Check username error:', err);
     return NextResponse.json({ available: false, error: 'Server error' }, { status: 500 });

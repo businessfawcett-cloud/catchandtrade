@@ -1,73 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase, getSupabaseUrl, getSupabaseKey } from '@/lib/api';
-import { getUserIdFromToken } from '@/lib/auth';
+import prisma from '@/lib/prisma';
 
-const supabase = getSupabase();
-const supabaseUrl = getSupabaseUrl();
-const supabaseKey = getSupabaseKey();
+function getUserIdFromToken(token: string): string | null {
+  try { return Buffer.from(token, 'base64').toString().split(':')[0] || null; }
+  catch { return null; }
+}
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'No token provided' }, { status: 401 });
-    }
-    
-    const token = authHeader.replace('Bearer ', '');
-    let userId = await getUserIdFromToken(token);
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-    
-    const { id } = params;
-    
-    // Verify user owns this portfolio
-    const { data: portfolio } = await supabase
-      .from('Portfolio')
-      .select('userid')
-      .eq('id', id)
-      .single();
-    
-    if (!portfolio || portfolio.userid !== userId) {
-      return NextResponse.json({ error: 'Not authorized to view this portfolio' }, { status: 403 });
-    }
-    
-    // Get portfolio cards
-    const { data: cards } = await supabase
-      .from('PortfolioCard')
-      .select('*')
-      .eq('portfolioid', id);
-    
-    // Calculate value
+    if (!authHeader?.startsWith('Bearer ')) return NextResponse.json({ error: 'No token provided' }, { status: 401 });
+    const userId = getUserIdFromToken(authHeader.replace('Bearer ', ''));
+    if (!userId) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+
+    const portfolio = await prisma.portfolio.findFirst({
+      where: { id: params.id, userId },
+      include: {
+        items: {
+          include: {
+            card: { include: { prices: { orderBy: { date: 'desc' }, take: 1 } } },
+          },
+        },
+      },
+    });
+
+    if (!portfolio) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+
     let totalValue = 0;
     let cardCount = 0;
-    
-    if (cards && cards.length > 0) {
-      for (const pc of cards) {
-        const quantity = pc.quantity || 1;
-        cardCount += quantity;
-        
-        // Get card price
-        if (pc.cardId) {
-          const { data: card } = await supabase
-            .from('Card')
-            .select('price')
-            .eq('id', pc.cardId)
-            .single();
-          
-          if (card?.price) {
-            totalValue += card.price * quantity;
-          }
-        }
-      }
+
+    for (const item of portfolio.items) {
+      const qty = item.quantity || 1;
+      cardCount += qty;
+      const latestPrice = item.card.prices[0]?.priceMarket;
+      if (latestPrice) totalValue += latestPrice * qty;
     }
-    
-    return NextResponse.json({
-      totalValue,
-      cardCount,
-      uniqueCards: cards?.length || 0
-    });
+
+    return NextResponse.json({ totalValue, cardCount, uniqueCards: portfolio.items.length });
   } catch (err) {
     console.error('Portfolio value error:', err);
     return NextResponse.json({ totalValue: 0, cardCount: 0, uniqueCards: 0 }, { status: 500 });

@@ -1,102 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase, getSupabaseUrl, getSupabaseKey } from '@/lib/api';
-
-const supabase = getSupabase();
-const supabaseUrl = getSupabaseUrl();
-const supabaseKey = getSupabaseKey();
+import prisma from '@/lib/prisma';
 
 function getUserIdFromToken(token: string): string | null {
-  try {
-    const decoded = Buffer.from(token, 'base64').toString();
-    return decoded.split(':')[0];
-  } catch {
-    return null;
-  }
+  try { return Buffer.from(token, 'base64').toString().split(':')[0] || null; }
+  catch { return null; }
 }
 
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'No token provided' }, { status: 401 });
-    }
-    
-    const token = authHeader.replace('Bearer ', '');
-    const userid = getUserIdFromToken(token);
-    if (!userid) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-    
-    const { data: portfolios } = await supabase
-      .from('Portfolio')
-      .select('id')
-      .eq('userid', userid);
-    
-    if (!portfolios || portfolios.length === 0) {
+    if (!authHeader?.startsWith('Bearer ')) return NextResponse.json({ error: 'No token provided' }, { status: 401 });
+    const userId = getUserIdFromToken(authHeader.replace('Bearer ', ''));
+    if (!userId) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+
+    const portfolios = await prisma.portfolio.findMany({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!portfolios.length) {
       return NextResponse.json({ pokemon: [], overview: { totalOwned: 0, uniquePokemon: 0, byType: {} } });
     }
-    
-    const portfolioids = portfolios.map(p => p.id);
-    
-    const { data: items } = await supabase
-      .from('PortfolioCard')
-      .select('*, card:Card(*)')
-      .in('portfolioid', portfolioids);
-    
-    if (!items || items.length === 0) {
+
+    const items = await prisma.portfolioItem.findMany({
+      where: { portfolioId: { in: portfolios.map((p) => p.id) } },
+      include: { card: true },
+    });
+
+    if (!items.length) {
       return NextResponse.json({ pokemon: [], overview: { totalOwned: 0, uniquePokemon: 0, byType: {} } });
     }
-    
-    const pokemonMap = new Map();
-    
+
+    const pokemonMap = new Map<string, any>();
+
     for (const item of items) {
-      if (!item.card) continue;
-      
-      const cardName = item.card.name;
-      const pokemonName = cardName
-        .replace(/\s+(EX|VMAX|V|EX-?V|GX|V-?EX|PRISM|δ|⭐|★|☆|LV\.?X?|LV\.\d|SP|RMS|RMS-?\d|CR|SSR|UR|HR|PR|SM|RC|BR|AR)\s*$/gi, '')
+      const pokemonName = item.card.name
+        .replace(/\s+(EX|VMAX|V|GX|LV\.?\d*|SP|CR|SSR|UR|HR|PR|AR|BR)$/gi, '')
         .trim();
-      
+
       if (!pokemonMap.has(pokemonName)) {
-        pokemonMap.set(pokemonName, {
-          name: pokemonName,
-          cards: [],
-          totalOwned: 0,
-          sets: new Set()
-        });
+        pokemonMap.set(pokemonName, { name: pokemonName, cards: [], totalOwned: 0, sets: new Set() });
       }
-      
+
       const entry = pokemonMap.get(pokemonName);
       entry.cards.push({
         id: item.card.id,
         name: item.card.name,
-        setName: item.card.setname,
-        setCode: item.card.setcode,
-        imageUrl: item.card.imageurl,
-        quantity: item.quantity || 1
+        setName: item.card.setName,
+        setCode: item.card.setCode,
+        imageUrl: item.card.imageUrl,
+        quantity: item.quantity || 1,
       });
       entry.totalOwned += item.quantity || 1;
-      if (item.card.setname) {
-        entry.sets.add(item.card.setname);
-      }
+      if (item.card.setName) entry.sets.add(item.card.setName);
     }
-    
-    const pokemon = Array.from(pokemonMap.values()).map(p => ({
-      ...p,
-      sets: Array.from(p.sets)
-    }));
-    
-    const uniquePokemon = pokemon.length;
-    const totalOwned = pokemon.reduce((sum, p) => sum + p.totalOwned, 0);
-    
+
+    const pokemon = Array.from(pokemonMap.values()).map((p) => ({ ...p, sets: Array.from(p.sets) }));
+
     return NextResponse.json({
       pokemon,
       overview: {
-        totalOwned,
-        uniquePokemon,
+        totalOwned: pokemon.reduce((s, p) => s + p.totalOwned, 0),
+        uniquePokemon: pokemon.length,
         totalCards: items.length,
-        byType: {}
-      }
+        byType: {},
+      },
     });
   } catch (err) {
     console.error('Pokédex overview error:', err);

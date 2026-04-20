@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase, getSupabaseUrl, getSupabaseKey } from '@/lib/api';
-import { getUserIdFromToken } from '@/lib/auth';
-
-const supabase = getSupabase();
-const supabaseUrl = getSupabaseUrl();
-const supabaseKey = getSupabaseKey();
+import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,34 +7,26 @@ export async function GET(request: NextRequest) {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'No token provided' }, { status: 401 });
     }
-    
+
     const token = authHeader.replace('Bearer ', '');
-    
-    let userId = await getUserIdFromToken(token);
-    
-    if (!userId) {
+    let userId: string;
+    try {
+      const decoded = Buffer.from(token, 'base64').toString();
+      userId = decoded.split(':')[0];
+    } catch {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
-    
-    const { data: user, error } = await supabase
-      .from('User')
-      .select('id, email, username, displayname, avatarid, ispublic, hidecollectionvalue')
-      .eq('id', userId)
-      .single();
-    
-    if (error || !user) {
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, username: true, displayName: true, avatarId: true, isPublic: true, hideCollectionValue: true },
+    });
+
+    if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    
-    return NextResponse.json({
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      displayName: user.displayname,
-      avatarId: user.avatarid,
-      isPublic: user.ispublic,
-      hideCollectionValue: user.hidecollectionvalue
-    });
+
+    return NextResponse.json(user);
   } catch (err) {
     console.error('Error in /api/users/me:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

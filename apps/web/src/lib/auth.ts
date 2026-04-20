@@ -1,13 +1,14 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { NextRequest } from 'next/server';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'fallback-secret-change-in-production'
-);
+function getSecret(envVar: string, name: string): Uint8Array {
+  const value = process.env[envVar];
+  if (!value) throw new Error(`${name} environment variable is not set`);
+  return new TextEncoder().encode(value);
+}
 
-const JWT_REFRESH_SECRET = new TextEncoder().encode(
-  process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret-change-in-production'
-);
+function getJwtSecret() { return getSecret('JWT_SECRET', 'JWT_SECRET'); }
+function getJwtRefreshSecret() { return getSecret('JWT_REFRESH_SECRET', 'JWT_REFRESH_SECRET'); }
 
 export interface TokenPayload {
   userId: string;
@@ -15,29 +16,25 @@ export interface TokenPayload {
 }
 
 export async function generateToken(userId: string, email: string): Promise<string> {
-  const token = await new SignJWT({ userId, email })
+  return new SignJWT({ userId, email })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
-    .sign(JWT_SECRET);
-  
-  return token;
+    .sign(getJwtSecret());
 }
 
 export async function generateRefreshToken(userId: string, email: string): Promise<string> {
-  const token = await new SignJWT({ userId, email, type: 'refresh' })
+  return new SignJWT({ userId, email, type: 'refresh' })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('30d')
-    .sign(JWT_REFRESH_SECRET);
-  
-  return token;
+    .sign(getJwtRefreshSecret());
 }
 
 export async function verifyToken(token: string): Promise<TokenPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as TokenPayload;
+    const { payload } = await jwtVerify(token, getJwtSecret());
+    return payload as unknown as TokenPayload;
   } catch {
     return null;
   }
@@ -45,8 +42,8 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
 
 export async function verifyRefreshToken(token: string): Promise<TokenPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_REFRESH_SECRET);
-    return payload as TokenPayload;
+    const { payload } = await jwtVerify(token, getJwtRefreshSecret());
+    return payload as unknown as TokenPayload;
   } catch {
     return null;
   }
@@ -54,45 +51,19 @@ export async function verifyRefreshToken(token: string): Promise<TokenPayload | 
 
 export async function getUserIdFromRequest(request: NextRequest): Promise<string | null> {
   const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
+  if (!authHeader?.startsWith('Bearer ')) return null;
 
   const token = authHeader.replace('Bearer ', '');
-  
+
   // Try JWT first
   const payload = await verifyToken(token);
-  if (payload?.userId) {
-    return payload.userId;
-  }
+  if (payload?.userId) return payload.userId;
 
-  // Fallback to old base64 format for backward compatibility
+  // Fallback: legacy base64 format
   try {
     const decoded = Buffer.from(token, 'base64').toString();
-    const parts = decoded.split(':');
-    if (parts.length >= 1) {
-      return parts[0];
-    }
+    return decoded.split(':')[0] || null;
   } catch {
     return null;
   }
-
-  return null;
-}
-
-export async function getUserIdFromToken(token: string): Promise<string | null> {
-  const payload = await verifyToken(token);
-  if (payload?.userId) {
-    return payload.userId;
-  }
-  try {
-    const decoded = Buffer.from(token, 'base64').toString();
-    const parts = decoded.split(':');
-    if (parts.length >= 1) {
-      return parts[0];
-    }
-  } catch {
-    return null;
-  }
-  return null;
 }

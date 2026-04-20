@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/api';
-
-const supabase = getSupabase();
+import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
-  
   try {
-    const { data: card, error } = await supabase
-      .from('Card')
-      .select('id, name, setname, setcode, cardnumber, rarity, imageurl, hp, types, weakness, retreat, attacks')
-      .eq('id', id)
-      .single();
-      
-    if (error || !card) {
-      return NextResponse.json({ error: 'Pokemon not found' }, { status: 404 });
-    }
-    
+    const card = await prisma.card.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!card) return NextResponse.json({ error: 'Pokemon not found' }, { status: 404 });
     return NextResponse.json({ pokemon: card });
   } catch (err) {
     console.error('Error fetching pokemon:', err);

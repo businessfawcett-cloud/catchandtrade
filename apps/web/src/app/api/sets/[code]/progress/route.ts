@@ -1,57 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/api';
-
-const supabase = getSupabase();
+import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest, { params }: { params: { code: string } }) {
-  const { code } = params;
   const authHeader = request.headers.get('authorization');
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!authHeader?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const token = authHeader.replace('Bearer ', '');
-  let userId;
+  let userId: string;
   try {
-    const decoded = Buffer.from(token, 'base64').toString();
-    userId = decoded.split(':')[0];
-  } catch (e) {
+    userId = Buffer.from(authHeader.replace('Bearer ', ''), 'base64').toString().split(':')[0];
+  } catch {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
 
-  // Get all cards in this set
-  const { data: setCards, error: setError } = await supabase
-    .from('Card')
-    .select('id, name, cardnumber, rarity')
-    .eq('setcode', code.toLowerCase())
-    .order('cardnumber', { ascending: true });
+  const setCards = await prisma.card.findMany({
+    where: { setCode: params.code.toLowerCase() },
+    select: { id: true, name: true, cardNumber: true, rarity: true },
+    orderBy: { cardNumber: 'asc' },
+  });
 
-  if (setError || !setCards) {
-    return NextResponse.json({ error: 'Set not found' }, { status: 404 });
-  }
+  if (!setCards.length) return NextResponse.json({ error: 'Set not found' }, { status: 404 });
 
-  // Get user's portfolio cards for this set
-  const { data: userCards, error: userError } = await supabase
-    .from('PortfolioCard')
-    .select('cardId, quantity')
-    .eq('userId', userId);
+  const portfolios = await prisma.portfolio.findMany({ where: { userId }, select: { id: true } });
+  const portfolioIds = portfolios.map((p) => p.id);
 
-  if (userError) {
-    return NextResponse.json({ error: 'Failed to fetch user cards' }, { status: 500 });
-  }
+  const userItems = await prisma.portfolioItem.findMany({
+    where: { portfolioId: { in: portfolioIds }, cardId: { in: setCards.map((c) => c.id) } },
+    select: { cardId: true },
+  });
 
-  const ownedCardIds = new Set(userCards?.map(uc => uc.cardId) || []);
-  const ownedCards = setCards.filter(c => ownedCardIds.has(c.id));
-  const missingCards = setCards.filter(c => !ownedCardIds.has(c.id));
-  
-  const progress = setCards.length > 0 ? (ownedCards.length / setCards.length) * 100 : 0;
+  const ownedIds = new Set(userItems.map((i) => i.cardId));
+  const ownedCards = setCards.filter((c) => ownedIds.has(c.id));
+  const missingCards = setCards.filter((c) => !ownedIds.has(c.id));
+  const progress = setCards.length > 0 ? Math.round((ownedCards.length / setCards.length) * 1000) / 10 : 0;
 
-  return NextResponse.json({ 
-    progress: Math.round(progress * 10) / 10,
-    ownedCards: ownedCards.map(c => c.id),
-    missingCards: missingCards.map(c => c.id),
+  return NextResponse.json({
+    progress,
+    ownedCards: ownedCards.map((c) => c.id),
+    missingCards: missingCards.map((c) => c.id),
     totalCards: setCards.length,
-    ownedCount: ownedCards.length
+    ownedCount: ownedCards.length,
   });
 }

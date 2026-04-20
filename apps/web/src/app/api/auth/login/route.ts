@@ -1,24 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/api';
+import prisma from '@/lib/prisma';
 import { generateToken, generateRefreshToken } from '@/lib/auth';
 import { verifyPassword } from '@/lib/password';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabase();
     const { email, password } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
     }
 
-    const { data: user, error } = await supabase
-      .from('User')
-      .select('id, email, username, passwordHash')
-      .eq('email', email.toLowerCase())
-      .single();
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      select: { id: true, email: true, username: true, passwordHash: true },
+    });
 
-    if (error || !user) {
+    if (!user || !user.passwordHash) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
@@ -33,7 +31,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       token,
       refreshToken,
-      user: { id: user.id, email: user.email, username: user.username }
+      user: { id: user.id, email: user.email, username: user.username },
     });
   } catch (error) {
     console.error('Error in login:', error);

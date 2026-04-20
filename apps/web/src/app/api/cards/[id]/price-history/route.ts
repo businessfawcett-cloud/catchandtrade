@@ -1,146 +1,85 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/api';
+import prisma from '@/lib/prisma';
 
 const POKEMON_TCG_API_KEY = process.env.POKEMON_TCG_API_KEY || 'a3751a33-9ed6-4662-9ae3-870939002fcc';
 const POKEMON_TCG_API_URL = 'https://api.pokemontcg.io/v2';
 
-function seededRandom(seed: number): number {
+function seededRandom(seed: number) {
   const x = Math.sin(seed) * 10000;
   return x - Math.floor(x);
 }
 
 function generateMockPriceHistory(cardId: string, currentPrice: number | null, days: number) {
-  const data = [];
   const basePrice = currentPrice || 50;
-  const now = new Date();
-  
-  // Generate consistent seed from cardId
-  const seed = cardId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  
-  // Determine a trend direction based on seed (consistent per card)
-  const trendDirection = seed % 2 === 0 ? 1 : -1;
-  
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    
-    // Use seeded random for consistent data
-    const rand = seededRandom(seed + i);
-    const variance = (rand - 0.5) * 0.1;
-    const trend = (trendDirection * (days - i) / days * 0.05);
-    const price = Math.max(1, basePrice * (1 + variance + trend));
-    
-    data.push({
+  const seed = cardId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const trendDir = seed % 2 === 0 ? 1 : -1;
+  return Array.from({ length: days }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (days - 1 - i));
+    const variance = (seededRandom(seed + i) - 0.5) * 0.1;
+    const trend = trendDir * i / days * 0.05;
+    return {
       date: date.toISOString().split('T')[0],
-      price: Math.round(price * 100) / 100
-    });
-  }
-
-  return data;
+      price: Math.max(1, Math.round(basePrice * (1 + variance + trend) * 100) / 100),
+    };
+  });
 }
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const supabase = getSupabase();
-    const { id } = params;
     const { searchParams } = new URL(request.url);
-    const period = searchParams.get('period') || '30';
+    const period = parseInt(searchParams.get('period') || '30');
 
-    const { data: card } = await supabase
-      .from('Card')
-      .select('id, pokemontcgid, name, setcode')
-      .eq('id', id)
-      .single();
+    const card = await prisma.card.findUnique({
+      where: { id: params.id },
+      select: { id: true, pokemonTcgId: true, name: true, setCode: true },
+    });
 
-    if (!card) {
-      return NextResponse.json({ error: 'Card not found' }, { status: 404 });
-    }
+    if (!card) return NextResponse.json({ error: 'Card not found' }, { status: 404 });
 
-    let currentPrice: number | null = null;
-    let prices: any[] = [];
+    const dbPrices = await prisma.cardPrice.findMany({
+      where: { cardId: params.id },
+      orderBy: { date: 'asc' },
+      take: 90,
+      select: { priceMarket: true, date: true },
+    });
 
-    // Try to get prices from database first
-    const { data: dbPrices } = await supabase
-      .from('CardPrice')
-      .select('pricemarket, pricelow, pricemid, pricehigh, date')
-      .eq('cardid', id)
-      .order('date', { ascending: true })
-      .limit(90);
+    let data: { date: string; price: number }[];
+    let hasRealData = false;
 
-    if (dbPrices && dbPrices.length > 0) {
-      prices = dbPrices;
-      currentPrice = prices[prices.length - 1].pricemarket;
-    } else if (card.pokemontcgid) {
-      // Fetch from Pokemon TCG API
+    if (dbPrices.length > 0) {
+      hasRealData = true;
+      data = dbPrices.map((p) => ({
+        date: p.date.toISOString().split('T')[0],
+        price: p.priceMarket || 0,
+      }));
+    } else if (card.pokemonTcgId) {
       try {
-        const response = await fetch(`${POKEMON_TCG_API_URL}/cards/${card.pokemontcgid}`, {
-          headers: { 'X-Api-Key': POKEMON_TCG_API_KEY }
+        const response = await fetch(`${POKEMON_TCG_API_URL}/cards/${card.pokemonTcgId}`, {
+          headers: { 'X-Api-Key': POKEMON_TCG_API_KEY },
         });
-        
         if (response.ok) {
           const tcgData = await response.json();
-          const cardData = tcgData.data?.[0];
-          
-          if (cardData?.tcgplayer?.prices) {
-            const tcgPrices = cardData.tcgplayer.prices;
-            
-            // Get normal/holographic prices
-            const normalPrice = tcgPrices.normal?.[0] || tcgPrices.holofoil?.[0] || {};
-            currentPrice = normalPrice.market || normalPrice.median || null;
-            
-            // Create mock historical data with real current price
-            if (currentPrice) {
-              prices = generateMockPriceHistory(id, currentPrice, parseInt(period));
-            }
-          }
+          const prices = tcgData.data?.tcgplayer?.prices;
+          const variant: any = prices ? Object.values(prices)[0] : null;
+          const currentPrice = variant?.market || variant?.mid || null;
+          data = generateMockPriceHistory(params.id, currentPrice, period);
+          hasRealData = !!currentPrice;
+        } else {
+          data = generateMockPriceHistory(params.id, null, period);
         }
-      } catch (e) {
-        console.error('Pokemon TCG API error:', e);
+      } catch {
+        data = generateMockPriceHistory(params.id, null, period);
       }
-    }
-
-    // If still no prices, generate consistent mock data
-    if (prices.length === 0) {
-      prices = generateMockPriceHistory(id, currentPrice, parseInt(period));
-      currentPrice = prices[prices.length - 1]?.price || 50;
-    }
-
-    const periodDays = parseInt(period);
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - periodDays);
-    const startStr = startDate.toISOString().split('T')[0];
-
-    const filteredPrices = prices.filter((p: any) => p.date >= startStr);
-    
-    if (filteredPrices.length > 0) {
-      const data = filteredPrices.map((p: any) => ({
-        date: p.date,
-        price: p.price || p.pricemarket
-      }));
-
-      const latest = data[data.length - 1];
-      const oldest = data[0];
-      const change = oldest?.price ? ((latest.price - oldest.price) / oldest.price) * 100 : 0;
-
-      return NextResponse.json({
-        data,
-        currentPrice: latest.price,
-        change: change.toFixed(2),
-        hasRealData: !!card.pokemontcgid
-      });
     } else {
-      const mockData = generateMockPriceHistory(id, currentPrice, periodDays);
-      const latest = mockData[mockData.length - 1];
-      const oldest = mockData[0];
-      const change = oldest ? ((latest.price - oldest.price) / oldest.price) * 100 : 0;
-
-      return NextResponse.json({
-        data: mockData,
-        currentPrice: latest.price,
-        change: change.toFixed(2),
-        hasRealData: false
-      });
+      data = generateMockPriceHistory(params.id, null, period);
     }
+
+    const latest = data[data.length - 1];
+    const oldest = data[0];
+    const change = oldest?.price ? (((latest.price - oldest.price) / oldest.price) * 100).toFixed(2) : '0.00';
+
+    return NextResponse.json({ data, currentPrice: latest.price, change, hasRealData });
   } catch (error) {
     console.error('Error fetching price history:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

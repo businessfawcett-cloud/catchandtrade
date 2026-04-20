@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/api';
-import { getUserIdFromToken } from '@/lib/auth';
+import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,54 +7,30 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50);
     const sellerId = searchParams.get('sellerId');
-    const status = searchParams.get('status') || 'ACTIVE';
+    const status = (searchParams.get('status') || 'ACTIVE') as any;
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
-    const setCode = searchParams.get('setCode');
-    
-    const supabase = getSupabase();
-    
-    let query = supabase
-      .from('Listing')
-      .select(`
-        *,
-        card:Card(id, name, setname, setcode, cardnumber, rarity, imageurl),
-        seller:User(id, username, displayname)
-      `)
-      .eq('status', status)
-      .order('createdat', { ascending: false })
-      .range((page - 1) * limit, page * limit - 1);
-    
-    if (sellerId) {
-      query = query.eq('sellerid', sellerId);
-    }
-    
-    if (minPrice) {
-      query = query.gte('price', parseFloat(minPrice));
-    }
-    
-    if (maxPrice) {
-      query = query.lte('price', parseFloat(maxPrice));
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Listings error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    
-    const { count } = await supabase
-      .from('Listing')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', status);
-    
-    return NextResponse.json({
-      listings: data || [],
-      total: count || 0,
-      page,
-      totalPages: Math.ceil((count || 0) / limit)
-    });
+
+    const where: any = { status };
+    if (sellerId) where.sellerId = sellerId;
+    if (minPrice) where.buyNowPrice = { ...where.buyNowPrice, gte: parseFloat(minPrice) };
+    if (maxPrice) where.buyNowPrice = { ...where.buyNowPrice, lte: parseFloat(maxPrice) };
+
+    const [listings, total] = await Promise.all([
+      prisma.listing.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          card: { select: { id: true, name: true, setName: true, setCode: true, cardNumber: true, rarity: true, imageUrl: true } },
+          seller: { select: { id: true, username: true, displayName: true } },
+        },
+      }),
+      prisma.listing.count({ where }),
+    ]);
+
+    return NextResponse.json({ listings, total, page, totalPages: Math.ceil(total / limit) });
   } catch (error) {
     console.error('Error in listings GET:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -65,49 +40,40 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    const token = authHeader.replace('Bearer ', '');
-    let userId = await getUserIdFromToken(token);
-    
-    if (!userId) {
+    if (!authHeader?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    let userId: string;
+    try {
+      userId = Buffer.from(authHeader.replace('Bearer ', ''), 'base64').toString().split(':')[0];
+    } catch {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
-    
+
     const body = await request.json();
-    const { cardId, price, condition, isGraded, grade, gradingCompany, quantity = 1, description } = body;
-    
-    if (!cardId || !price) {
-      return NextResponse.json({ error: 'cardId and price required' }, { status: 400 });
-    }
-    
-    const supabase = getSupabase();
-    
-    const { data, error } = await supabase
-      .from('Listing')
-      .insert({
-        sellerid: userId,
-        cardid: cardId,
-        price: parseFloat(price),
+    const { cardId, price, condition, isGraded, gradeCompany, gradeValue, quantity = 1, description, title } = body;
+
+    if (!cardId || !price) return NextResponse.json({ error: 'cardId and price required' }, { status: 400 });
+
+    // Get card name for default title
+    const card = await prisma.card.findUnique({ where: { id: cardId }, select: { name: true } });
+
+    const listing = await prisma.listing.create({
+      data: {
+        sellerId: userId,
+        cardId,
+        title: title || card?.name || 'Card Listing',
+        description: description || null,
+        buyNowPrice: parseFloat(price),
         condition: condition || 'NEAR_MINT',
-        isgraded: isGraded || false,
-        grade: grade,
-        gradingcompany: gradingCompany,
-        quantity: quantity,
-        description: description,
+        isGraded: isGraded || false,
+        gradeCompany: gradeCompany || null,
+        gradeValue: gradeValue || null,
         status: 'ACTIVE',
-        createdat: new Date().toISOString()
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    
-    return NextResponse.json(data);
+        imageUrls: [],
+      },
+    });
+
+    return NextResponse.json(listing);
   } catch (error) {
     console.error('Error in listings POST:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

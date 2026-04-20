@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase, getWebUrl } from '@/lib/api';
-
-const supabase = getSupabase();
+import prisma from '@/lib/prisma';
+import { getWebUrl } from '@/lib/api';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -17,14 +16,9 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get('code');
   const error = searchParams.get('error');
-  const errorDescription = searchParams.get('error_description');
 
-  if (error || errorDescription) {
-    return NextResponse.redirect(getLoginUrl(error || errorDescription || 'unknown'));
-  }
-
-  if (!code) {
-    return NextResponse.redirect(getLoginUrl('no_code'));
+  if (error || !code) {
+    return NextResponse.redirect(getLoginUrl(error || 'no_code'));
   }
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
@@ -40,100 +34,59 @@ export async function GET(request: NextRequest) {
         client_id: GOOGLE_CLIENT_ID,
         client_secret: GOOGLE_CLIENT_SECRET,
         redirect_uri: REDIRECT_URI,
-        grant_type: 'authorization_code'
-      })
+        grant_type: 'authorization_code',
+      }),
     });
 
     if (!tokenResponse.ok) {
-      console.log('Token exchange failed');
-      return NextResponse.redirect('https://catchandtrade.com/login?error=token_exchange_failed');
+      return NextResponse.redirect(getLoginUrl('token_exchange_failed'));
     }
 
     const tokenData = await tokenResponse.json();
-
     const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` }
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
 
     const googleUser = await userResponse.json();
-
     if (!googleUser.email) {
-      return NextResponse.redirect('https://catchandtrade.com/login?error=no_email');
+      return NextResponse.redirect(getLoginUrl('no_email'));
     }
 
     const userEmail = googleUser.email.toLowerCase();
     const googleId = googleUser.id;
 
-    console.log('Looking up user:', userEmail, googleId);
+    let user = await prisma.user.findUnique({ where: { email: userEmail } });
 
-    // Try email first
-    let { data: user } = await supabase
-      .from('User')
-      .select('*')
-      .eq('email', userEmail)
-      .single();
-
-    // Try googleid if not found
     if (!user) {
-      const { data: googleUserData } = await supabase
-        .from('User')
-        .select('*')
-        .eq('googleid', googleId)
-        .single();
-      if (googleUserData) {
-        user = googleUserData;
-        console.log('Found by googleid');
-      }
+      user = await prisma.user.findUnique({ where: { googleId } });
     }
 
-    // Create if still not found
     if (!user) {
-      console.log('Creating new user');
-      const { data: newUser, error: createError } = await supabase
-        .from('User')
-        .insert({
+      user = await prisma.user.create({
+        data: {
           email: userEmail,
           username: googleUser.name || userEmail.split('@')[0],
-          googleid: googleId,
-          displayname: googleUser.name || userEmail.split('@')[0]
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        console.log('Create error:', createError);
-        // Try to find by googleid
-        const { data: retryUser } = await supabase
-          .from('User')
-          .select('*')
-          .eq('googleid', googleId)
-          .single();
-        user = retryUser;
-      } else {
-        user = newUser;
-      }
+          googleId,
+          displayName: googleUser.name || userEmail.split('@')[0],
+        },
+      });
     }
 
     if (!user) {
       return NextResponse.redirect(getLoginUrl('user_not_found'));
     }
 
-    console.log('Success! User:', user.email);
-
     const token = Buffer.from(`${user.id}:${user.email}`).toString('base64');
-    
     const redirectUrl = new URL('/login', getWebUrl());
     redirectUrl.searchParams.set('token', token);
-    redirectUrl.searchParams.set('user', JSON.stringify({ 
-      id: user.id, 
-      email: user.email, 
-      username: user.username || null,
-      displayName: user.displayname || user.username || null 
-    }));
+    redirectUrl.searchParams.set(
+      'user',
+      JSON.stringify({ id: user.id, email: user.email, username: user.username || null, displayName: user.displayName || null })
+    );
 
     return NextResponse.redirect(redirectUrl);
   } catch (err) {
     console.error('OAuth error:', err);
-    return NextResponse.redirect('https://catchandtrade.com/login?error=callback_failed');
+    return NextResponse.redirect(getLoginUrl('callback_failed'));
   }
 }
