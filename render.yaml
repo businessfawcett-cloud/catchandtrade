@@ -3,7 +3,7 @@ services:
     name: catchandtrade-web
     env: node
     region: oregon
-    workingDirectory: apps/web
+    rootDir: apps/web
     buildCommand: rm -rf node_modules .next && npm install && npx prisma generate && npx next build
     startCommand: npm run start
     envVars:
