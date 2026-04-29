@@ -46,8 +46,7 @@
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "prisma": "5.22.0",
-    "ts-jest": "^29.4.6",
-    "typescript": "^5.3.0"
+    "ts-jest": "^29.4.6"
   },
   "overrides": {
     "react": "^18.2.0",
