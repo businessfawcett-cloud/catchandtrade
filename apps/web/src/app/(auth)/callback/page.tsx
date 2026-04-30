@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import PokeballLoader from '@/components/PokeballLoader';
+import { getApiUrl } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.catchandtrade.com';
+const API_URL = getApiUrl();
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function AuthCallback() {
     if (token) {
       localStorage.setItem('token', token);
       console.log('Callback: token saved, fetching user...');
-      fetch(`${API_URL}/api/users/me`, {
+      fetch(`${API_URL}/users/me`, {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => {
