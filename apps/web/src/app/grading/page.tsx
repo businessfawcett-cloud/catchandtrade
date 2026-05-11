@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
-const GRADING_SERVICES = {
+const GRADING_SERVICES: Record<string, { name: string; baseCost: number }> = {
   'PSA': { name: 'PSA', baseCost: 30 },
   'BGS': { name: 'BGS', baseCost: 40 },
   'CGC': { name: 'CGC', baseCost: 25 }
@@ -20,7 +20,7 @@ const VALUE_TIERS = [
   { max: 999999, psa10: 6.0, psa9: 3.5, bgs95: 7.0, bgs9: 5.0, cgc10: 6.0, cgc9: 3.5 }
 ];
 
-function getTier(value) {
+function getTier(value: number) {
   for (let i = 0; i < VALUE_TIERS.length; i++) {
     if (value < VALUE_TIERS[i].max) return VALUE_TIERS[i];
   }
@@ -33,13 +33,13 @@ export default function GradingPage() {
   const [targetGrade, setTargetGrade] = useState(10);
   const [showResults, setShowResults] = useState(false);
 
-  const calculateGradingCost = (service, value) => {
+  const calculateGradingCost = (service: string, value: number) => {
     const baseCost = GRADING_SERVICES[service]?.baseCost || 30;
     const valueMultiplier = value > 5000 ? 1.5 : value > 1000 ? 1.3 : 1;
     return Math.round(baseCost * valueMultiplier);
   };
 
-  const calculatePotentialValue = (service, grade, value) => {
+  const calculatePotentialValue = (service: string, grade: number, value: number) => {
     const tier = getTier(value);
     let multiplier = 1;
     

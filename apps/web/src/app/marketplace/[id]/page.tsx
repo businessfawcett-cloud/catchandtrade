@@ -559,7 +559,7 @@ export default function CardDetailPage({ params }: { params: { id: string } }) {
             </div>
           )}
 
-          <GradingCalculator cardId={card.id} cardName={card.name} currentPrice={latestPrice?.priceMarket} />
+          <GradingCalculator cardId={card.id} cardName={card.name} currentPrice={latestPrice?.priceMarket ?? undefined} />
         </div>
       </div>
 

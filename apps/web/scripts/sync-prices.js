@@ -1,12 +1,5 @@
-const { createClient } = require('@supabase/supabase-js');
-
-const supabaseUrl = 'https://ijnajdpcplapwiyvzsdh.supabase.co';
-const supabaseKey = 'sb_secret_npPQJSJtOVSfpAhN-MjjZg_6d5YbZkC';
-
 const POKEMON_TCG_API_KEY = 'a3751a33-9ed6-4662-9ae3-870939002fcc';
 const POKEMON_TCG_API_URL = 'https://api.pokemontcg.io/v2';
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Popular card IDs to fetch prices for
 const POPULAR_CARDS = [

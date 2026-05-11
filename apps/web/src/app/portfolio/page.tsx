@@ -769,7 +769,7 @@ export default function PortfolioPage() {
                           borderRadius: '8px',
                         }}>
                           <img
-                            src={item.card?.imageUrl}
+                            src={item.card?.imageUrl ?? undefined}
                             alt={item.card?.name || 'Card'}
                             style={{
                               position: 'absolute',

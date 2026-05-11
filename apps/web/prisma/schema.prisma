@@ -113,6 +113,7 @@ model Portfolio {
   userId    String
   name      String
   isPublic  Boolean         @default(false)
+  isDefault Boolean         @default(false)
   shareSlug String?         @unique
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt

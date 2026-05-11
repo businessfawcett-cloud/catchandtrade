@@ -5,7 +5,7 @@ import Link from 'next/link';
 import PokeballLoader from '@/components/PokeballLoader';
 import CardGrid from '@/components/CardGrid';
 import { Library, CreditCard, DollarSign, BookOpen } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -197,19 +197,13 @@ function StatsBar() {
   const [setsCount, setSetsCount] = useState(TOTAL_SETS);
   
   useEffect(() => {
-    // FIXED: Use Supabase count with head: true (no rows returned, just count!)
-    supabase
-      .from('Card')
-      .select('*', { count: 'exact', head: true })
-      .then(({ count, error }) => {
-        if (error) {
-          setCardsCount(20078);
-        } else {
-          setCardsCount(count || 20078);
-        }
-      });
+    fetch(`${API_URL}/api/cards?limit=1`)
+      .then(res => res.json())
+      .then(data => {
+        setCardsCount(data.total || 20078);
+      })
+      .catch(() => setCardsCount(20078));
     
-    // FIXED: Don't fetch all sets - use hardcoded value (sets change rarely)
     setSetsCount(TOTAL_SETS);
   }, []);
   
@@ -246,33 +240,22 @@ function FeaturedCards() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // FIXED: Query ONLY the needed cards directly - no waste!
     const iconicCardNames = ['Charizard', 'Pikachu', 'Mewtwo', 'Blastoise', 'Venusaur'];
     
-    supabase
-      .from('Card')
-      .select('id, name, setname, setcode, cardnumber, rarity, imageurl')
-      .in('name', iconicCardNames)
-      .limit(5)
-      .then(({ data, error }) => {
-        if (error) {
-          setLoading(false);
-          return;
-        }
-        // Map lowercase fields to expected format
-        const mapped = (data || []).map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          setName: c.setname,
-          setCode: c.setcode,
-          cardNumber: c.cardnumber,
-          rarity: c.rarity,
-          imageUrl: c.imageurl,
-          currentPrice: null
-        }));
-        setCards(mapped);
-        setLoading(false);
-      });
+    Promise.all(
+      iconicCardNames.map(name =>
+        fetch(`${API_URL}/api/cards?search=${encodeURIComponent(name)}&limit=1`)
+          .then(res => res.json())
+          .then(data => data.cards?.[0] || null)
+          .catch(() => null)
+      )
+    ).then(results => {
+      const valid = results.filter(Boolean) as Card[];
+      if (valid.length > 0) {
+        setCards(valid);
+      }
+      setLoading(false);
+    });
   }, []);
   
   return (
@@ -489,7 +472,7 @@ function Dashboard({ user: initialUser }: { user: User }) {
   };
 
   const avatarUrl = user.avatarId ? AVATARS[user.avatarId] : null;
-  const displayName = user.displayName || user.displayname || user.username || 'Trainer';
+  const displayName = user.displayName || user.username || 'Trainer';
 
   // Stat card icons - larger 24px
   const StackedCardsIcon = ({ style }: { style?: React.CSSProperties }) => (
