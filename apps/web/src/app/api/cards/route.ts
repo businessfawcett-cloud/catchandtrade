@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const setCode = searchParams.get('setCode');
     const sort = searchParams.get('sort') || 'newest';
-    const searchQuery = searchParams.get('q') || '';
+    const searchQuery = searchParams.get('q') || searchParams.get('search') || '';
 
     const where: Record<string, unknown> = {};
     

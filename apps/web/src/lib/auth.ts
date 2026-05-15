@@ -1,14 +1,19 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { NextRequest } from 'next/server';
 
-function getSecret(envVar: string, name: string): Uint8Array {
+function getSecret(envVar: string, fallback: string): Uint8Array {
   const value = process.env[envVar];
-  if (!value) throw new Error(`${name} environment variable is not set`);
+  if (!value) {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn(`WARNING: ${envVar} not set in production! Using insecure fallback. Set ${envVar} in your environment.`);
+    }
+    return new TextEncoder().encode(fallback);
+  }
   return new TextEncoder().encode(value);
 }
 
-function getJwtSecret() { return getSecret('JWT_SECRET', 'JWT_SECRET'); }
-function getJwtRefreshSecret() { return getSecret('JWT_REFRESH_SECRET', 'JWT_REFRESH_SECRET'); }
+function getJwtSecret() { return getSecret('JWT_SECRET', 'fallback-secret-change-in-production'); }
+function getJwtRefreshSecret() { return getSecret('JWT_REFRESH_SECRET', 'fallback-refresh-secret-change-in-production'); }
 
 export interface TokenPayload {
   userId: string;
